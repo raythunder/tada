@@ -1,3 +1,4 @@
+// tailwind.config.js
 import type { Config } from 'tailwindcss';
 
 export default {
@@ -5,74 +6,67 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Refined Blue - slightly less saturated
+        // Refined color palette
         'primary': {
-          DEFAULT: 'hsl(212, 88%, 55%)', // Slightly adjusted blue
-          'light': 'hsl(212, 90%, 95%)',
-          'dark': 'hsl(212, 88%, 48%)',
+          DEFAULT: 'hsl(210, 100%, 50%)', // Brighter blue
+          'light': 'hsl(210, 100%, 96%)', // Lighter shade for backgrounds
+          'dark': 'hsl(210, 100%, 45%)', // Slightly darker for hover
         },
         'muted': {
-          DEFAULT: 'hsl(210, 10%, 65%)', // Slightly lighter default muted
-          foreground: 'hsl(210, 10%, 45%)', // Slightly darker foreground muted
+          DEFAULT: 'hsl(210, 10%, 65%)', // Adjusted muted text
+          foreground: 'hsl(210, 10%, 45%)', // Darker muted text
         },
         'canvas': { // Base background colors
-          DEFAULT: 'hsl(0, 0%, 100%)', // White
-          alt: 'hsl(220, 20%, 97.5%)', // Very light cool gray
-          inset: 'hsl(220, 20%, 96%)',  // Slightly darker inset
+          DEFAULT: 'hsl(0, 0%, 100%)',
+          alt: 'hsl(220, 30%, 98.5%)', // Slightly cooler alt background
+          inset: 'hsl(220, 30%, 96%)', // Slightly cooler inset background
         },
-        'glass': { // For blurred backgrounds
-          DEFAULT: 'hsla(0, 0%, 100%, 0.7)', // More subtle glass
-          darker: 'hsla(220, 20%, 97.5%, 0.8)', // For alt background
+        'glass': { // For blurred backgrounds - increased translucency
+          DEFAULT: 'hsla(0, 0%, 100%, 0.7)',
+          darker: 'hsla(220, 30%, 98.5%, 0.75)',
         }
       },
       borderRadius: {
-        'md': '0.375rem', // Standard medium
-        'lg': '0.625rem', // Slightly less large radius
-        'xl': '0.875rem', // Slightly less xl radius
+        'sm': '0.25rem', // Small radius
+        'md': '0.375rem', // Default medium radius (use this most often)
+        'lg': '0.5rem', // Large radius (for buttons, modals)
+        'xl': '0.75rem', // Extra large (maybe modals)
       },
       boxShadow: {
-        // More subtle shadows inspired by Apple's HIG
-        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.04), 0 1px 3px 0 rgba(0, 0, 0, 0.03)',
-        'medium': '0 3px 5px -1px rgba(0, 0, 0, 0.05), 0 2px 3px -2px rgba(0, 0, 0, 0.04)',
-        'strong': '0 8px 12px -3px rgba(0, 0, 0, 0.07), 0 3px 5px -4px rgba(0, 0, 0, 0.05)',
+        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.04)', // Softer subtle shadow
+        'medium': '0 3px 5px -1px rgba(0, 0, 0, 0.05), 0 2px 3px -2px rgba(0, 0, 0, 0.04)', // Softer medium
+        'strong': '0 8px 12px -3px rgba(0, 0, 0, 0.06), 0 4px 5px -4px rgba(0, 0, 0, 0.05)', // Softer strong
         'inner-sm': 'inset 0 1px 2px 0 rgba(0, 0, 0, 0.05)',
       },
       transitionTimingFunction: {
-        'apple': 'cubic-bezier(0.4, 0.0, 0.2, 1)', // Similar to ease-in-out, common in iOS/macOS
-        'emphasized': 'cubic-bezier(0.4, 0, 0.2, 1)', // Standard material ease
+        'apple': 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+        'emphasized': 'cubic-bezier(0.4, 0, 0.2, 1)',
       },
       backdropBlur: {
         'xs': '2px',
-        'sm': '5px', // Standard small blur
-        'DEFAULT': '10px', // Default blur
-        'md': '15px', // Medium blur
-        'lg': '20px',
-        'xl': '30px',
+        'sm': '4px',
+        'DEFAULT': '8px',
+        'md': '12px',
+        'lg': '16px',
+        'xl': '24px',
       },
       keyframes: {
         'fade-in': {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
-        'slide-in-up': {
-          '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        'slide-out-down': {
-          '0%': { opacity: '1', transform: 'translateY(0)' },
-          '100%': { opacity: '0', transform: 'translateY(10px)' },
+        'scale-in': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
         }
       },
       animation: {
         'fade-in': 'fade-in 0.2s ease-out forwards',
-        'slide-in-up': 'slide-in-up 0.2s cubic-bezier(0.4, 0.0, 0.2, 1) forwards',
-        'slide-out-down': 'slide-out-down 0.15s cubic-bezier(0.4, 0.0, 0.2, 1) forwards',
+        'scale-in': 'scale-in 0.2s ease-out forwards',
       }
     },
   },
   plugins: [
-    require('@tailwindcss/forms')({
-      strategy: 'class', // Opt-in strategy for form styles
-    }),
+    require('@tailwindcss/forms'),
   ],
 } satisfies Config;

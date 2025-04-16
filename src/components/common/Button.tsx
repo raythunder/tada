@@ -8,7 +8,7 @@ import { motion, HTMLMotionProps } from 'framer-motion';
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
-interface ButtonProps extends Omit<HTMLMotionProps<"button">, "size" | "type"> { // Omit HTML type as well
+interface ButtonProps extends Omit<HTMLMotionProps<"button">, "size"> {
     variant?: ButtonVariant;
     size?: ButtonSize;
     icon?: IconName;
@@ -16,7 +16,7 @@ interface ButtonProps extends Omit<HTMLMotionProps<"button">, "size" | "type"> {
     fullWidth?: boolean;
     loading?: boolean;
     children?: React.ReactNode;
-    type?: 'button' | 'submit' | 'reset'; // Explicitly define allowed button types
+    className?: string; // Allow className override
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -39,60 +39,63 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         const isDisabled = disabled || loading;
 
         const baseClasses = clsx(
-            'inline-flex items-center justify-center font-medium whitespace-nowrap select-none',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas', // Adjusted focus ring
-            'transition-all duration-150 ease-apple', // Use custom easing
-            isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+            'inline-flex items-center justify-center font-medium whitespace-nowrap select-none outline-none', // Remove focus outline, handled by focus-visible
+            'focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas', // Adjusted focus ring
+            'transition-all duration-150 ease-in-out', // Standard transition
+            isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer', // Reduced opacity for disabled
             fullWidth && 'w-full'
         );
 
-        // Refined variant styles for better visual hierarchy and subtlety
+        // Use consistent 'rounded-md' for most buttons, 'rounded-lg' for larger ones maybe? Let's stick to md.
+        const commonRadius = 'rounded-md';
+
         const variantClasses: Record<ButtonVariant, string> = {
             primary: clsx(
-                'bg-primary text-white shadow-subtle', // Use subtle shadow
-                !isDisabled && 'hover:bg-primary-dark hover:shadow-medium active:bg-primary-dark' // Add active state
+                'bg-primary text-white shadow-subtle',
+                !isDisabled && 'hover:bg-primary-dark hover:shadow-medium active:bg-primary'
             ),
             secondary: clsx(
-                'bg-gray-100 text-gray-700 border border-gray-200/80 shadow-subtle', // Lighter border
-                !isDisabled && 'hover:bg-gray-200 hover:border-gray-300 hover:shadow-medium active:bg-gray-200'
+                'bg-gray-100 text-gray-700 border border-gray-200/80 shadow-subtle',
+                !isDisabled && 'hover:bg-gray-200 hover:border-gray-300 active:bg-gray-200'
             ),
             outline: clsx(
-                'border border-gray-300/90 text-gray-700 bg-canvas', // Slightly softer border
-                !isDisabled && 'hover:bg-gray-100/60 hover:border-gray-400/90 active:bg-gray-100'
+                'border border-gray-300/80 text-gray-700 bg-canvas', // Use canvas for pure outline
+                !isDisabled && 'hover:bg-gray-100/50 hover:border-gray-400/80 active:bg-gray-100'
             ),
             ghost: clsx(
-                'text-gray-700', // Default text color
-                !isDisabled && 'hover:bg-gray-500/10 active:bg-gray-500/15' // More subtle hover/active
+                'text-gray-600', // Slightly lighter text for ghost
+                !isDisabled && 'hover:bg-gray-500/10 active:bg-gray-500/15 hover:text-gray-800'
             ),
             link: clsx(
-                'text-primary underline-offset-4 h-auto p-0', // Remove padding/height for link
-                !isDisabled && 'hover:underline hover:text-primary-dark active:text-primary-dark'
+                'text-primary underline-offset-4 h-auto px-0 py-0', // Reset padding/height for link
+                !isDisabled && 'hover:underline hover:text-primary-dark'
             ),
             danger: clsx(
-                'bg-red-600 text-white shadow-subtle', // Slightly darker red
-                !isDisabled && 'hover:bg-red-700 hover:shadow-medium active:bg-red-700'
+                'bg-red-500 text-white shadow-subtle',
+                !isDisabled && 'hover:bg-red-600 active:bg-red-700'
             ),
         };
 
-        // Adjusted sizes and radii
         const sizeClasses: Record<ButtonSize, string> = {
-            sm: 'text-xs px-2.5 h-7 rounded-md', // Smaller padding/height
-            md: 'text-sm px-3.5 h-8 rounded-lg', // Adjusted large radius
-            lg: 'text-sm px-4 h-9 rounded-lg', // Keep lg text sm, increase padding/height
-            icon: 'h-8 w-8 rounded-lg', // Square icon button
+            sm: `text-xs px-2.5 h-7 ${commonRadius}`, // Smaller height/padding
+            md: `text-sm px-3 h-8 ${commonRadius}`, // Default size
+            lg: `text-base px-4 h-9 ${commonRadius}`, // Larger size
+            icon: `h-8 w-8 ${commonRadius}`, // Square icon button matching md height
         };
 
-        // Icon sizes mapping
         const iconSizeClasses: Record<ButtonSize, number> = {
             sm: 14,
             md: 16,
-            lg: 16, // Keep icon size 16 for lg
-            icon: 18,
+            lg: 18,
+            icon: 18, // Consistent icon size for icon button
         };
 
-        // Icon margin adjustments
-        const iconMargin = size === 'icon' ? '' : (size === 'sm' ? 'mr-1' : 'mr-1.5');
-        const iconMarginRight = size === 'icon' ? '' : (size === 'sm' ? 'ml-1' : 'ml-1.5');
+        const iconMargin = size === 'icon' || !children ? '' : size === 'sm' ? 'mr-1' : 'mr-1.5';
+        const iconMarginRight = size === 'icon' || !children ? '' : size === 'sm' ? 'ml-1' : 'ml-1.5';
+
+        const motionProps = !isDisabled
+            ? { whileTap: { scale: 0.97, transition: { duration: 0.05 } } }
+            : {};
 
         return (
             <motion.button
@@ -100,15 +103,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 type={type}
                 className={twMerge(
                     baseClasses,
-                    variant !== 'link' && sizeClasses[size], // Don't apply size classes to links
-                    variantClasses[variant],
-                    className
+                    size !== 'link' && sizeClasses[size], // Don't apply size classes to link variant
+                    variant !== 'link' && variantClasses[variant], // Don't apply background/border to link
+                    variant === 'link' && variantClasses.link, // Apply only link styles if variant is link
+                    className // Allow overrides
                 )}
                 disabled={isDisabled}
-                // Subtle tap animation
-                whileTap={!isDisabled ? { scale: 0.97, transition: { duration: 0.08 } } : {}}
-                // Hover animation (optional, can be subtle scale or background transition handled by CSS)
-                // whileHover={!isDisabled ? { scale: 1.03 } : {}}
+                {...motionProps}
                 {...props}
             >
                 {loading ? (
@@ -118,8 +119,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                         {icon && iconPosition === 'left' && (
                             <Icon name={icon} size={iconSizeClasses[size]} className={iconMargin} aria-hidden="true" />
                         )}
-                        {/* Render children only if they exist */}
-                        {children && <span className={size === 'icon' ? 'sr-only' : ''}>{children}</span>}
+                        {/* Ensure children are rendered correctly even for icon buttons (for accessibility) */}
+                        {children && <span className={size === 'icon' && children ? 'sr-only' : ''}>{children}</span>}
                         {icon && iconPosition === 'right' && (
                             <Icon name={icon} size={iconSizeClasses[size]} className={iconMarginRight} aria-hidden="true" />
                         )}

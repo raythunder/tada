@@ -1,96 +1,96 @@
 // src/App.tsx
 import React from 'react';
-import { Routes, Route, useParams, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useParams, Navigate } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import MainPage from './pages/MainPage';
 import SummaryPage from './pages/SummaryPage';
 import CalendarPage from './pages/CalendarPage';
 import { TaskFilter } from './types';
-import { useSetAtom } from 'jotai'; // Use useSetAtom for setting state without subscribing
+import { useAtom } from 'jotai';
 import { currentFilterAtom } from './store/atoms';
 
-// Helper component remains the same, sets filter based on route
-const FilterSetter: React.FC<{ filter: TaskFilter; children: React.ReactElement }> = ({ filter, children }) => {
-    const setCurrentFilter = useSetAtom(currentFilterAtom);
-    const location = useLocation(); // Use location to trigger effect on path change
-
+// Helper component to set the global filter state based on the current route
+// This ensures the correct data is loaded/filtered by atoms even if the component re-renders
+const RouteFilterUpdater: React.FC<{ filter: TaskFilter }> = ({ filter }) => {
+    const [, setCurrentFilter] = useAtom(currentFilterAtom);
+    // Update the filter whenever the component renders with a new filter prop
     React.useEffect(() => {
         setCurrentFilter(filter);
-    }, [filter, setCurrentFilter, location.pathname]); // Depend on pathname change
-
-    return children;
+    }, [filter, setCurrentFilter]);
+    return null; // This component doesn't render anything itself
 };
 
-// Helper component for List routes
+// Wrapper for list pages to extract name and set filter
 const ListPageWrapper: React.FC = () => {
     const { listName } = useParams<{ listName: string }>();
-    if (!listName) return <Navigate to="/" replace />; // Redirect if no list name
-    const filter: TaskFilter = `list-${listName}`;
-    const decodedListName = decodeURIComponent(listName); // Decode potentially encoded names
+    const decodedListName = listName ? decodeURIComponent(listName) : '';
+
+    if (!decodedListName) {
+        // Redirect to a default page if listName is missing
+        return <Navigate to="/all" replace />;
+    }
+    const filter: TaskFilter = `list-${decodedListName}`;
     return (
-        <FilterSetter filter={filter}>
+        <>
+            <RouteFilterUpdater filter={filter} />
             <MainPage title={decodedListName} filter={filter} />
-        </FilterSetter>
+        </>
     );
 };
 
-// Helper component for Tag routes
+// Wrapper for tag pages
 const TagPageWrapper: React.FC = () => {
     const { tagName } = useParams<{ tagName: string }>();
-    if (!tagName) return <Navigate to="/" replace />; // Redirect if no tag name
-    const filter: TaskFilter = `tag-${tagName}`;
-    const decodedTagName = decodeURIComponent(tagName);
+    const decodedTagName = tagName ? decodeURIComponent(tagName) : '';
+
+    if (!decodedTagName) {
+        return <Navigate to="/all" replace />;
+    }
+    const filter: TaskFilter = `tag-${decodedTagName}`;
     return (
-        <FilterSetter filter={filter}>
+        <>
+            <RouteFilterUpdater filter={filter} />
             <MainPage title={`#${decodedTagName}`} filter={filter} />
-        </FilterSetter>
+        </>
     );
 };
+
+// Default Page Wrapper (for index route, defaulting to 'All Tasks')
+const DefaultPageWrapper: React.FC = () => {
+    const filter: TaskFilter = 'all'; // Default filter is now 'all'
+    return (
+        <>
+            <RouteFilterUpdater filter={filter} />
+            <MainPage title="All Tasks" filter={filter} />
+        </>
+    );
+};
+
 
 const App: React.FC = () => {
     return (
         <Routes>
-            {/* MainLayout wraps all pages */}
             <Route path="/" element={<MainLayout />}>
-                {/* Index route defaults to 'all' filter (All Tasks) */}
-                <Route index element={
-                    <FilterSetter filter="all">
-                        <MainPage title="All Tasks" filter="all" />
-                    </FilterSetter>}
-                />
-                {/* Define routes for main filters */}
-                {/* 'all' is handled by index route now */}
-                <Route path="today" element={
-                    <FilterSetter filter="today">
-                        <MainPage title="Today" filter="today" />
-                    </FilterSetter>}
-                />
-                <Route path="next7days" element={
-                    <FilterSetter filter="next7days">
-                        <MainPage title="Upcoming" filter="next7days" />
-                    </FilterSetter>}
-                />
-                <Route path="completed" element={
-                    <FilterSetter filter="completed">
-                        <MainPage title="Completed" filter="completed" />
-                    </FilterSetter>}
-                />
-                <Route path="trash" element={
-                    <FilterSetter filter="trash">
-                        <MainPage title="Trash" filter="trash" />
-                    </FilterSetter>}
-                />
+                {/* Index route defaults to 'All Tasks' view */}
+                <Route index element={<DefaultPageWrapper />} />
+
+                {/* Static Filter Routes */}
+                <Route path="all" element={<DefaultPageWrapper />} /> {/* Explicit '/all' route */}
+                <Route path="today" element={<><RouteFilterUpdater filter="today" /><MainPage title="Today" filter="today" /></>} />
+                <Route path="next7days" element={<><RouteFilterUpdater filter="next7days" /><MainPage title="Next 7 Days" filter="next7days" /></>} />
+                <Route path="completed" element={<><RouteFilterUpdater filter="completed" /><MainPage title="Completed" filter="completed" /></>} />
+                <Route path="trash" element={<><RouteFilterUpdater filter="trash" /><MainPage title="Trash" filter="trash" /></>} />
+
+                {/* Views without Sidebar */}
+                <Route path="summary" element={<><RouteFilterUpdater filter="all" /><SummaryPage /></>} /> {/* Summary might use 'all' internally or its own logic */}
+                <Route path="calendar" element={<><RouteFilterUpdater filter="all" /><CalendarPage /></>} /> {/* Calendar likely shows all relevant tasks */}
+
                 {/* Dynamic routes for lists and tags */}
-                {/* Ensure listName/tagName can handle special characters if needed */}
                 <Route path="list/:listName" element={<ListPageWrapper />} />
                 <Route path="tag/:tagName" element={<TagPageWrapper />} />
 
-                {/* Standalone Pages (don't need filter setting via wrapper) */}
-                <Route path="summary" element={<SummaryPage />} />
-                <Route path="calendar" element={<CalendarPage />} />
-
-                {/* Fallback route - Navigate to index ('all' tasks) */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                {/* Fallback route - redirect to default */}
+                <Route path="*" element={<Navigate to="/all" replace />} />
             </Route>
         </Routes>
     );

@@ -1,137 +1,100 @@
 // src/utils/dateUtils.ts
 import {
-    format as formatFns,
+    format as formatFns, // Alias to avoid conflict
     isToday as isTodayFns,
-    isYesterday as isYesterdayFns,
-    isTomorrow as isTomorrowFns,
     isAfter,
     isBefore,
     startOfDay,
     endOfDay,
     addDays,
     parseISO,
-    // fromUnixTime,
+    // fromUnixTime, // Converts seconds to Date
     isValid,
-    differenceInCalendarDays,
-    startOfWeek,
-    endOfWeek
+    differenceInCalendarDays // Useful for relative checks
 } from 'date-fns';
-import { zhCN } from 'date-fns/locale'; // Import desired locales
+import { enUS } from 'date-fns/locale'; // Default to English US, adjust if needed
 
-// --- Configuration ---
-const appLocale = zhCN; // Change to zhCN or others as needed
-// ---
+// Consistent locale
+const currentLocale = enUS;
 
+/** Safely parses various date inputs into a Date object */
 export const safeParseDate = (dateInput: Date | number | string | null | undefined): Date | null => {
-    if (dateInput === null || dateInput === undefined) return null;
+    if (dateInput === null || typeof dateInput === 'undefined') return null;
 
     let date: Date;
     if (dateInput instanceof Date) {
         date = dateInput;
     } else if (typeof dateInput === 'number') {
-        // Assume milliseconds since epoch if it's a large number, otherwise maybe seconds?
-        // Be explicit: ALWAYS use milliseconds for internal timestamps.
+        // Assuming the number is a timestamp in milliseconds
         date = new Date(dateInput);
+    } else if (typeof dateInput === 'string') {
+        date = parseISO(dateInput); // Handles ISO 8601 format
+        // Could add more parsing logic here if needed (e.g., for MM/DD/YYYY)
     } else {
-        date = parseISO(dateInput);
+        return null; // Unsupported type
     }
 
     return isValid(date) ? date : null;
 };
 
-
-export const formatDate = (dateInput: Date | number | null | undefined, formatString: string = 'P'): string => {
+/** Formats a date using a specified format string */
+export const formatDate = (dateInput: Date | number | null | undefined, formatString: string = 'MMM d, yyyy'): string => {
     const date = safeParseDate(dateInput);
     if (!date) return '';
     try {
-        return formatFns(date, formatString, { locale: appLocale });
+        return formatFns(date, formatString, { locale: currentLocale });
     } catch (e) {
-        console.error("Error formatting date:", dateInput, e);
+        console.error("Error formatting date:", e);
         return "Invalid Date";
     }
 };
 
+/** Formats a date and time */
 export const formatDateTime = (dateInput: Date | number | null | undefined): string => {
-    return formatDate(dateInput, 'Pp'); // e.g., Sep 13, 2018, 12:00:00 AM
-};
+    return formatDate(dateInput, 'MMM d, yyyy, h:mm a'); // e.g., Sep 13, 2024, 2:30 PM
+}
 
-// Improved relative date formatting
+/** Formats a date relative to today (Today, Tomorrow, Yesterday, or specific date) */
 export const formatRelativeDate = (dateInput: Date | number | null | undefined): string => {
     const date = safeParseDate(dateInput);
     if (!date) return '';
 
-    const dateDay = startOfDay(date);
-
-    if (isTodayFns(dateDay)) return 'Today';
-    if (isYesterdayFns(dateDay)) return 'Yesterday';
-    if (isTomorrowFns(dateDay)) return 'Tomorrow';
-
-    // Check for dates within the current week
     const today = startOfDay(new Date());
-    const startOfCurrentWeek = startOfWeek(today, { locale: appLocale });
-    const endOfCurrentWeek = endOfWeek(today, { locale: appLocale });
+    const inputDay = startOfDay(date);
+    const diffDays = differenceInCalendarDays(inputDay, today);
 
-    if (isAfter(dateDay, startOfCurrentWeek) && isBefore(dateDay, endOfCurrentWeek)) {
-        return formatDate(date, 'eee'); // e.g., 'Mon', 'Tue'
-    }
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Tomorrow';
+    if (diffDays === -1) return 'Yesterday';
+    // Add more relative terms if needed (e.g., "In 2 days")
+    // if (diffDays > 1 && diffDays <= 7) return `In ${diffDays} days`;
 
-    // Default to short format like 'MMM d' or 'MMM d, yyyy' if different year
-    const currentYear = new Date().getFullYear();
-    if (date.getFullYear() === currentYear) {
-        return formatDate(date, 'MMM d'); // e.g., Sep 13
-    } else {
-        return formatDate(date, 'MMM d, yyyy'); // e.g., Sep 13, 2027
-    }
+    // Default to standard format for other dates
+    return formatDate(date, 'MMM d'); // e.g., Sep 13
 };
 
-export const getRelativeDateGroupTitle = (dateInput: Date | number | null | undefined): string => {
-    const date = safeParseDate(dateInput);
-    if (!date) return 'No Date';
-
-    const dateDay = startOfDay(date);
-
-    if (isTodayFns(dateDay)) return 'Today';
-    if (isTomorrowFns(dateDay)) return 'Tomorrow';
-
-    const today = startOfDay(new Date());
-    const diffDays = differenceInCalendarDays(dateDay, today);
-
-    if (diffDays > 1 && diffDays <= 7) {
-        return formatDate(date, 'eeee'); // e.g., 'Monday'
-    }
-
-    // For dates further out or past (excluding today/yesterday/tomorrow)
-    const currentYear = today.getFullYear();
-    if (date.getFullYear() === currentYear) {
-        return formatDate(date, 'eee, MMM d'); // e.g., Mon, Aug 15
-    } else {
-        return formatDate(date, 'eee, MMM d, yyyy'); // e.g., Mon, Aug 15, 2025
-    }
-};
-
-
+/** Checks if a date is today */
 export const isToday = (dateInput: Date | number | null | undefined): boolean => {
     const date = safeParseDate(dateInput);
     return date ? isTodayFns(date) : false;
 };
 
-// Checks if the date is strictly within the *next* 7 days (excluding today)
-export const isWithinUpcoming7Days = (dateInput: Date | number | null | undefined): boolean => {
+/** Checks if a date is within the next 7 days (including today) */
+export const isWithinNext7Days = (dateInput: Date | number | null | undefined): boolean => {
     const date = safeParseDate(dateInput);
     if (!date) return false;
     const today = startOfDay(new Date());
-    // const tomorrow = startOfDay(addDays(today, 1));
-    const sevenDaysLater = endOfDay(addDays(today, 7)); // End of the 7th day from today
+    const nextWeekEnd = endOfDay(addDays(today, 6)); // End of the 7th day from today
 
-    // isAfter(date, today) ensures it's not today
-    // isBefore(date, sevenDaysLater) ensures it's within the next 7 days range
-    return isAfter(date, today) && isBefore(date, sevenDaysLater);
+    // Check if the date is after yesterday and before the end of the 7th day
+    return isAfter(date, addDays(today, -1)) && isBefore(date, addDays(nextWeekEnd, 1));
 };
 
+/** Checks if a date is before today (overdue) */
 export const isOverdue = (dateInput: Date | number | null | undefined): boolean => {
     const date = safeParseDate(dateInput);
     if (!date) return false;
     const today = startOfDay(new Date());
-    // Compare start of the input date with start of today
+    // Compare the start of the input date with the start of today
     return isBefore(startOfDay(date), today);
 };

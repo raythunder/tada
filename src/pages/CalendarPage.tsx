@@ -3,8 +3,7 @@ import React from 'react';
 import CalendarView from '../components/calendar/CalendarView';
 
 const CalendarPage: React.FC = () => {
-    // This page implicitly uses the 'all' filter logic within CalendarView
-    // No specific filter needs to be set globally here unless CalendarView relies on it
+    // CalendarView now handles its own layout within the main content area
     return <CalendarView />;
 };
 

@@ -1,176 +1,165 @@
 // src/components/summary/SummaryView.tsx
-import React, {useMemo, useState} from 'react';
-// import Icon from '../common/Icon';
+import React, { useState, useCallback } from 'react';
+import Icon from '../common/Icon';
 import Button from '../common/Button';
 import CodeMirrorEditor from '../common/CodeMirrorEditor';
-import {useAtom} from 'jotai';
-import {tasksAtom} from '@/store/atoms';
-import {endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subWeeks} from 'date-fns';
-import {enUS} from 'date-fns/locale';
-import {formatRelativeDate, isOverdue} from "@/utils/dateUtils.ts";
+import { useAtom } from 'jotai';
+import { tasksAtom } from '@/store/atoms';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from 'date-fns';
+import { enUS } from 'date-fns/locale';
+import { motion } from 'framer-motion';
 
-type SummaryPeriod = 'this-week' | 'last-week' | 'this-month';
+type SummaryPeriod = 'this-week' | 'last-week' | 'this-month' | 'last-month';
 
 const SummaryView: React.FC = () => {
     const [tasks] = useAtom(tasksAtom);
     const [summaryContent, setSummaryContent] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [currentPeriod, setCurrentPeriod] = useState<SummaryPeriod>('this-week');
+    const [period, setPeriod] = useState<SummaryPeriod>('this-week'); // Default period
 
-    // Calculate date ranges based on selected period
-    const {startDate, endDate, title} = useMemo(() => {
-        const today = new Date();
-        let start: Date, end: Date, periodTitle: string;
-
-        switch (currentPeriod) {
-            case 'last-week': {
-                const startLastWeek = startOfWeek(subWeeks(today, 1), {locale: enUS});
-                const endLastWeek = endOfWeek(subWeeks(today, 1), {locale: enUS});
-                start = startLastWeek;
-                end = endLastWeek;
-                periodTitle = `Last Week (${format(start, 'MMM d')} - ${format(end, 'MMM d')})`;
-                break;
-            }
+    const getDateRange = useCallback((): { start: Date, end: Date } => {
+        const now = new Date();
+        switch (period) {
+            case 'last-week':
+                const lastWeekStart = startOfWeek(subWeeks(now, 1), { locale: enUS });
+                const lastWeekEnd = endOfWeek(subWeeks(now, 1), { locale: enUS });
+                return { start: lastWeekStart, end: lastWeekEnd };
             case 'this-month':
-                start = startOfMonth(today);
-                end = endOfMonth(today);
-                periodTitle = `This Month (${format(start, 'MMMM yyyy')})`;
-                break;
+                return { start: startOfMonth(now), end: endOfMonth(now) };
+            case 'last-month':
+                const lastMonthStart = startOfMonth(subMonths(now, 1));
+                const lastMonthEnd = endOfMonth(subMonths(now, 1));
+                return { start: lastMonthStart, end: lastMonthEnd };
             case 'this-week':
             default:
-                start = startOfWeek(today, {locale: enUS});
-                end = endOfWeek(today, {locale: enUS});
-                periodTitle = `This Week (${format(start, 'MMM d')} - ${format(end, 'MMM d')})`;
-                break;
+                const currentWeekStart = startOfWeek(now, { locale: enUS });
+                const currentWeekEnd = endOfWeek(now, { locale: enUS });
+                return { start: currentWeekStart, end: currentWeekEnd };
         }
-        return {startDate: start, endDate: end, title: periodTitle};
-    }, [currentPeriod]);
+    }, [period]);
 
+    const { start, end } = getDateRange();
 
-    // Improved placeholder function for generating AI summary
-    const generateSummary = () => {
+    const formatDateRange = (startDt: Date, endDt: Date) => {
+        const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+        const yearOptions: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'short', day: 'numeric' };
+        const startStr = startDt.toLocaleDateString(enUS.code, options);
+        let endStr = endDt.toLocaleDateString(enUS.code, options);
+        // Add year if ranges span across years or for clarity on monthly ranges
+        if (startDt.getFullYear() !== endDt.getFullYear() || period.includes('month')) {
+            endStr = endDt.toLocaleDateString(enUS.code, yearOptions);
+        }
+        return `${startStr} - ${endStr}`;
+    };
+
+    const generateSummary = useCallback(() => {
         setIsLoading(true);
-        setSummaryContent(''); // Clear previous content while loading
+        setSummaryContent(''); // Clear previous content immediately
 
         // Simulate API call or complex logic
         setTimeout(() => {
-            // Filter tasks based on the selected period
+            const { start: rangeStart, end: rangeEnd } = getDateRange();
+
             const completedInRange = tasks.filter(task =>
                 task.completed &&
-                task.updatedAt >= startDate.getTime() &&
-                task.updatedAt <= endDate.getTime() &&
+                task.updatedAt >= rangeStart.getTime() &&
+                task.updatedAt <= rangeEnd.getTime() &&
                 task.list !== 'Trash'
-            );
-            const overdueTasks = tasks.filter(task =>
-                !task.completed && task.dueDate && isOverdue(task.dueDate) && task.list !== 'Trash'
-            );
-            const upcomingTasks = tasks.filter(task =>
-                !task.completed && task.dueDate && task.dueDate > new Date().getTime() && task.list !== 'Trash'
-            ).sort((a, b) => (a.dueDate ?? 0) - (b.dueDate ?? 0)).slice(0, 5); // Get next 5 upcoming
+            ).sort((a,b) => b.updatedAt - a.updatedAt); // Sort by completion time
+
+            const addedInRange = tasks.filter(task =>
+                task.createdAt >= rangeStart.getTime() &&
+                task.createdAt <= rangeEnd.getTime() &&
+                task.list !== 'Trash'
+            ).sort((a,b) => b.createdAt - a.createdAt); // Sort by creation time
 
 
-            let generatedText = `## Summary: ${title}\n\n`;
+            let generatedText = `## Summary for ${period.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} (${formatDateRange(rangeStart, rangeEnd)})\n\n`;
 
-            // Section: Completed Tasks
             if (completedInRange.length > 0) {
                 generatedText += `**✅ Completed Tasks (${completedInRange.length}):**\n`;
-                completedInRange
-                    .sort((a, b) => b.updatedAt - a.updatedAt) // Sort by completion date desc
-                    .forEach(task => {
-                        generatedText += `- ${task.title} *(Completed: ${format(new Date(task.updatedAt), 'MMM d')})*\n`;
-                    });
-            } else {
-                generatedText += `*No tasks completed during this period.*\n`;
-            }
-
-            // Section: Overdue Tasks
-            if (overdueTasks.length > 0) {
-                generatedText += `\n**⚠️ Overdue Tasks (${overdueTasks.length}):**\n`;
-                overdueTasks
-                    .sort((a, b) => (a.dueDate ?? 0) - (b.dueDate ?? 0)) // Sort by due date asc
-                    .forEach(task => {
-                        generatedText += `- ${task.title} *(Due: ${formatRelativeDate(task.dueDate)})*\n`;
-                    });
-            }
-
-            // Section: Upcoming Tasks
-            if (upcomingTasks.length > 0) {
-                generatedText += `\n**🗓️ Upcoming Tasks (Next 5):**\n`;
-                upcomingTasks.forEach(task => {
-                    generatedText += `- ${task.title} *(Due: ${formatRelativeDate(task.dueDate)})*\n`;
+                completedInRange.forEach(task => {
+                    generatedText += `- ${task.title} (Completed: ${format(new Date(task.updatedAt), 'MMM d')})\n`;
                 });
-            }
-
-
-            // Section: General Notes/Suggestions (AI part)
-            generatedText += "\n**✨ Insights & Suggestions:**\n";
-            if (overdueTasks.length > 2) {
-                generatedText += "- Consider reviewing overdue tasks and rescheduling or breaking them down.\n";
-            }
-            if (completedInRange.length > 5) {
-                generatedText += "- Great job on completing several tasks! Keep the momentum going.\n";
             } else {
-                generatedText += "- Focus on prioritizing tasks for the upcoming period.\n";
+                generatedText += "**✅ No tasks completed in this period.**\n";
             }
-            generatedText += "- Remember to take breaks and celebrate accomplishments!\n";
 
+            generatedText += "\n"; // Add spacing
+
+            if (addedInRange.length > 0) {
+                generatedText += `**➕ Added Tasks (${addedInRange.length}):**\n`;
+                addedInRange.forEach(task => {
+                    generatedText += `- ${task.title} (Added: ${format(new Date(task.createdAt), 'MMM d')})\n`;
+                });
+            } else {
+                generatedText += "**➕ No new tasks added in this period.**\n";
+            }
+
+
+            // Add more sections (e.g., upcoming tasks, overdue tasks) if needed
+            // generatedText += "\n**Notes:**\n- Start planning for next week's goals.\n";
 
             setSummaryContent(generatedText);
             setIsLoading(false);
-        }, 1200); // Simulate delay
-    };
+        }, 1000); // Simulate 1 second delay
+    }, [tasks, period, getDateRange, formatDateRange]); // Dependencies for the generation logic
 
     return (
-        // Ensure full height and flex column structure
-        <div className="h-full max-h-screen flex flex-col bg-canvas">
+        // Ensure SummaryView fills the height provided by MainLayout
+        <div className="h-full flex flex-col bg-canvas">
             {/* Header */}
-            <div
-                className="px-4 py-2.5 border-b border-gray-200/70 flex justify-between items-center flex-shrink-0 h-14">
+            <div className="px-4 py-2 border-b border-gray-200/60 flex justify-between items-center flex-shrink-0">
                 <h1 className="text-lg font-semibold text-gray-800">AI Summary</h1>
                 <div className="flex items-center space-x-2">
-                    {/* Period Selector Dropdown (Example) */}
-                    <select
-                        value={currentPeriod}
-                        onChange={(e) => setCurrentPeriod(e.target.value as SummaryPeriod)}
-                        disabled={isLoading}
-                        className="form-select h-9 text-sm rounded-lg border-gray-300/90 focus:border-primary focus:ring-1 focus:ring-primary"
-                    >
-                        <option value="this-week">This Week</option>
-                        <option value="last-week">Last Week</option>
-                        <option value="this-month">This Month</option>
-                    </select>
+                    {/* Add Period Selector Dropdown Here */}
+                    {/* <Select value={period} onValueChange={(v) => setPeriod(v as SummaryPeriod)}> ... </Select> */}
                     <Button
                         variant="primary"
-                        size="md"
+                        size="sm"
                         icon="sparkles" // Use sparkles icon
                         onClick={generateSummary}
                         loading={isLoading}
                         disabled={isLoading}
-                        className="font-medium"
                     >
-                        {isLoading ? 'Generating...' : 'Generate'}
+                        {isLoading ? 'Generating...' : 'Generate Summary'}
                     </Button>
-                    {/* <Button variant="ghost" size="icon" aria-label="Summary options" className="text-muted-foreground">
+                    {/* <Button variant="ghost" size="icon" aria-label="Summary options" className="w-7 h-7">
                         <Icon name="more-horizontal" size={18} />
                     </Button> */}
                 </div>
             </div>
 
-            {/* No Filters Section Needed */}
+            {/* Filters Bar - Simplified */}
+            <div className="px-4 py-1.5 border-b border-gray-200/60 flex justify-start items-center flex-shrink-0 bg-canvas-alt space-x-1">
+                <span className="text-xs text-muted-foreground mr-2">Period:</span>
+                <Button onClick={() => setPeriod('this-week')} variant={period === 'this-week' ? 'secondary' : 'ghost'} size="sm" className="text-xs h-6 px-2">{`This Week (${formatDateRange(startOfWeek(new Date(), {locale: enUS}), endOfWeek(new Date(), {locale: enUS}))})`}</Button>
+                <Button onClick={() => setPeriod('this-month')} variant={period === 'this-month' ? 'secondary' : 'ghost'} size="sm" className="text-xs h-6 px-2">{`This Month (${format(new Date(), 'MMMM yyyy')})`}</Button>
+                {/* Add more buttons or a dropdown for other periods (Last Week, Last Month) */}
+            </div>
 
-            {/* Editor Area - Use flex-1 to fill remaining space */}
-            <div className="flex-1 p-3 md:p-4 overflow-hidden">
-                {/* Wrapper div ensures editor takes full height */}
-                <div
-                    className="h-full w-full border border-gray-200/80 rounded-lg shadow-inner bg-white overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-colors duration-150">
+
+            {/* Editor Area - Takes remaining space */}
+            <div className="flex-1 p-3 overflow-hidden"> {/* Use small padding */}
+                {/* Container ensures editor fills the padded area */}
+                <div className="h-full w-full relative">
+                    {/* Loading Overlay */}
+                    {isLoading && (
+                        <motion.div
+                            className="absolute inset-0 bg-canvas/50 backdrop-blur-xs flex items-center justify-center z-10"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                        >
+                            <Icon name="loader" size={24} className="text-primary animate-spin" />
+                        </motion.div>
+                    )}
+                    {/* Editor itself */}
                     <CodeMirrorEditor
                         value={summaryContent}
                         onChange={setSummaryContent} // Allow manual edits
-                        className="h-full" // Let CM fill the wrapper
-                        placeholder={
-                            isLoading ? "✨ Generating your summary..." :
-                                "Click 'Generate' to create an AI summary based on your tasks for the selected period,\nor start typing your own notes here...\n\nSupports **Markdown** formatting."
-                        }
+                        className="h-full w-full rounded-lg shadow-inner !border-gray-200/60" // Ensure full size, subtle border
+                        placeholder={isLoading ? "" : "Click 'Generate Summary' to create a report for the selected period, or start typing your own notes...\n\nSupports **Markdown** formatting."}
                         readOnly={isLoading} // Make read-only while loading
                     />
                 </div>

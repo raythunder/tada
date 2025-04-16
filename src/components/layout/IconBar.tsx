@@ -11,70 +11,57 @@ const IconBar: React.FC = () => {
     const [currentUser] = useAtom(currentUserAtom);
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
 
-    // Updated navigation items (All Tasks is now the primary/index)
+    // Updated navigation: All Tasks first, Calendar, Summary
     const navigationItems: { path: string; icon: IconName, label: string }[] = [
-        { path: '/', icon: 'archive', label: 'All Tasks' }, // Index route
+        { path: '/all', icon: 'archive', label: 'All Tasks' }, // Using 'archive' for "All"
         { path: '/calendar', icon: 'calendar-days', label: 'Calendar' },
-        { path: '/summary', icon: 'sparkles', label: 'AI Summary' }, // Changed icon
+        { path: '/summary', icon: 'sparkles', label: 'AI Summary' }, // Using 'sparkles' for AI Summary
     ];
 
     const handleAvatarClick = () => {
         setIsSettingsOpen(true);
     };
 
-    // Refined NavLink styling
     const getNavLinkClass = ({ isActive }: { isActive: boolean }): string =>
         twMerge(
-            'flex items-center justify-center w-11 h-11 rounded-lg transition-all duration-150 ease-apple group relative', // Slightly larger, ease-apple
+            'flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-150 ease-out group relative', // Added relative for potential ::before pseudo-elements
             isActive
                 ? 'bg-primary/10 text-primary' // Subtle active state
-                : 'text-muted-foreground hover:bg-gray-500/10 hover:text-gray-800'
+                : 'text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-gray-200' // Gentle hover
+            // Consider adding a small indicator for active state, e.g., a left border or background change
         );
 
-    // Simple logo component
-    const AppLogo = () => (
-        <div className="mb-6 mt-1 flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary to-blue-400 rounded-lg text-white text-xl shadow-inner font-bold tracking-tighter">
-            {/* Replace 'T' with a more abstract or refined logo/icon if available */}
-            T
-        </div>
-    );
 
     return (
-        // Apply glass effect and refine padding/shadow
-        <div className="w-16 bg-glass/darker backdrop-blur-md border-r border-gray-200/60 flex flex-col items-center py-3 shadow-sm z-20 flex-shrink-0">
-            <AppLogo />
+        // Apply glassmorphism effect here
+        <div className="w-16 bg-glass/darker backdrop-blur-md border-r border-black/5 dark:border-white/5 flex flex-col items-center py-4 flex-shrink-0 z-20 shadow-sm">
+            {/* App Logo Placeholder */}
+            <div className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-gradient-to-br from-primary via-blue-500 to-purple-500 rounded-lg text-white font-bold text-lg shadow-inner">
+                T
+            </div>
 
-            <nav className="flex flex-col items-center space-y-3 flex-1">
+            <nav className="flex flex-col items-center space-y-3 flex-1"> {/* Reduced space */}
                 {navigationItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
                         className={getNavLinkClass}
-                        title={item.label} // Tooltip
-                        end // Use end prop for exact matching on "/" for the 'All Tasks' route
+                        title={item.label}
+                        // Use end prop carefully, especially if nested routes exist
+                        // 'end' might be needed for '/all' if other routes start with /all/
+                        end={item.path === '/'} // Only use 'end' for the absolute root path if it existed
                     >
-                        {({ isActive }) => (
-                            <>
-                                <Icon name={item.icon} size={20} />
-                                {/* Optional: Active indicator dot */}
-                                {isActive && (
-                                <motion.div
-                                    layoutId="activeIconIndicator" // Animate indicator between items
-                                    className="absolute -right-1 bottom-1 w-1.5 h-1.5 bg-primary rounded-full"
-                                />
-                            )}
-                            </>
-                        )}
+                        <Icon name={item.icon} size={20} />
                     </NavLink>
                 ))}
             </nav>
 
-            {/* Avatar / Settings Trigger at the bottom */}
+            {/* Avatar / Settings Trigger */}
             <div className="mt-auto mb-1">
                 <motion.button
                     onClick={handleAvatarClick}
-                    className="w-9 h-9 rounded-full overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas-alt" // Adjusted focus ring
-                    whileHover={{ scale: 1.1, transition: { duration: 0.15 } }}
+                    className="w-8 h-8 rounded-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas-alt"
+                    whileHover={{ scale: 1.1, transition: { duration: 0.1 } }}
                     whileTap={{ scale: 0.95, transition: { duration: 0.1 } }}
                     title="Account Settings"
                 >
@@ -85,9 +72,8 @@ const IconBar: React.FC = () => {
                             className="w-full h-full object-cover"
                         />
                     ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-medium text-sm">
-                            {/* Initials */}
-                            {currentUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                        <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-medium text-xs">
+                            {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : '?'}
                         </div>
                     )}
                 </motion.button>

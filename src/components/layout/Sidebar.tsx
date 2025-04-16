@@ -1,68 +1,60 @@
 // src/components/layout/Sidebar.tsx
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import Icon, { IconName } from '../common/Icon';
 import { useAtom } from 'jotai';
-import { currentFilterAtom, taskCountsAtom, userListNamesAtom, userTagNamesAtom } from '@/store/atoms';
-import { TaskFilter } from '@/types';
+import { currentFilterAtom, taskCountsAtom, userListNamesAtom, userTagNamesAtom, tasksAtom } from '@/store/atoms';
+import { TaskFilter, Task } from '@/types';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../common/Button';
 
 interface SidebarItemProps {
-    filter: TaskFilter; // Use filter type
+    to: string;
+    filter: TaskFilter;
     icon: IconName;
     label: string;
     count?: number;
-    isListOrTag?: boolean; // Flag for user-created items
+    exact?: boolean; // To control NavLink active matching
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ filter, icon, label, count }) => {
-// const SidebarItem: React.FC<SidebarItemProps> = ({ filter, icon, label, count, isListOrTag }) => {
-    const [currentFilter, setCurrentFilter] = useAtom(currentFilterAtom);
-    const navigate = useNavigate(); // Hook for navigation
-    const isActive = currentFilter === filter;
+const SidebarItem: React.FC<SidebarItemProps> = ({ to, filter, icon, label, count, exact = false }) => {
+    // We need NavLink's isActive for styling, but Jotai atom for filtering logic
+    const [, setCurrentFilter] = useAtom(currentFilterAtom);
+    const navigate = useNavigate();
 
-    // Determine path based on filter type
-    let path: string;
-    if (filter === 'all') path = '/'; // 'All Tasks' maps to index route
-    else if (filter === 'today') path = '/today';
-    else if (filter === 'next7days') path = '/next7days';
-    else if (filter === 'completed') path = '/completed';
-    else if (filter === 'trash') path = '/trash';
-    else if (filter.startsWith('list-')) path = `/list/${filter.substring(5)}`;
-    else if (filter.startsWith('tag-')) path = `/tag/${filter.substring(4)}`;
-    else path = '/'; // Default fallback
-
-    const handleClick = (e: React.MouseEvent) => {
-        e.preventDefault(); // Prevent default NavLink navigation
-        setCurrentFilter(filter); // Set the filter state
-        navigate(path); // Programmatically navigate
+    const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        e.preventDefault(); // Prevent NavLink's default navigation
+        setCurrentFilter(filter); // Update the filter state
+        navigate(to); // Manually navigate
     };
 
+    const getNavLinkClass = ({ isActive }: { isActive: boolean }): string =>
+        twMerge(
+            'flex items-center justify-between px-2.5 py-1 h-7 rounded-md mb-0.5 text-sm group transition-colors duration-100 ease-out', // Slightly smaller, less margin
+            isActive
+                ? 'bg-primary/10 text-primary font-medium' // Use primary color theme for active
+                : 'text-gray-600 hover:bg-black/5 dark:hover:bg-white/5 hover:text-gray-800 dark:hover:text-gray-200' // Gentle hover
+        );
+
     return (
-        // Use a button for click handling, but wrap with NavLink for semantic correctness and potential future styling based on route
         <NavLink
-            to={path}
-            className={twMerge(
-                'flex items-center justify-between pl-2 pr-1.5 py-1 h-7 rounded-md mb-0.5 text-sm group transition-colors duration-100 ease-apple', // Adjusted padding/height/margin
-                isActive
-                    ? 'bg-primary/10 text-primary font-medium' // Refined active state
-                    : 'text-gray-600 hover:bg-gray-500/10 hover:text-gray-700 active:bg-gray-500/15', // Subtle hover/active
-                'focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/80 focus-visible:ring-inset' // Custom focus for list items
-            )}
-            onClick={handleClick}
-            aria-current={isActive ? 'page' : undefined}
-            title={label} // Add tooltip
+            to={to}
+            end={exact} // Use 'end' prop for exact matching if specified
+            className={getNavLinkClass}
+            onClick={handleClick} // Use our custom click handler
+            aria-current="page" // Let NavLink handle aria-current based on its isActive
         >
             <div className="flex items-center overflow-hidden whitespace-nowrap text-ellipsis">
                 <Icon name={icon} size={16} className="mr-2 flex-shrink-0" />
-                <span className="truncate pt-px">{label}</span> {/* Adjust alignment slightly */}
+                <span className="truncate">{label}</span>
             </div>
+            {/* Subtle count indicator */}
             {count !== undefined && count > 0 && (
                 <span className={twMerge(
-                    "text-[11px] font-mono px-1.5 py-0 rounded-full ml-2", // Smaller font, adjusted padding
-                    isActive ? 'text-primary bg-primary/15' : 'text-muted-foreground bg-gray-100 group-hover:bg-gray-200/70'
+                    "text-[11px] font-mono px-1.5 py-0 rounded-full ml-2 tabular-nums",
+                    // Conditional styling based on NavLink's active state (passed via className function)
+                    ({ isActive }: { isActive: boolean }) => isActive ? 'text-primary bg-primary/15' : 'text-muted-foreground bg-gray-100 group-hover:bg-gray-200'
                 )}>
                     {count}
                 </span>
@@ -71,34 +63,32 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ filter, icon, label, count })
     );
 };
 
+
 interface CollapsibleSectionProps {
     title: string;
     children: React.ReactNode;
     icon?: IconName;
-    initiallyOpen?: boolean; // Control initial state
+    initiallyOpen?: boolean;
 }
 
 const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, icon, children, initiallyOpen = true }) => {
     const [isOpen, setIsOpen] = React.useState(initiallyOpen);
 
     return (
-        <div className="mt-2 pt-2 border-t border-gray-200/60 first:mt-0 first:pt-0 first:border-t-0">
+        <div className="mt-2 pt-2 border-t border-black/5 dark:border-white/5 first:mt-0 first:pt-0 first:border-t-0">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-between w-full px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-gray-700 focus-visible:outline-none focus-visible:text-gray-800"
+                className="flex items-center justify-between w-full px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
                 aria-expanded={isOpen}
             >
                 <div className="flex items-center">
-                    {icon && <Icon name={icon} size={13} className="mr-1 opacity-80" />}
+                    {icon && <Icon name={icon} size={12} className="mr-1.5" />}
                     <span>{title}</span>
                 </div>
                 <Icon
-                    name='chevron-right' // Use right chevron, rotate when open
+                    name={'chevron-down'} // Use ChevronDown, rotate it based on state
                     size={14}
-                    className={twMerge(
-                        "transform transition-transform duration-200 ease-apple",
-                        isOpen && "rotate-90"
-                    )}
+                    className={twMerge("transition-transform duration-200", isOpen ? "rotate-180" : "rotate-0")}
                 />
             </button>
             <AnimatePresence initial={false}>
@@ -109,11 +99,11 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({ title, icon, ch
                         animate="open"
                         exit="collapsed"
                         variants={{
-                            open: { opacity: 1, height: 'auto' },
-                            collapsed: { opacity: 0, height: 0 },
+                            open: { opacity: 1, height: 'auto', marginTop: '4px' }, // Add margin when open
+                            collapsed: { opacity: 0, height: 0, marginTop: '0px' },
                         }}
-                        transition={{ duration: 0.25, ease: [0.4, 0.0, 0.2, 1] }} // Smoother ease
-                        className="overflow-hidden mt-0.5 space-y-0.5" // Add vertical spacing for items within
+                        transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }} // Emphasized easing
+                        className="overflow-hidden" // No margin here, handled by variants
                     >
                         {children}
                     </motion.div>
@@ -129,98 +119,124 @@ const Sidebar: React.FC = () => {
     const [userLists] = useAtom(userListNamesAtom);
     const [userTags] = useAtom(userTagNamesAtom);
     const [, setCurrentFilter] = useAtom(currentFilterAtom);
+    const [, setTasks] = useAtom(tasksAtom);
     const navigate = useNavigate();
+
+    // State for the search input
+    const [searchTerm, setSearchTerm] = React.useState('');
 
     const handleAddNewList = () => {
         const newListName = prompt("Enter new list name:");
-        if (newListName?.trim()) {
+        if (newListName && newListName.trim() !== '') {
             const trimmedName = newListName.trim();
-            // In a real app, update a dedicated 'lists' atom/state first.
-            // For now, set filter & navigate. A task must be added/moved later.
-            const newFilter: TaskFilter = `list-${trimmedName}`;
-            setCurrentFilter(newFilter);
-            navigate(`/list/${trimmedName}`);
+            // Check if list already exists (case-insensitive)
+            if (userLists.some(list => list.toLowerCase() === trimmedName.toLowerCase())) {
+                alert(`List "${trimmedName}" already exists.`);
+                return;
+            }
+            // Create a filter for the new list
+            const newListFilter: TaskFilter = `list-${trimmedName}`;
+            setCurrentFilter(newListFilter); // Set the filter immediately
+            navigate(`/list/${encodeURIComponent(trimmedName)}`); // Navigate to the new list's URL
+
+            // Optionally add a dummy task to make the list persistent if it's derived purely from tasks
+            const now = Date.now();
+            const dummyTask: Task = {
+                id: `task-list-placeholder-${now}`,
+                title: `New task in ${trimmedName}`,
+                completed: false,
+                dueDate: null,
+                list: trimmedName, // Assign to the new list
+                order: 0, // Will be recalculated or needs logic
+                createdAt: now,
+                updatedAt: now,
+                content: '',
+            };
+            // Prepend or append based on desired behavior
+            // setTasks(prev => [dummyTask, ...prev]); // Add to top for immediate visibility
+            // Note: This dummy task approach might clutter things. A dedicated list state is better long-term.
         }
     };
 
-    // Basic Search Handler (Placeholder)
-    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const query = e.target.value;
-        console.log("Search Query:", query);
-        // Implement search logic here (e.g., filter tasks, navigate to search results page)
+    // Add logic for handling search if needed (e.g., filtering tasks based on searchTerm)
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+        // Implement search filtering logic here if desired
+        // e.g., set a different filter or modify filteredTasksAtom based on search
+        // For now, it's just a UI element.
     };
 
+
     return (
-        // Refined width, padding, background
-        <aside className="w-60 bg-canvas-alt border-r border-gray-200/60 h-full flex flex-col shrink-0 z-10 pt-3 pb-2">
-            {/* Optional Search Bar - Refined Style */}
+        <aside className="w-60 bg-canvas-alt border-r border-black/5 dark:border-white/5 h-full flex flex-col shrink-0 z-10 pt-3 pb-2">
+            {/* Search Bar */}
             <div className="px-3 mb-2">
                 <div className="relative">
-                    <Icon name="search" size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                    <Icon name="search" size={15} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
                     <input
                         type="search"
-                        placeholder="Search..."
-                        onChange={handleSearch}
-                        className="form-input w-full h-7 pl-8 pr-2 text-sm bg-canvas-inset border border-gray-200/80 rounded-md focus:border-primary focus:ring-1 focus:ring-primary focus:bg-white placeholder-muted" // Use @tailwindcss/forms class
+                        placeholder="Search tasks..."
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        className="w-full h-7 pl-7 pr-2 text-sm bg-canvas-inset border border-black/10 dark:border-white/10 rounded-md focus:border-primary/50 focus:ring-1 focus:ring-primary/30 placeholder:text-muted text-gray-800"
                     />
                 </div>
             </div>
 
             {/* Main Filters */}
-            <nav className="px-2 flex-shrink-0 space-y-0.5">
-                {/* 'All Tasks' is now the primary filter, linked to '/' */}
-                <SidebarItem filter="all" icon="archive" label="All Tasks" count={counts.all} />
-                <SidebarItem filter="today" icon="sun" label="Today" count={counts.today} />
-                <SidebarItem filter="next7days" icon="calendar-days" label="Upcoming" count={counts.next7days} />
-                {/* Removed 'Inbox' as a top-level filter */}
+            <nav className="px-2 flex-shrink-0 mb-1">
+                {/* Updated order: All Tasks, Today, Next 7 Days */}
+                <SidebarItem to="/all" filter="all" icon="archive" label="All Tasks" count={counts.all} exact />
+                <SidebarItem to="/today" filter="today" icon="sun" label="Today" count={counts.today} />
+                <SidebarItem to="/next7days" filter="next7days" icon="calendar" label="Next 7 Days" count={counts.next7days} />
+                {/* Inbox removed */}
             </nav>
 
-            {/* Scrollable Area for Lists, Tags, etc. */}
-            <div className="flex-1 overflow-y-auto px-2 pt-1 styled-scrollbar">
+            {/* Scrollable Area */}
+            <div className="flex-1 overflow-y-auto px-2 styled-scrollbar">
                 {/* Lists Section */}
-                <CollapsibleSection title="Lists" icon="list" initiallyOpen={true}>
+                <CollapsibleSection title="My Lists" icon="list">
                     {userLists.map(listName => (
                         <SidebarItem
                             key={listName}
+                            to={`/list/${encodeURIComponent(listName)}`} // Ensure list names are URL-safe
                             filter={`list-${listName}`}
-                            // Use 'inbox' icon specifically for the Inbox list
-                            icon={listName === 'Inbox' ? 'inbox' : 'list'}
+                            icon="list"
                             label={listName}
                             count={counts.lists[listName]}
-                            isListOrTag={true}
                         />
                     ))}
                     <Button
                         variant="ghost"
                         size="sm"
                         icon="plus"
-                        className="w-full justify-start mt-1 text-muted-foreground hover:text-primary font-normal h-7 pl-1.5 text-xs" // Adjust style
+                        className="w-full justify-start mt-1 text-muted-foreground hover:text-primary text-xs pl-2.5 h-7"
                         onClick={handleAddNewList}
                     >
                         Add List
                     </Button>
                 </CollapsibleSection>
 
-                {/* Tags Section - Only show if tags exist */}
+                {/* Tags Section - Conditionally render if tags exist */}
                 {userTags.length > 0 && (
-                    <CollapsibleSection title="Tags" icon="tag" initiallyOpen={true}>
+                    <CollapsibleSection title="Tags" icon="tag" initiallyOpen={false}>
                         {userTags.map(tagName => (
                             <SidebarItem
                                 key={tagName}
+                                to={`/tag/${encodeURIComponent(tagName)}`} // Ensure tags are URL-safe
                                 filter={`tag-${tagName}`}
                                 icon="tag"
-                                label={tagName}
+                                label={`#${tagName}`} // Display with '#'
                                 count={counts.tags[tagName]}
-                                isListOrTag={true}
                             />
                         ))}
                     </CollapsibleSection>
                 )}
 
                 {/* System Filters Section */}
-                <CollapsibleSection title="System" initiallyOpen={false}> {/* Initially closed */}
-                    <SidebarItem filter="completed" icon="check-square" label="Completed" count={counts.completed} />
-                    <SidebarItem filter="trash" icon="trash" label="Trash" count={counts.trash} />
+                <CollapsibleSection title="System" initiallyOpen={false}>
+                    <SidebarItem to="/completed" filter="completed" icon="check-square" label="Completed" count={counts.completed} />
+                    <SidebarItem to="/trash" filter="trash" icon="trash" label="Trash" count={counts.trash} />
                 </CollapsibleSection>
             </div>
         </aside>

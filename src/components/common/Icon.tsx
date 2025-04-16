@@ -3,26 +3,16 @@ import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 
-// Keep the existing IconName type - ADD any new icons used
-export type IconName =
-    | 'check-square' | 'calendar' | 'search' | 'user' | 'settings' | 'inbox'
-    | 'file-text' | 'trash' | 'list' | 'grid' | 'clock' | 'alert-circle'
-    | 'plus' | 'more-horizontal' | 'chevron-down' | 'chevron-up' | 'chevron-left' | 'chevron-right'
-    | 'sun' | 'moon' | 'edit' | 'check' | 'x' | 'arrow-left' | 'arrow-right'
-    | 'star' | 'flag' | 'tag' | 'bell' | 'share' | 'upload' | 'download'
-    | 'logout' | 'lock' | 'tool' | 'layers' | 'package' | 'sliders' | 'info'
-    | 'help' | 'phone' | 'mail' | 'external-link' | 'crown' | 'terminal'
-    | 'grip-vertical' | 'copy' | 'archive' | 'arrow-up-down' | 'calendar-days' | 'loader' | 'users'
-    | 'sparkles'; // Added sparkles
+export type IconName = keyof typeof iconMap; // Dynamically generate type from map keys
 
-// Map string names to Lucide components (Case-insensitive matching might be added if needed)
-const iconMap: { [key in IconName]: React.ComponentType<LucideIcons.LucideProps> } = {
+// Keep the map for lookup, ensure keys match IconName type implicitly
+const iconMap = {
     'check-square': LucideIcons.CheckSquare,
     'calendar': LucideIcons.Calendar,
     'search': LucideIcons.Search,
     'user': LucideIcons.User,
     'settings': LucideIcons.Settings,
-    'inbox': LucideIcons.Inbox,
+    // 'inbox': LucideIcons.Inbox, // Removed
     'file-text': LucideIcons.FileText,
     'trash': LucideIcons.Trash2,
     'list': LucideIcons.List,
@@ -64,39 +54,38 @@ const iconMap: { [key in IconName]: React.ComponentType<LucideIcons.LucideProps>
     'terminal': LucideIcons.Terminal,
     'grip-vertical': LucideIcons.GripVertical,
     'copy': LucideIcons.Copy,
-    'archive': LucideIcons.Archive,
+    'archive': LucideIcons.Archive, // For 'All Tasks'
     'arrow-up-down': LucideIcons.ArrowUpDown,
-    'calendar-days': LucideIcons.CalendarDays,
-    'loader': LucideIcons.Loader2, // Use Loader2 for a different spin animation
+    'calendar-days': LucideIcons.CalendarDays, // For Calendar icon
+    'loader': LucideIcons.Loader2, // Use Loader2 for better spinning animation
     'users': LucideIcons.Users,
-    'sparkles': LucideIcons.Sparkles, // Added sparkles
+    'sparkles': LucideIcons.Sparkles, // For AI actions
 };
 
 interface IconProps extends React.SVGAttributes<SVGElement> {
     name: IconName;
     size?: number | string;
     className?: string;
-    strokeWidth?: number; // Allow customizing stroke width
 }
 
 const Icon = React.forwardRef<SVGSVGElement, IconProps>(
-    ({ name, size = '1em', className, strokeWidth = 1.75, ...props }, ref) => { // Default stroke slightly thinner
+    ({ name, size = '1em', className, ...props }, ref) => {
         const IconComponent = iconMap[name];
 
         if (!IconComponent) {
             console.warn(`Icon "${name}" not found.`);
-            // Return a default placeholder icon to avoid breaking layout
-            return <LucideIcons.HelpCircle ref={ref} size={size} className={twMerge('inline-block flex-shrink-0 text-red-500', className)} {...props} />;
+            // Render a fallback or nothing
+            return <LucideIcons.HelpCircle ref={ref} size={size} className={twMerge('inline-block flex-shrink-0 stroke-current text-red-500', className)} {...props} />;
         }
 
         return (
             <IconComponent
                 ref={ref}
                 size={size}
-                // Combine classes: base, passed className
+                // Use stroke-width 1.75 for a slightly lighter feel like Apple SF Symbols
+                strokeWidth={1.75}
+                absoluteStrokeWidth={false} // Ensure stroke width scales with size
                 className={twMerge('inline-block flex-shrink-0 stroke-current', className)}
-                strokeWidth={strokeWidth}
-                absoluteStrokeWidth={strokeWidth !== 2} // Needed for lucide-react if strokeWidth is not default 2
                 {...props}
             />
         );

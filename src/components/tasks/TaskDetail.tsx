@@ -1,341 +1,343 @@
 // src/components/tasks/TaskDetail.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAtom } from 'jotai';
-import { selectedTaskAtom, tasksAtom, selectedTaskIdAtom } from '@/store/atoms';
+import { selectedTaskAtom, tasksAtom, selectedTaskIdAtom, userListNamesAtom } from '@/store/atoms';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
-import CodeMirrorEditor, { CodeMirrorEditorRef } from '../common/CodeMirrorEditor'; // Import ref type
-import {formatDateTime, isOverdue} from '@/utils/dateUtils';
+import CodeMirrorEditor from '../common/CodeMirrorEditor';
+import {formatDateTime, formatDate, formatRelativeDate, isOverdue} from '@/utils/dateUtils';
 import { Task } from '@/types';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css"; // Keep datepicker CSS
-import { twMerge } from "tailwind-merge";
-import {SettingsRow} from "@/components/settings/SettingsModal.tsx";
+import "react-datepicker/dist/react-datepicker.css"; // Import datepicker CSS
+import { twMerge } from 'tailwind-merge';
 
 const TaskDetail: React.FC = () => {
-    const [selectedTask, ] = useAtom(selectedTaskAtom);
-    const [, setTasks] = useAtom(tasksAtom);
+    const [selectedTask, setSelectedTask] = useAtom(selectedTaskAtom);
+    const [tasks, setTasks] = useAtom(tasksAtom);
     const [, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
+    const [userLists] = useAtom(userListNamesAtom); // Get available user lists
 
-    // Local state for edits, synced with selectedTaskAtom
+    // Local state for editing to avoid updating Jotai on every keystroke, debounced save could be better
     const [editableTitle, setEditableTitle] = useState('');
     const [editableContent, setEditableContent] = useState('');
     const [selectedDueDate, setSelectedDueDate] = useState<Date | null>(null);
-    // Add states for list, priority, tags if implementing selectors
-    // const [selectedList, setSelectedList] = useState('');
-    // const [selectedPriority, setSelectedPriority] = useState<number | undefined>();
 
-    const editorRef = useRef<CodeMirrorEditorRef>(null); // Ref for CodeMirror focus
-    const titleInputRef = useRef<HTMLInputElement>(null); // Ref for title input focus
+    // Refs for managing focus and saving
+    const titleInputRef = useRef<HTMLInputElement>(null);
+    const editorBlurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isSavingRef = useRef(false); // Prevent race conditions on save
 
-    // Debounce mechanism
-    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const DEBOUNCE_DELAY = 750; // milliseconds
-
-    // Sync local state when the selected task changes FROM Jotai atom
+    // Sync local state when the selected task changes
     useEffect(() => {
         if (selectedTask) {
             setEditableTitle(selectedTask.title);
             setEditableContent(selectedTask.content || '');
             setSelectedDueDate(selectedTask.dueDate ? new Date(selectedTask.dueDate) : null);
-            // Sync other fields if needed
-            // setSelectedList(selectedTask.list);
-            // setSelectedPriority(selectedTask.priority);
-
-            // Focus title input when a new task is selected and title is empty
-            if (selectedTask.title === '' && titleInputRef.current) {
-                titleInputRef.current.focus();
-            }
-
         } else {
             // Reset when no task is selected
             setEditableTitle('');
             setEditableContent('');
             setSelectedDueDate(null);
         }
-        // Clear any pending debounce save when task changes
-        if (debounceTimeoutRef.current) {
-            clearTimeout(debounceTimeoutRef.current);
+        // Clear any pending blur saves when task changes
+        if (editorBlurTimeoutRef.current) {
+            clearTimeout(editorBlurTimeoutRef.current);
         }
+        isSavingRef.current = false; // Reset saving flag
     }, [selectedTask]);
 
-    const handleClose = useCallback(() => {
-        // Save any pending changes before closing
-        if (debounceTimeoutRef.current) {
-            clearTimeout(debounceTimeoutRef.current);
-            handleSaveChanges(true); // Force immediate save
-        }
-        setSelectedTaskId(null);
-    }, [setSelectedTaskId, /* include handleSaveChanges if needed */]);
-
-    // --- Save Logic ---
-    const handleSaveChanges = useCallback((forceSave = false) => {
-        if (!selectedTask) return;
+    // Function to save changes (debounced or on specific actions)
+    const saveChanges = useCallback(() => {
+        if (!selectedTask || isSavingRef.current) return;
 
         const trimmedTitle = editableTitle.trim();
-        const hasChanges = trimmedTitle !== selectedTask.title ||
-            editableContent !== (selectedTask.content || '') ||
-            (selectedDueDate?.getTime() ?? null) !== selectedTask.dueDate;
-
-        if (hasChanges || forceSave) {
-            const updatedTask: Task = {
-                ...selectedTask,
-                title: trimmedTitle || "Untitled Task",
-                content: editableContent,
-                dueDate: selectedDueDate ? selectedDueDate.getTime() : null,
-                updatedAt: Date.now(),
-            };
-
-            setTasks((prevTasks: Task[]) =>
-                prevTasks.map((t: Task) => (t.id === selectedTask.id ? updatedTask : t))
-            );
+        // Avoid saving if nothing actually changed
+        if (trimmedTitle === selectedTask.title &&
+            editableContent === (selectedTask.content || '') &&
+            (selectedDueDate?.getTime() ?? null) === (selectedTask.dueDate ?? null)) {
+            // console.log("No changes detected, skipping save.");
+            return;
         }
-    }, [selectedTask, editableTitle, editableContent, selectedDueDate, setTasks]);
-    // const handleSaveChanges = useCallback((forceSave = false) => {
-    //     if (!selectedTask) return;
-    //
-    //     const trimmedTitle = editableTitle.trim();
-    //     const hasChanges = trimmedTitle !== selectedTask.title ||
-    //         editableContent !== (selectedTask.content || '') ||
-    //         (selectedDueDate?.getTime() ?? null) !== selectedTask.dueDate;
-    //     // Add checks for list, priority, tags if changed
-    //
-    //     if (hasChanges || forceSave) {
-    //         const updatedTask: Task = {
-    //             ...selectedTask,
-    //             title: trimmedTitle || "Untitled Task", // Ensure title is not empty
-    //             content: editableContent,
-    //             dueDate: selectedDueDate ? selectedDueDate.getTime() : null,
-    //             // list: selectedList,
-    //             // priority: selectedPriority,
-    //             // tags: updatedTags,
-    //             updatedAt: Date.now(),
-    //         };
-    //
-    //         setTasks((prevTasks: Task[]) =>
-    //             prevTasks.map((t: Task) => (t.id === selectedTask.id ? updatedTask : t))
-    //         );
-    //         // Update the internal selected task atom as well to reflect saved state immediately
-    //         // This might cause a flicker if not handled carefully with useEffect dependencies
-    //         setSelectedTaskInternal(updatedTask);
-    //     }
-    // }, [selectedTask, editableTitle, editableContent, selectedDueDate, setTasks, setSelectedTaskInternal]);
 
-    // Debounced save function
-    const debouncedSave = useCallback(() => {
-        if (debounceTimeoutRef.current) {
-            clearTimeout(debounceTimeoutRef.current);
-        }
-        debounceTimeoutRef.current = setTimeout(() => {
-            handleSaveChanges();
-        }, DEBOUNCE_DELAY);
-    }, [handleSaveChanges]);
+        isSavingRef.current = true; // Set saving flag
+
+        const updatedTask: Task = {
+            ...selectedTask,
+            title: trimmedTitle || "Untitled Task", // Ensure title is not empty
+            content: editableContent,
+            // Ensure dueDate is stored as timestamp or null
+            dueDate: selectedDueDate ? selectedDueDate.getTime() : null,
+            updatedAt: Date.now(),
+        };
+
+        setTasks((prevTasks: Task[]) =>
+            prevTasks.map((t: Task) => (t.id === selectedTask.id ? updatedTask : t))
+        );
+
+        // Update the selectedTask atom directly to reflect changes immediately in the UI
+        // Be cautious with this if other atoms derive from selectedTaskAtom complexly
+        setSelectedTask(updatedTask);
+
+
+        // Reset saving flag after a short delay to prevent rapid saves
+        setTimeout(() => {
+            isSavingRef.current = false;
+        }, 100); // 100ms delay
+
+
+    }, [selectedTask, editableTitle, editableContent, selectedDueDate, setTasks, setSelectedTask]);
+
 
     // --- Event Handlers ---
+
+    const handleClose = useCallback(() => {
+        saveChanges(); // Save any pending changes before closing
+        setSelectedTaskId(null);
+    }, [setSelectedTaskId, saveChanges]);
+
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setEditableTitle(e.target.value);
-        debouncedSave();
+        // Optionally debounce save here
     };
 
-    const handleContentChange = (newValue: string) => {
-        setEditableContent(newValue);
-        debouncedSave();
+    const handleTitleBlur = () => {
+        saveChanges();
     };
 
-    const handleDueDateChange = (date: Date | null) => {
-        setSelectedDueDate(date);
-        // Save immediately on date change (no debounce needed for this)
-        if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); // Clear pending debounce
-        handleSaveChanges(true); // Force immediate save after date change
-    };
-
-    const handleDelete = useCallback(() => {
-        if (!selectedTask) return;
-        // Use a more modern confirmation if possible, e.g., a custom modal
-        if (window.confirm(`Move "${selectedTask.title || 'Untitled Task'}" to Trash?`)) {
-            const now = Date.now();
-            setTasks((prevTasks: Task[]) =>
-                prevTasks.map((t: Task) =>
-                    t.id === selectedTask.id
-                        ? { ...t, list: 'Trash', completed: false, updatedAt: now, order: -1 } // Move to trash, mark incomplete, maybe set order to -1
-                        : t
-                )
-            );
-            handleClose(); // Close detail view after moving to trash
-        }
-    }, [selectedTask, setTasks, handleClose]);
-
-    // Handle title input interaction
     const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
-            handleSaveChanges(true); // Save immediately
-            editorRef.current?.focus(); // Focus content editor
+            titleInputRef.current?.blur(); // Trigger blur to save
+            // Optionally focus the content editor next - needs ref on CodeMirror
         } else if (e.key === 'Escape') {
-            // Revert title to last saved state
+            // Revert title changes on Escape
             if (selectedTask) setEditableTitle(selectedTask.title);
-            e.currentTarget.blur(); // Remove focus
+            titleInputRef.current?.blur(); // Remove focus
         }
     };
 
+    const handleContentChange = useCallback((newValue: string) => {
+        setEditableContent(newValue);
+        // Optionally debounce save here
+    }, []);
+
+    const handleContentBlur = useCallback(() => {
+        // Delay save slightly on editor blur to allow clicking other controls (like date picker) without triggering save immediately
+        if (editorBlurTimeoutRef.current) {
+            clearTimeout(editorBlurTimeoutRef.current);
+        }
+        editorBlurTimeoutRef.current = setTimeout(() => {
+            saveChanges();
+        }, 150); // 150ms delay seems reasonable
+    }, [saveChanges]);
+
+
+    const handleDateChange = (date: Date | null) => {
+        setSelectedDueDate(date);
+        // Save immediately on date change
+        if (selectedTask && !isSavingRef.current) {
+            isSavingRef.current = true;
+            const updatedTask: Task = {
+                ...selectedTask,
+                dueDate: date ? date.getTime() : null,
+                updatedAt: Date.now()
+            };
+            setTasks((prev: Task[]) => prev.map((t: Task) => t.id === selectedTask.id ? updatedTask : t));
+            setSelectedTask(updatedTask); // Update selected task state
+            setTimeout(() => { isSavingRef.current = false; }, 100);
+        }
+    };
+
+
+    const handleDelete = useCallback(() => {
+        if (!selectedTask) return;
+        // Use a more modern confirmation if available, or window.confirm
+        if (window.confirm(`Move "${selectedTask.title}" to Trash?`)) {
+            setTasks((prevTasks: Task[]) =>
+                prevTasks.map((t: Task) =>
+                    t.id === selectedTask.id
+                        ? { ...t, list: 'Trash', completed: false, updatedAt: Date.now() }
+                        : t
+                )
+            );
+            setSelectedTaskId(null); // Close detail view after moving to trash
+        }
+    }, [selectedTask, setTasks, setSelectedTaskId]);
+
     // --- Render Logic ---
 
-    // Placeholder when no task selected - refined style
+    // Placeholder when no task is selected
     if (!selectedTask) {
         return (
             <div className="border-l border-gray-200/60 w-[400px] shrink-0 bg-canvas-alt h-full flex flex-col items-center justify-center text-muted p-10 text-center">
-                <Icon name="edit" size={36} className="mb-4 text-gray-300" strokeWidth={1.5}/>
-                <p className="text-sm text-gray-500">Select a task to view details</p>
-                <p className="text-xs text-muted-foreground mt-1">or add a new one.</p>
+                <Icon name="edit" size={36} className="mb-4 text-gray-300"/>
+                <p className="text-sm">Select a task to view details</p>
+                <p className="text-xs mt-1">or click '+' to add a new task.</p>
             </div>
         );
     }
 
-    // Datepicker Custom Input Button
-    const DatePickerCustomInput = React.forwardRef<HTMLButtonElement, { value?: string; onClick?: () => void }>(
-        ({ value, onClick }, ref) => (
-            <Button
-                ref={ref}
-                variant="ghost"
-                size="sm"
-                icon="calendar"
-                className={twMerge(
-                    "text-sm font-normal h-7",
-                    value ? "text-gray-700" : "text-muted-foreground"
-                )}
-                onClick={onClick}
-            >
-                {value || 'Set Date'}
-            </Button>
-        ));
-    DatePickerCustomInput.displayName = 'DatePickerCustomInput';
-
+    // Main Task Detail render
     return (
         <motion.div
-            key={selectedTask.id} // Animate presence based on task ID
-            className="border-l border-gray-200/60 w-[400px] shrink-0 bg-canvas h-full flex flex-col shadow-lg z-10 overflow-hidden" // Fixed width, subtle shadow
+            key={selectedTask.id} // Trigger animation on task change
+            className="border-l border-gray-200/60 w-[400px] shrink-0 bg-canvas h-full flex flex-col shadow-lg z-10" // Fixed width
             initial={{ x: '100%' }}
             animate={{ x: '0%' }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', stiffness: 350, damping: 35, duration: 0.3 }} // Faster spring animation
+            transition={{ type: 'spring', stiffness: 350, damping: 35 }} // Slightly faster spring
         >
             {/* Header */}
-            <div className="px-4 py-2 border-b border-gray-200/70 flex justify-between items-center flex-shrink-0 h-11">
-                {/* Breadcrumb/Metadata can go here */}
-                <span className="text-xs text-muted-foreground">
-                    {selectedTask.list || 'Inbox'} / {selectedTask.completed ? 'Completed' : 'Active'}
-                 </span>
+            <div className="px-3 py-2 border-b border-gray-200/60 flex justify-between items-center flex-shrink-0 h-10">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Details</span>
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={handleClose}
                     aria-label="Close task details"
-                    className="text-muted hover:bg-gray-500/10 -mr-1" // Adjust position
+                    className="text-muted-foreground hover:bg-black/5 w-7 h-7" // Smaller close button
                 >
-                    <Icon name="x" size={18} />
+                    <Icon name="x" size={16} />
                 </Button>
             </div>
 
             {/* Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto p-4 styled-scrollbar space-y-4">
-                {/* Title Input - More integrated look */}
+                {/* Title Input */}
                 <div className="relative">
+                    {/* Basic Checkbox for completion status */}
+                    <input
+                        type="checkbox"
+                        checked={selectedTask.completed}
+                        onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            setTasks(prev => prev.map(t => t.id === selectedTask.id ? {...t, completed: isChecked, updatedAt: Date.now()} : t));
+                            // Update local state immediately
+                            setSelectedTask(prev => prev ? {...prev, completed: isChecked, updatedAt: Date.now()} : null);
+                        }}
+                        className="absolute top-1.5 left-0 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/50 focus:ring-1"
+                    />
                     <input
                         ref={titleInputRef}
                         type="text"
                         value={editableTitle}
                         onChange={handleTitleChange}
-                        onBlur={() => { if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); handleSaveChanges(true); }} // Save immediately on blur
+                        onBlur={handleTitleBlur}
                         onKeyDown={handleTitleKeyDown}
-                        className="w-full text-lg font-semibold px-1 py-1 border border-transparent rounded-md hover:border-gray-200/80 focus:border-primary focus:ring-1 focus:ring-primary focus:bg-white outline-none transition-colors duration-150"
-                        placeholder="Untitled Task"
+                        className={twMerge(
+                            "w-full text-base font-medium pl-6 pr-2 py-1 border border-transparent rounded-md",
+                            "hover:border-gray-200/80 focus:border-primary/50 focus:ring-1 focus:ring-primary/30 focus:bg-white outline-none",
+                            "placeholder:text-muted placeholder:font-normal",
+                            selectedTask.completed && "line-through text-muted" // Style if completed
+                        )}
+                        placeholder="Task title..."
+                        disabled={selectedTask.completed} // Disable editing if completed
                     />
                 </div>
 
-                {/* Metadata Section - Use SettingsRow concept */}
-                <div className="space-y-0 text-sm border-t border-b border-gray-200/60 divide-y divide-gray-200/60 -mx-4 px-4">
+                {/* Metadata Section */}
+                <div className="space-y-1.5 text-sm border-t border-b border-gray-200/60 py-3">
                     {/* Due Date Picker */}
-                    <SettingsRow label="Due Date" description={selectedDueDate && isOverdue(selectedDueDate) ? 'Overdue' : undefined}>
+                    <div className="flex items-center justify-between group h-7">
+                        <span className="text-muted-foreground flex items-center text-xs font-medium w-20">
+                            <Icon name="calendar" size={14} className="mr-1.5 opacity-70"/>Due Date
+                        </span>
+                        {/* Use a custom input button for the DatePicker */}
                         <DatePicker
                             selected={selectedDueDate}
-                            onChange={handleDueDateChange}
-                            customInput={<DatePickerCustomInput />}
-                            dateFormat="eee, MMM d, yyyy" // More descriptive format
+                            onChange={handleDateChange}
+                            customInput={
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={twMerge(
+                                        "text-xs h-6 px-1.5",
+                                        selectedDueDate ? 'text-gray-700' : 'text-muted-foreground opacity-0 group-hover:opacity-100 focus:opacity-100', // Show on hover if no date
+                                        selectedDueDate && isOverdue(selectedDueDate) && !selectedTask.completed && 'text-red-600'
+                                    )}
+                                    icon={selectedDueDate ? undefined : "plus"} // Show plus icon when no date
+                                    iconPosition="left"
+                                >
+                                    {selectedDueDate ? formatRelativeDate(selectedDueDate) : 'Set date'}
+                                </Button>
+                            }
+                            dateFormat="yyyy/MM/dd" // Format used for selection
                             placeholderText="Set due date"
-                            isClearable
-                            clearButtonClassName="react-datepicker__close-icon" // Use built-in clear
+                            isClearable={!!selectedDueDate} // Show clear button only if date is set
+                            clearButtonClassName="absolute right-1 top-1/2 transform -translate-y-1/2" // Style clear button if needed
                             showPopperArrow={false}
                             popperPlacement="bottom-end"
-                            calendarClassName="!text-xs" // Smaller calendar text
-                            wrapperClassName="w-auto" // Allow datepicker to size correctly
+                            // Add today button
+                            todayButton="Today"
                         />
-                    </SettingsRow>
+                    </div>
 
-                    {/* List Selector (Placeholder) */}
-                    <SettingsRow label="List">
-                        <Button variant="ghost" size="sm" icon="list" className="text-gray-700 font-normal h-7">
+                    {/* List Selector (Example - needs implementation) */}
+                    <div className="flex items-center justify-between group h-7">
+                         <span className="text-muted-foreground flex items-center text-xs font-medium w-20">
+                             <Icon name="list" size={14} className="mr-1.5 opacity-70"/>List
+                         </span>
+                        {/* Replace with a dropdown/select component */}
+                        <Button variant="ghost" size="sm" className="text-xs h-6 px-1.5 text-gray-700">
                             {selectedTask.list || 'Inbox'}
                         </Button>
-                    </SettingsRow>
+                    </div>
 
-                    {/* Priority Selector (Placeholder) */}
-                    <SettingsRow label="Priority">
-                        <Button variant="ghost" size="sm" icon="flag" className="text-gray-700 font-normal h-7">
-                            {selectedTask.priority ? `Priority ${selectedTask.priority}` : 'No Priority'}
+                    {/* Priority Selector (Example - needs implementation) */}
+                    <div className="flex items-center justify-between group h-7">
+                         <span className="text-muted-foreground flex items-center text-xs font-medium w-20">
+                            <Icon name="flag" size={14} className="mr-1.5 opacity-70"/>Priority
+                        </span>
+                        {/* Replace with a dropdown/select component */}
+                        <Button variant="ghost" size="sm" className="text-xs h-6 px-1.5 text-gray-700">
+                            {selectedTask.priority ? `Priority ${selectedTask.priority}` : 'Set Priority'}
                         </Button>
-                    </SettingsRow>
+                    </div>
 
-                    {/* Tags Input (Placeholder) */}
-                    <SettingsRow label="Tags">
-                        <Button variant="ghost" size="sm" icon="tag" className="text-gray-700 font-normal h-7">
-                            {selectedTask.tags?.join(', ') || 'Add Tags'}
+                    {/* Tags Input (Example - needs implementation) */}
+                    <div className="flex items-center justify-between group h-7">
+                         <span className="text-muted-foreground flex items-center text-xs font-medium w-20">
+                            <Icon name="tag" size={14} className="mr-1.5 opacity-70"/>Tags
+                         </span>
+                        {/* Replace with a tag input component */}
+                        <Button variant="ghost" size="sm" className="text-xs h-6 px-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 focus:opacity-100">
+                            {selectedTask.tags?.join(', ') || '+ Add Tags'}
                         </Button>
-                    </SettingsRow>
-                </div>
-
-                {/* Content Editor */}
-                <div className="pt-2">
-                    <label htmlFor="task-content-editor" className="text-xs text-muted-foreground font-medium mb-1.5 block uppercase tracking-wider">
-                        Notes
-                    </label>
-                    {/* Wrap editor for focus styling */}
-                    <div className="border border-gray-200/80 rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary bg-canvas transition-colors duration-150 min-h-[150px] flex flex-col">
-                        <CodeMirrorEditor
-                            editorRef={editorRef}
-                            value={editableContent}
-                            onChange={handleContentChange}
-                            onBlur={() => { if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current); handleSaveChanges(true); }} // Save immediately on blur
-                            placeholder="Add notes, links, or details..."
-                            className="flex-grow" // Ensure CM grows within the flex container
-                        />
                     </div>
                 </div>
 
+                {/* Content Editor */}
+                <div>
+                    {/* Optional Label */}
+                    {/* <label htmlFor="task-content-editor" className="text-xs text-muted-foreground font-medium mb-1 block"> Notes </label> */}
+                    <CodeMirrorEditor
+                        // key={selectedTask.id} // Force re-render if needed, but useEffect handles value changes
+                        value={editableContent}
+                        onChange={handleContentChange}
+                        onBlur={handleContentBlur} // Use delayed blur save
+                        placeholder="Add notes, links, or details... (Markdown supported)"
+                        className="min-h-[150px] text-sm !bg-canvas !border-0 focus-within:!ring-0 focus-within:!border-0 shadow-none" // Simpler styling, rely on parent padding/borders
+                        readOnly={selectedTask.completed}
+                    />
+                </div>
 
-                {/* Timestamps - More subtle */}
-                <div className="text-[11px] text-muted space-y-0.5 border-t border-gray-200/60 pt-3 mt-5">
+
+                {/* Timestamps */}
+                <div className="text-[11px] text-muted space-y-0.5 border-t border-gray-200/60 pt-3 mt-auto">
                     <p>Created: {formatDateTime(selectedTask.createdAt)}</p>
                     <p>Updated: {formatDateTime(selectedTask.updatedAt)}</p>
                 </div>
             </div>
 
             {/* Footer Actions */}
-            <div className="px-4 py-2 border-t border-gray-200/70 flex justify-between items-center flex-shrink-0 h-11 bg-canvas-alt">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    icon="trash"
-                    onClick={handleDelete}
-                    className="text-red-600 hover:bg-red-500/10 hover:text-red-700"
-                >
+            <div className="px-3 py-2 border-t border-gray-200/60 flex justify-between items-center flex-shrink-0 h-10">
+                <Button variant="ghost" size="sm" icon="trash" onClick={handleDelete} className="text-red-600 hover:bg-red-50 hover:text-red-700 text-xs">
                     Delete
                 </Button>
-                {/* Indicate saving status subtly */}
+                {/* Save status indicator can be added here if needed */}
                 <span className="text-xs text-muted">
-                     {/* {isSaving ? 'Saving...' : 'Changes saved'} */}
-                    {/* Auto-save indication */}
+                     {isSavingRef.current ? "Saving..." : ""}
                  </span>
             </div>
         </motion.div>

@@ -9,23 +9,24 @@ import { AnimatePresence } from 'framer-motion';
 
 interface MainPageProps {
     title: string;
-    filter: TaskFilter; // Pass the specific filter
+    filter: TaskFilter;
 }
 
 const MainPage: React.FC<MainPageProps> = ({ title, filter }) => {
     const [selectedTaskId] = useAtom(selectedTaskIdAtom);
 
     return (
-        // Ensure this container fills the space provided by MainLayout's <main>
+        // This component now just orchestrates TaskList and TaskDetail side-by-side
         <div className="h-full flex flex-1 overflow-hidden">
-            {/* Task List takes available space, minimum width prevents collapse */}
-            <div className="flex-1 h-full min-w-0 overflow-hidden">
+            {/* Task List takes available space, Detail view has fixed width */}
+            <div className="flex-1 h-full min-w-0"> {/* min-w-0 prevents overflow */}
                 <TaskList title={title} filter={filter} />
             </div>
 
             {/* Task Detail slides in/out */}
-            <AnimatePresence initial={false}>
-                {selectedTaskId && <TaskDetail />}
+            {/* AnimatePresence handles the mounting/unmounting animation */}
+            <AnimatePresence>
+                {selectedTaskId && <TaskDetail key={selectedTaskId} />}
             </AnimatePresence>
         </div>
     );
