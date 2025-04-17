@@ -7,7 +7,7 @@ export const iconMap = {
     'calendar': LucideIcons.Calendar,
     'search': LucideIcons.Search,
     'user': LucideIcons.User,
-    'settings': LucideIcons.Settings, // Used for Appearance/Settings
+    'settings': LucideIcons.Settings,
     'file-text': LucideIcons.FileText,
     'trash': LucideIcons.Trash2,
     'list': LucideIcons.List,
@@ -20,45 +20,44 @@ export const iconMap = {
     'chevron-up': LucideIcons.ChevronUp,
     'chevron-left': LucideIcons.ChevronLeft,
     'chevron-right': LucideIcons.ChevronRight,
-    'sun': LucideIcons.Sun, // For Today filter / maybe Appearance
-    'moon': LucideIcons.Moon, // For Appearance
-    'edit': LucideIcons.Edit3, // For placeholder / edit actions
+    'sun': LucideIcons.Sun,
+    'moon': LucideIcons.Moon,
+    'edit': LucideIcons.Edit3,
     'check': LucideIcons.Check,
     'x': LucideIcons.X,
-    'arrow-left': LucideIcons.ArrowLeft, // For Restore action
+    'arrow-left': LucideIcons.ArrowLeft,
     'arrow-right': LucideIcons.ArrowRight,
     'star': LucideIcons.Star,
     'flag': LucideIcons.Flag,
     'tag': LucideIcons.Tag,
     'bell': LucideIcons.Bell,
-    'share': LucideIcons.Share2, // For Integrations
-    'upload': LucideIcons.UploadCloud, // For Backup/Restore
-    'download': LucideIcons.Download, // For Backup/Restore
+    'share': LucideIcons.Share2,
+    'upload': LucideIcons.UploadCloud,
+    'download': LucideIcons.Download,
     'logout': LucideIcons.LogOut,
     'lock': LucideIcons.Lock,
     'tool': LucideIcons.Wrench,
     'layers': LucideIcons.Layers,
     'package': LucideIcons.Package,
     'sliders': LucideIcons.SlidersHorizontal,
-    'info': LucideIcons.Info, // For About
+    'info': LucideIcons.Info,
     'help': LucideIcons.HelpCircle,
     'phone': LucideIcons.Phone,
     'mail': LucideIcons.Mail,
     'external-link': LucideIcons.ExternalLink,
-    'crown': LucideIcons.Crown, // For Premium
+    'crown': LucideIcons.Crown,
     'terminal': LucideIcons.Terminal,
-    'grip-vertical': LucideIcons.GripVertical, // For DND handle
+    'grip-vertical': LucideIcons.GripVertical,
     'copy': LucideIcons.Copy,
-    'archive': LucideIcons.Archive, // For 'All Tasks' filter
+    'archive': LucideIcons.Archive,
     'arrow-up-down': LucideIcons.ArrowUpDown,
-    'calendar-days': LucideIcons.CalendarDays, // For Calendar view icon
-    'loader': LucideIcons.Loader2, // Use Loader2 for better spinning animation
+    'calendar-days': LucideIcons.CalendarDays,
+    'loader': LucideIcons.Loader2,
     'users': LucideIcons.Users,
-    'sparkles': LucideIcons.Sparkles, // For AI Summary icon
-    'folder-plus': LucideIcons.FolderPlus, // For Add List action
-    // Add any potentially missing icons below:
-    'folder': LucideIcons.Folder, // Could be used for Lists section header
-    'minus': LucideIcons.Minus, // For collapsing sections maybe?
+    'sparkles': LucideIcons.Sparkles,
+    'folder-plus': LucideIcons.FolderPlus,
+    'folder': LucideIcons.Folder,
+    'minus': LucideIcons.Minus,
     'inbox': LucideIcons.Inbox,
 };
 

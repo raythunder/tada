@@ -3,11 +3,7 @@ import React, { useCallback, useState, useMemo, useEffect } from 'react';
 import TaskItem from './TaskItem';
 import { useAtom, useAtomValue } from 'jotai';
 import {
-    filteredTasksAtom, // READ derived state
-    tasksAtom,         // WRITE base state
-    selectedTaskIdAtom,// WRITE UI state
-    currentFilterAtom, // WRITE UI state (can be READ too)
-    groupedAllTasksAtom // READ derived state
+    filteredTasksAtom, tasksAtom, selectedTaskIdAtom, currentFilterAtom, groupedAllTasksAtom
 } from '@/store/atoms';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
@@ -18,29 +14,28 @@ import {
 } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { AnimatePresence, motion } from 'framer-motion';
-import { startOfDay } from "date-fns";
+import { startOfDay } from "@/utils/dateUtils"; // Use utils
 // import { twMerge } from "tailwind-merge";
 
-// Interface for component props
 interface TaskListProps {
     title: string;
-    filter: TaskFilter; // Pass filter explicitly for clarity
+    filter: TaskFilter;
 }
 
 // Sticky Group Header Component with Glass Effect
 const TaskGroupHeader: React.FC<{ title: string }> = ({ title }) => (
     <motion.div
         className="px-3 pt-3 pb-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 z-[5]"
-        // Apply glass effect using Tailwind config
+        // Apply glass effect using explicit styles for better control
         style={{
-            backgroundColor: 'hsla(0, 0%, 100%, 0.75)', // Use hsla for background
+            backgroundColor: 'hsla(0, 0%, 100%, 0.75)', // White with transparency
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            // Mask to prevent blur bleeding downwards too much (optional)
-            // WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
-            // maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
+            // Optional mask to prevent blur bleeding too far down
+            // WebkitMaskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
+            // maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
         }}
-        layout // Animate position if list changes cause header shifts
+        layout // Animate position changes
     >
         {title}
     </motion.div>
@@ -48,263 +43,179 @@ const TaskGroupHeader: React.FC<{ title: string }> = ({ title }) => (
 
 // Main Task List Component
 const TaskList: React.FC<TaskListProps> = ({ title, filter }) => {
-    // Read derived state using useAtomValue for performance
     const filteredTasksValue = useAtomValue(filteredTasksAtom);
     const groupedTasksValue = useAtomValue(groupedAllTasksAtom);
-
-    // Use useAtom for state that needs reading AND writing
     const [tasks, setTasks] = useAtom(tasksAtom);
-    const [currentFilterInternal, setCurrentFilterInternal] = useAtom(currentFilterAtom); // Read/Write filter state
-    const [, setSelectedTaskId] = useAtom(selectedTaskIdAtom); // Only need setter
-
-    // State for Drag-and-Drop overlay
+    const [currentFilterInternal, setCurrentFilterInternal] = useAtom(currentFilterAtom);
+    const [, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const [draggingTask, setDraggingTask] = useState<Task | null>(null);
 
-    // Effect to synchronize the external filter prop with the internal atom state
-    // This ensures the component reflects the filter passed via props (e.g., from routing)
     useEffect(() => {
         if (filter !== currentFilterInternal) {
             setCurrentFilterInternal(filter);
         }
     }, [filter, currentFilterInternal, setCurrentFilterInternal]);
 
-    // Memoize the list of task IDs for SortableContext, based on the *current* filter
     const sortableItems: UniqueIdentifier[] = useMemo(() => {
         if (filter === 'all') {
-            // Flatten the grouped tasks for the 'all' view
-            return [
-                ...groupedTasksValue.overdue,
-                ...groupedTasksValue.today,
-                ...groupedTasksValue.next7days,
-                ...groupedTasksValue.later,
-                ...groupedTasksValue.nodate,
-            ].map(task => task.id);
+            return Object.values(groupedTasksValue).flat().map(task => task.id); // Flatten all groups
         } else {
-            // Use the already filtered tasks for other views
             return filteredTasksValue.map(task => task.id);
         }
-        // Dependencies: the filter prop and the derived atom *values*
     }, [filter, filteredTasksValue, groupedTasksValue]);
 
-    // Configure Dnd-Kit sensors
     const sensors = useSensors(
-        useSensor(PointerSensor, {
-            // Require pointer movement before starting drag, prevents clicks interfering
-            activationConstraint: { distance: 5 },
-        }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    // --- Drag and Drop Handlers ---
     const handleDragStart = useCallback((event: DragStartEvent) => {
-        const { active } = event;
-        const task = tasks.find(t => t.id === active.id);
-        if (task) {
-            setDraggingTask(task); // Set task for DragOverlay
-            // Optionally select the task being dragged
-            // setSelectedTaskId(task.id);
-        }
-    }, [tasks]); // Depend on the base tasks array
+        const task = tasks.find(t => t.id === event.active.id);
+        if (task) setDraggingTask(task);
+    }, [tasks]);
 
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
-        setDraggingTask(null); // Clear overlay task
+        setDraggingTask(null);
 
         if (over && active.id !== over.id) {
-            // Use the memoized sortableItems for current view order
-            const currentVisibleIds = sortableItems;
+            const currentVisibleIds = sortableItems; // Use the memoized IDs for the current view
 
             setTasks((currentTasks) => {
                 const oldVisibleIndex = currentVisibleIds.findIndex(id => id === active.id);
                 const newVisibleIndex = currentVisibleIds.findIndex(id => id === over.id);
 
-                // Ensure both items are found in the current visible list
                 if (oldVisibleIndex === -1 || newVisibleIndex === -1) {
-                    console.warn("TaskList DragEnd: Could not find dragged/target item in the current visible list.");
-                    // Fallback: Find indices in the *full* task list (less accurate for visual order)
+                    // Fallback: If indices not found in visible list, try reordering based on full list order.
+                    // This might happen if the list updates during drag, though less likely with stable IDs.
                     const oldFullIndex = currentTasks.findIndex(t => t.id === active.id);
                     const newFullIndex = currentTasks.findIndex(t => t.id === over.id);
                     if (oldFullIndex !== -1 && newFullIndex !== -1) {
-                        console.warn("TaskList DragEnd: Falling back to full list reorder.");
                         const reordered = arrayMove(currentTasks, oldFullIndex, newFullIndex);
-                        // Simple reorder based on index - update 'order' based on new index
+                        // Update order based on new array index (simple approach)
                         return reordered.map((t, i) => ({ ...t, order: i, updatedAt: Date.now() }));
                     }
-                    return currentTasks; // No change if indices not found
+                    return currentTasks; // No change
                 }
 
-                // --- Fractional Indexing for robust sorting ---
-                // Find the tasks before and after the drop target *in the current view*
+                // Fractional Indexing: Find adjacent tasks based on VISIBLE order
+                const targetTask = currentTasks.find(t => t.id === over.id)!; // Task we are dropping ON
+                // Task visually BEFORE the drop target in the current view
                 const prevTask = newVisibleIndex > 0 ? currentTasks.find(t => t.id === currentVisibleIds[newVisibleIndex - 1]) : null;
-                const nextTask = currentTasks.find(t => t.id === currentVisibleIds[newVisibleIndex]); // The task we are dropping ON/BEFORE
 
                 const prevOrder = prevTask?.order;
-                // Use the order of the item we are dropping onto as the 'next' order
-                const nextOrder = nextTask?.order;
+                const nextOrder = targetTask?.order; // Order of the item we are dropping onto
 
                 let newOrderValue: number;
 
-                if (prevOrder === undefined || prevOrder === null) {
-                    // Dropped at the beginning of the visible list
-                    newOrderValue = (nextOrder ?? 0) - 1; // Place before the first item
-                } else if (nextOrder === undefined || nextOrder === null) {
-                    // Should not happen if dropping onto a valid item, but as fallback:
-                    // Dropped at the end? Or onto an item without order?
-                    newOrderValue = prevOrder + 1; // Place after the previous item
+                // Determine new order relative to the target item's position
+                if (oldVisibleIndex < newVisibleIndex) {
+                    // Dragging Down: Place *after* the target item
+                    const afterTargetTask = currentTasks.find(t => t.id === currentVisibleIds[newVisibleIndex + 1]);
+                    const afterTargetOrder = afterTargetTask?.order;
+                    if (afterTargetOrder !== undefined && afterTargetOrder !== null) {
+                        newOrderValue = (nextOrder + afterTargetOrder) / 2;
+                    } else {
+                        newOrderValue = nextOrder + 1; // Place after target
+                    }
                 } else {
-                    // Dropped between two items
-                    newOrderValue = (prevOrder + nextOrder) / 2;
+                    // Dragging Up: Place *before* the target item
+                    if (prevOrder !== undefined && prevOrder !== null) {
+                        newOrderValue = (prevOrder + nextOrder) / 2; // Between prev and target
+                    } else {
+                        newOrderValue = nextOrder - 1; // Place before target (first item)
+                    }
                 }
-                // --- End Fractional Indexing ---
 
-
-                // Update the dragged task's order and timestamp
                 return currentTasks.map(task =>
-                    task.id === active.id
-                        ? { ...task, order: newOrderValue, updatedAt: Date.now() }
-                        : task
+                    task.id === active.id ? { ...task, order: newOrderValue, updatedAt: Date.now() } : task
                 );
             });
-            // Optional: Re-select the task after drop
-            // setSelectedTaskId(active.id as string);
         }
-    }, [setTasks, sortableItems]); // Depend on setTasks and the current view order (sortableItems)
+    }, [setTasks, sortableItems]); // Depend on current view order
 
-    // --- Add Task Handler ---
     const handleAddTask = () => {
         const now = Date.now();
-        let defaultList = 'Inbox'; // Default to Inbox
-        let defaultDueDate: number | null = null;
-        let defaultTags: string[] = [];
+        let defaultList = 'Inbox'; let defaultDueDate: number | null = null; let defaultTags: string[] = [];
 
-        // Set defaults based on the current filter
-        if (filter.startsWith('list-') && filter !== 'list-Inbox') {
-            defaultList = filter.substring(5);
-        } else if (filter === 'today') {
-            defaultDueDate = startOfDay(now).getTime();
-        } else if (filter.startsWith('tag-')) {
-            defaultTags = [filter.substring(4)];
-        }
-        // Could add logic for 'next7days' default date if desired
+        if (filter.startsWith('list-') && filter !== 'list-Inbox') defaultList = filter.substring(5);
+        else if (filter === 'today') defaultDueDate = startOfDay(now).getTime();
+        else if (filter.startsWith('tag-')) defaultTags = [filter.substring(4)];
 
-        // Calculate order: Place new task at the top of the *current view*
         const firstVisibleTask = sortableItems.length > 0 ? tasks.find(t => t.id === sortableItems[0]) : null;
-        const newOrder = (firstVisibleTask?.order ?? 0) - 1; // Place before the first visible item, or at -1 if list is empty
+        const newOrder = (firstVisibleTask?.order ?? 0) - 1;
 
         const newTask: Task = {
-            id: `task-${now}-${Math.random().toString(16).slice(2)}`,
-            title: '', // Start with empty title
-            completed: false,
-            list: defaultList,
-            dueDate: defaultDueDate,
-            order: newOrder,
-            createdAt: now,
-            updatedAt: now,
-            content: '',
-            tags: defaultTags,
-            priority: null,
+            id: `task-${now}-${Math.random().toString(16).slice(2)}`, title: '', completed: false,
+            list: defaultList, dueDate: defaultDueDate, order: newOrder, createdAt: now, updatedAt: now,
+            content: '', tags: defaultTags, priority: null,
         };
 
-        // Add the new task to the beginning of the tasks array (atom update)
         setTasks(prev => [newTask, ...prev]);
-        setSelectedTaskId(newTask.id); // Select the new task
-
-        // Focus the title input in TaskDetail after a short delay for rendering/animation
-        setTimeout(() => {
-            (document.querySelector('.task-detail-title-input') as HTMLInputElement)?.focus();
-        }, 100); // Shorter delay might work
+        setSelectedTaskId(newTask.id);
+        setTimeout(() => { (document.querySelector('.task-detail-title-input') as HTMLInputElement)?.focus(); }, 50); // Shorter delay
     };
 
-    // --- Render Helper for Task Groups ---
-    // This uses AnimatePresence to handle the add/remove animations you liked
+    // Render Helper for Task Groups - Preserving the requested animation
     const renderTaskGroup = (groupTasks: Task[], groupKey: string | number) => (
-        // Key added to AnimatePresence if group identity matters for transitions, otherwise optional
         <AnimatePresence initial={false} key={`group-anim-${groupKey}`}>
             {groupTasks.map((task) => (
                 <motion.div
-                    key={task.id} // Key for React and Framer Motion
-                    layout // Enable layout animation for reordering
-                    initial={{ opacity: 0, y: -10 }} // Subtle entry from top
+                    key={task.id}
+                    layout // ** KEEPING THIS for the requested animation **
+                    initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -15, transition: { duration: 0.15 } }} // Subtle exit to left
-                    transition={{ duration: 0.2, ease: "easeOut" }} // Standard exit/entry timing
-                    className="task-motion-wrapper" // Optional wrapper class if needed
+                    exit={{ opacity: 0, x: -15, transition: { duration: 0.15 } }} // Subtle exit
+                    transition={{ duration: 0.2, ease: "easeOut" }} // Subtle entry
+                    className="task-motion-wrapper"
                 >
-                    {/* Render the actual TaskItem */}
                     <TaskItem task={task} />
                 </motion.div>
             ))}
         </AnimatePresence>
     );
 
-    // Determine if the current view is empty
     const isEmpty = useMemo(() => {
-        if (filter === 'all') {
-            // Check if all groups in the 'all' view are empty
-            return Object.values(groupedTasksValue).every(group => group.length === 0);
-        } else {
-            // Check if the filtered list for other views is empty
-            return filteredTasksValue.length === 0;
-        }
+        if (filter === 'all') return Object.values(groupedTasksValue).every(group => group.length === 0);
+        else return filteredTasksValue.length === 0;
     }, [filter, groupedTasksValue, filteredTasksValue]);
 
 
     // --- Main Render ---
     return (
-        // DndContext wraps the sortable area
-        <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            measuring={{ droppable: { strategy: MeasuringStrategy.Always } }} // Helps with dynamic content height
-        >
-            <div className="h-full flex flex-col bg-canvas"> {/* Use standard canvas background */}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}>
+            <div className="h-full flex flex-col bg-canvas">
                 {/* Header with Glass Effect */}
-                <div className="px-3 py-2 border-b border-border-color/60 flex justify-between items-center flex-shrink-0 h-11 bg-glass-200 backdrop-blur-sm z-10"> {/* Glass header */}
+                <div className="px-3 py-2 border-b border-border-color/60 flex justify-between items-center flex-shrink-0 h-11 bg-glass-200 backdrop-blur-sm z-10">
                     <h1 className="text-base font-semibold text-gray-800 truncate pr-2" title={title}>{title}</h1>
-                    {/* Action Buttons */}
                     <div className="flex items-center space-x-1">
-                        {/* Show Add Task button only if not in Completed or Trash view */}
                         {filter !== 'completed' && filter !== 'trash' && (
                             <Button variant="primary" size="sm" icon="plus" onClick={handleAddTask} className="px-2.5"> Add </Button>
                         )}
-                        {/* Placeholder for List Options */}
-                        <Button variant="ghost" size="icon" aria-label="List options" className="w-7 h-7 text-muted-foreground">
-                            <Icon name="more-horizontal" size={18} />
-                        </Button>
+                        {/* Use icon prop for Button */}
+                        <Button variant="ghost" size="icon" icon="more-horizontal" aria-label="List options" className="w-7 h-7 text-muted-foreground" />
                     </div>
                 </div>
 
                 {/* Task List Area */}
                 <div className="flex-1 overflow-y-auto styled-scrollbar relative">
                     {isEmpty ? (
-                        // Empty State Message
+                        // Subtle Empty State Animation
                         <motion.div
                             className="flex flex-col items-center justify-center h-full text-gray-400 px-6 text-center pt-10"
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: 5 }} // Less dramatic slide
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
+                            transition={{ duration: 0.2 }} // Faster duration
                         >
-                            <Icon
-                                name={filter === 'trash' ? 'trash' : (filter === 'completed' ? 'check-square' : 'archive')}
-                                size={40} className="mb-3 text-gray-300 opacity-80"
-                            />
+                            <Icon name={filter === 'trash' ? 'trash' : (filter === 'completed' ? 'check-square' : 'archive')} size={40} className="mb-3 text-gray-300 opacity-80" />
                             <p className="text-sm font-medium text-gray-500">
-                                {filter === 'trash' ? 'Trash is empty' : (filter === 'completed' ? 'No completed tasks yet' : `No tasks in "${title}"`)}
+                                {filter === 'trash' ? 'Trash is empty' : (filter === 'completed' ? 'No completed tasks' : `No tasks in "${title}"`)}
                             </p>
-                            {filter !== 'trash' && filter !== 'completed' && (
-                                <p className="text-xs mt-1 text-muted">Click the '+' button to add a new task.</p>
-                            )}
+                            {filter !== 'trash' && filter !== 'completed' && ( <p className="text-xs mt-1 text-muted">Click '+' to add a task.</p> )}
                         </motion.div>
                     ) : (
-                        // Sortable Context wrapping the tasks
                         <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
-                            {/* Conditional rendering based on 'all' filter */}
                             {filter === 'all' ? (
-                                // Render grouped tasks for 'All' view
                                 <>
                                     {groupedTasksValue.overdue.length > 0 && ( <> <TaskGroupHeader title="Overdue" /> {renderTaskGroup(groupedTasksValue.overdue, 'overdue')} </> )}
                                     {groupedTasksValue.today.length > 0 && ( <> <TaskGroupHeader title="Today" /> {renderTaskGroup(groupedTasksValue.today, 'today')} </> )}
@@ -313,27 +224,16 @@ const TaskList: React.FC<TaskListProps> = ({ title, filter }) => {
                                     {groupedTasksValue.nodate.length > 0 && ( <> <TaskGroupHeader title="No Due Date" /> {renderTaskGroup(groupedTasksValue.nodate, 'nodate')} </> )}
                                 </>
                             ) : (
-                                // Render flat list for other filters
-                                <div className="pt-0.5"> {/* Add padding if needed */}
-                                    {renderTaskGroup(filteredTasksValue, 'default-group')}
-                                </div>
+                                <div className="pt-0.5"> {renderTaskGroup(filteredTasksValue, 'default-group')} </div>
                             )}
                         </SortableContext>
                     )}
                 </div>
             </div>
 
-            {/* Drag Overlay: Renders the dragging item visually */}
-            {/* Use dropAnimation={null} for smoother appearance without double animation */}
+            {/* Drag Overlay */}
             <DragOverlay dropAnimation={null}>
-                {draggingTask ? (
-                    <TaskItem
-                        task={draggingTask}
-                        isOverlay // Signal that this is the overlay item
-                        // Pass minimal style to ensure it looks like the source but can be customized
-                        style={{ boxShadow: '0 6px 10px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08)' }} // Example overlay shadow
-                    />
-                ) : null}
+                {draggingTask ? ( <TaskItem task={draggingTask} isOverlay style={{ boxShadow: '0 6px 10px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08)' }} /> ) : null}
             </DragOverlay>
         </DndContext>
     );

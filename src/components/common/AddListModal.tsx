@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAtom } from 'jotai';
 import { isAddListModalOpenAtom, userListNamesAtom } from '@/store/atoms';
-import Icon from './Icon';
+// import Icon from './Icon';
 import Button from './Button';
 import { motion } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
@@ -13,19 +13,17 @@ interface AddListModalProps {
 
 const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
     const [, setIsOpen] = useAtom(isAddListModalOpenAtom);
-    const [allListNames] = useAtom(userListNamesAtom); // Get existing names for validation
+    const [allListNames] = useAtom(userListNamesAtom);
     const [listName, setListName] = useState('');
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const handleClose = () => setIsOpen(false);
 
-    // Focus input on mount
     useEffect(() => {
-        // Timeout needed to allow modal animation to potentially finish
         const timer = setTimeout(() => {
             inputRef.current?.focus();
-        }, 50); // Short delay
+        }, 50);
         return () => clearTimeout(timer);
     }, []);
 
@@ -38,68 +36,64 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
             inputRef.current?.focus();
             return;
         }
-        // Case-insensitive check for duplicates
         if (allListNames.some(name => name.toLowerCase() === trimmedName.toLowerCase())) {
             setError(`List "${trimmedName}" already exists.`);
-            inputRef.current?.select(); // Select text for easy replacement
+            inputRef.current?.select();
             return;
         }
-        // Check against reserved system names (case-insensitive)
         const reservedNames = ['inbox', 'trash', 'archive', 'all', 'today', 'next 7 days', 'completed'];
         if (reservedNames.includes(trimmedName.toLowerCase())) {
             setError(`"${trimmedName}" is a reserved system name.`);
             inputRef.current?.select();
             return;
         }
-        // Add more validation if needed (e.g., length, special characters)
 
         setError(null);
-        onAdd(trimmedName); // Call the callback passed from Sidebar
-        handleClose(); // Close modal on successful submission
+        onAdd(trimmedName);
+        handleClose();
     };
 
     return (
-        // AnimatePresence should wrap this component where it's rendered (in Sidebar)
-        // Backdrop with blur and fade-in
+        // Subtle backdrop fade
         <motion.div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 flex items-center justify-center p-4" // Slightly darker backdrop
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            onClick={handleClose} // Close on backdrop click
+            onClick={handleClose}
             aria-modal="true"
             role="dialog"
             aria-labelledby="addListModalTitle"
         >
-            {/* Modal Content with scale-in */}
+            {/* Subtle modal scale/fade */}
             <motion.div
                 className={twMerge(
-                    "bg-glass-100 w-full max-w-sm rounded-lg shadow-strong overflow-hidden border border-black/5", // Use glass bg, standard radius
-                    "flex flex-col" // Ensure flex column layout
+                    "bg-glass-100 w-full max-w-sm rounded-lg shadow-strong overflow-hidden border border-black/5", // Use glass bg
+                    "flex flex-col"
                 )}
-                initial={{ scale: 0.95, opacity: 0 }}
+                initial={{ scale: 0.98, opacity: 0 }} // Less dramatic scale
                 animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
-                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+                exit={{ scale: 0.98, opacity: 0 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }} // Faster transition
+                onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-black/5 flex justify-between items-center flex-shrink-0">
                     <h2 id="addListModalTitle" className="text-base font-semibold text-gray-800">Create New List</h2>
+                    {/* Use icon prop for Button */}
                     <Button
                         variant="ghost"
                         size="icon"
+                        icon="x" // Use icon prop
                         onClick={handleClose}
-                        className="text-muted-foreground hover:bg-black/5 w-7 h-7 -mr-1" // Standard icon button size/style
+                        className="text-muted-foreground hover:bg-black/5 w-7 h-7 -mr-1"
                         aria-label="Close modal"
-                    >
-                        <Icon name="x" size={16} />
-                    </Button>
+                    />
                 </div>
 
                 {/* Form Body */}
-                <form onSubmit={handleSubmit} className="p-5 space-y-4"> {/* Increased padding slightly */}
+                <form onSubmit={handleSubmit} className="p-5 space-y-4">
                     <div>
                         <label htmlFor="listNameInput" className="block text-xs font-medium text-muted-foreground mb-1.5">
                             List Name
@@ -111,14 +105,13 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
                             value={listName}
                             onChange={(e) => {
                                 setListName(e.target.value);
-                                if (error) setError(null); // Clear error on typing
+                                if (error) setError(null);
                             }}
                             placeholder="e.g., Groceries, Project X"
                             className={twMerge(
-                                "w-full h-9 px-3 text-sm bg-canvas-inset border rounded-md focus:border-primary/50 focus:ring-1 focus:ring-primary/30 placeholder:text-muted", // Standard input style
-                                error ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : 'border-border-color-medium' // Use medium border color
+                                "w-full h-9 px-3 text-sm bg-canvas-inset border rounded-md focus:border-primary/50 focus:ring-1 focus:ring-primary/30 placeholder:text-muted",
+                                error ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : 'border-border-color-medium'
                             )}
-                            // autoFocus removed, using useEffect hook instead
                             aria-required="true"
                             aria-invalid={!!error}
                             aria-describedby={error ? "listNameError" : undefined}

@@ -2,7 +2,7 @@
 import React from 'react';
 import TaskList from '../components/tasks/TaskList';
 import TaskDetail from '../components/tasks/TaskDetail';
-import { useAtomValue } from 'jotai'; // Use useAtomValue for reading
+import { useAtomValue } from 'jotai';
 import { selectedTaskIdAtom } from '../store/atoms';
 import { TaskFilter } from '@/types';
 import { AnimatePresence } from 'framer-motion';
@@ -13,28 +13,23 @@ interface MainPageProps {
 }
 
 const MainPage: React.FC<MainPageProps> = ({ title, filter }) => {
-    // Read selectedTaskId using useAtomValue as we don't set it here
     const selectedTaskId = useAtomValue(selectedTaskIdAtom);
 
     return (
-        // Main container for the Task List / Detail view
         <div className="h-full flex flex-1 overflow-hidden">
-
-            {/* Task List takes available space, min-width ensures it doesn't collapse too much */}
-            <div className="flex-1 h-full min-w-0 border-r border-border-color/60"> {/* Added border */}
-                {/* Pass title and filter props */}
+            {/* Task List */}
+            <div className="flex-1 h-full min-w-0 border-r border-border-color/60">
                 <TaskList title={title} filter={filter} />
             </div>
 
-            {/* Task Detail slides in/out using AnimatePresence */}
-            {/* initial={false} prevents animation on the initial load */}
+            {/* Task Detail - AnimatePresence correctly handles mount/unmount */}
+            {/* Removed the placeholder logic - TaskDetail only renders when ID exists */}
             <AnimatePresence initial={false}>
-                {/* Conditionally render TaskDetail only if a task is selected */}
-                {/* Keying TaskDetail ensures it re-mounts/animates correctly if needed,
-                    though the internal state relies on selectedTaskAtom */}
-                {selectedTaskId && <TaskDetail key={`detail-${selectedTaskId}`} />}
+                {selectedTaskId && <TaskDetail key={selectedTaskId} />}
+                {/* Key ensures component remounts or updates correctly when ID changes */}
+                {/* The TaskDetail component itself handles fetching the correct task data based on the atom */}
+                {/* This structure ensures only one TaskDetail is rendered and animated */}
             </AnimatePresence>
-
         </div>
     );
 };

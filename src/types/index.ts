@@ -11,21 +11,22 @@ export interface Task {
     id: string;
     title: string;
     completed: boolean;
-    dueDate?: number | null; // Store as timestamp (milliseconds since epoch)
-    list: string; // e.g., 'Inbox', 'Work', 'Personal'
+    dueDate?: number | null; // Timestamp (milliseconds since epoch)
+    list: string; // e.g., 'Inbox', 'Work', 'Personal', 'Trash'
     content?: string; // Markdown content
-    order: number; // For manual sorting within filters/lists
+    order: number; // For manual sorting
     createdAt: number; // Timestamp
     updatedAt: number; // Timestamp
     tags?: string[];
-    priority?: number | null; // e.g., 1 (High) - 4 (Low), null for none
+    priority?: number | null; // 1 (High) - 4 (Low), null for none
 }
 
-export type TaskFilter = 'all' | 'today' | 'next7days' | 'completed' | 'trash' | `list-${string}` | `tag-${string}`;
+export type TaskFilter =
+    | 'all' | 'today' | 'next7days' | 'completed' | 'trash'
+    | `list-${string}` | `tag-${string}`;
 
 export type SettingsTab =
     | 'account' | 'appearance' | 'premium' | 'notifications' | 'integrations'
     | 'about';
 
-// Grouping category for 'All Tasks' view
 export type TaskGroupCategory = 'overdue' | 'today' | 'next7days' | 'later' | 'nodate';
