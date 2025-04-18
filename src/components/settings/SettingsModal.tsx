@@ -1,5 +1,5 @@
 // src/components/settings/SettingsModal.tsx
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useAtom } from 'jotai';
 import { currentUserAtom, isSettingsOpenAtom, settingsSelectedTabAtom } from '@/store/atoms';
 import { SettingsTab } from '@/types'; // Added User import
@@ -16,10 +16,9 @@ interface SettingsItem {
     icon: IconName;
 }
 
-// Define the sections based on SettingsTab type
 const settingsSections: SettingsItem[] = [
     { id: 'account', label: 'Account', icon: 'user' },
-    { id: 'appearance', label: 'Appearance', icon: 'settings' }, // More general icon
+    { id: 'appearance', label: 'Appearance', icon: 'settings' },
     { id: 'premium', label: 'Premium', icon: 'crown' },
     { id: 'notifications', label: 'Notifications', icon: 'bell' },
     { id: 'integrations', label: 'Integrations', icon: 'share' },
@@ -30,39 +29,38 @@ const settingsSections: SettingsItem[] = [
 
 // Helper component for rows in settings pages
 const SettingsRow: React.FC<{label: string, value?: React.ReactNode, action?: React.ReactNode, children?: React.ReactNode, description?: string}> =
-    ({label, value, action, children, description}) => (
-        <div className="flex justify-between items-center py-2.5 min-h-[40px] border-b border-black/5 last:border-b-0"> {/* Softer border */}
+    React.memo(({label, value, action, children, description}) => (
+        <div className="flex justify-between items-center py-2.5 min-h-[40px] border-b border-black/5 last:border-b-0">
             <div className="flex-1 mr-4">
                 <span className="text-sm text-gray-700 font-medium block">{label}</span>
                 {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
             </div>
             <div className="text-sm text-gray-800 flex items-center space-x-2 flex-shrink-0">
-                {/* Render value, action or children */}
                 {value && !action && !children && <span className="text-muted-foreground text-right">{value}</span>}
                 {action && !children && <div className="flex justify-end">{action}</div>}
                 {children && <div className="flex justify-end space-x-2">{children}</div>}
             </div>
         </div>
-    );
+    ));
+SettingsRow.displayName = 'SettingsRow';
 
 
 // Specific Account Settings Content
 const AccountSettings: React.FC = () => {
-    const [currentUser] = useAtom(currentUserAtom); // Type is User | null
-    // Placeholder actions - replace with actual logic
-    const handleEdit = () => console.log("Edit action");
-    const handleChangePassword = () => console.log("Change password action");
-    const handleUnlink = () => console.log("Unlink action");
-    const handleLinkApple = () => console.log("Link Apple ID action");
-    const handleBackup = () => console.log("Backup action");
-    const handleImport = () => console.log("Import action");
-    const handleDeleteAccount = () => console.log("Delete account action");
-    const handleLogout = () => { console.log("Logout action"); /* Add actual logout logic here */ };
+    const [currentUser] = useAtom(currentUserAtom);
+    // Placeholder actions
+    const handleEdit = useCallback(() => console.log("Edit action"), []);
+    const handleChangePassword = useCallback(() => console.log("Change password action"), []);
+    const handleUnlink = useCallback(() => console.log("Unlink action"), []);
+    const handleLinkApple = useCallback(() => console.log("Link Apple ID action"), []);
+    const handleBackup = useCallback(() => console.log("Backup action"), []);
+    const handleImport = useCallback(() => console.log("Import action"), []);
+    const handleDeleteAccount = useCallback(() => console.log("Delete account action"), []);
+    const handleLogout = useCallback(() => { console.log("Logout action"); /* Add actual logout logic here */ }, []);
 
     return (
-        // Use motion for subtle fade-in of content
         <motion.div
-            className="space-y-6" // Add spacing between sections
+            className="space-y-6"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
@@ -70,7 +68,7 @@ const AccountSettings: React.FC = () => {
             {/* User Profile Header */}
             <div className="flex items-center space-x-4 mb-4">
                 <motion.div
-                    className="w-16 h-16 rounded-full overflow-hidden shadow-medium flex-shrink-0 border-2 border-white" // Add white border for separation
+                    className="w-16 h-16 rounded-full overflow-hidden shadow-medium flex-shrink-0 border-2 border-white backdrop-blur-sm bg-white/30" // Added subtle glass bg
                     initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: 0.05, type: 'spring', stiffness: 300, damping: 20 }}
@@ -87,7 +85,7 @@ const AccountSettings: React.FC = () => {
                     <h3 className="text-xl font-semibold text-gray-800">{currentUser?.name ?? 'Guest User'}</h3>
                     <p className="text-sm text-muted-foreground">{currentUser?.email ?? 'No email'}</p>
                     {currentUser?.isPremium && (
-                        <div className="text-xs text-yellow-700 flex items-center mt-1.5 font-medium bg-yellow-400/20 px-1.5 py-0.5 rounded-full w-fit">
+                        <div className="text-xs text-yellow-700 flex items-center mt-1.5 font-medium bg-yellow-400/30 backdrop-blur-sm px-1.5 py-0.5 rounded-full w-fit"> {/* Glassy premium badge */}
                             <Icon name="crown" size={12} className="mr-1 text-yellow-600" />
                             <span>Premium Member</span>
                         </div>
@@ -113,7 +111,6 @@ const AccountSettings: React.FC = () => {
             <div className="space-y-0">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 mt-4">Data Management</h4>
                 <SettingsRow label="Backup & Restore" description="Save or load your task data.">
-                    {/* Use glass buttons */}
                     <Button variant="glass" size="sm" icon="download" onClick={handleBackup}>Backup</Button>
                     <Button variant="glass" size="sm" icon="upload" onClick={handleImport}>Import</Button>
                 </SettingsRow>
@@ -122,9 +119,9 @@ const AccountSettings: React.FC = () => {
                 } />
             </div>
 
-            {/* Logout Action - Placed logically within Account */}
+            {/* Logout Action */}
             <div className="mt-6">
-                <Button variant="outline" size="md" icon="logout" onClick={handleLogout} className="w-full sm:w-auto">
+                <Button variant="glass" size="md" icon="logout" onClick={handleLogout} className="w-full sm:w-auto"> {/* Use glass button */}
                     Logout
                 </Button>
             </div>
@@ -153,9 +150,9 @@ const SettingsModal: React.FC = () => {
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
     const [selectedTab, setSelectedTab] = useAtom(settingsSelectedTabAtom);
 
-    const handleClose = () => setIsSettingsOpen(false);
+    const handleClose = useCallback(() => setIsSettingsOpen(false), [setIsSettingsOpen]);
 
-    const renderContent = () => {
+    const renderContent = useMemo(() => {
         switch (selectedTab) {
             case 'account': return <AccountSettings />;
             case 'appearance': return <PlaceholderSettings title="Appearance" icon="settings" />;
@@ -163,53 +160,48 @@ const SettingsModal: React.FC = () => {
             case 'notifications': return <PlaceholderSettings title="Notifications" icon="bell" />;
             case 'integrations': return <PlaceholderSettings title="Integrations" icon="share" />;
             case 'about': return <PlaceholderSettings title="About" icon="info" />;
-            default: {
-                // Ensure exhaustive check or provide default
-                // const _exhaustiveCheck: never = selectedTab;
+            default:
                 console.warn("Unknown settings tab:", selectedTab);
-                return <AccountSettings />;
-            } // Default to account
+                return <AccountSettings />; // Fallback
         }
-    };
+    }, [selectedTab]); // Only re-render when tab changes
 
     return (
-        // Backdrop with stronger blur
         <motion.div
-            className="fixed inset-0 bg-black/50 backdrop-blur-md z-40 flex items-center justify-center p-4" // Increased blur/opacity
+            className="fixed inset-0 bg-black/60 backdrop-blur-lg z-40 flex items-center justify-center p-4" // Stronger backdrop
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            onClick={handleClose} // Close on backdrop click
+            onClick={handleClose}
             aria-modal="true"
             role="dialog"
-            aria-labelledby="settingsModalTitle" // Title is inside the modal content
+            aria-labelledby="settingsModalTitle"
         >
-            {/* Modal Content - Apply strong glass effect */}
+            {/* Modal Content - Apply STRONG glass effect */}
             <motion.div
                 className={twMerge(
-                    "bg-glass-100 backdrop-blur-xl w-full max-w-3xl h-[75vh] max-h-[600px]", // Use strong glass bg and blur
-                    "rounded-lg shadow-strong flex overflow-hidden border border-black/10" // Standard radius, strong shadow, slightly increased border opacity
+                    "bg-glass-100 backdrop-blur-xl w-full max-w-3xl h-[75vh] max-h-[600px]", // Strongest glass bg and blur
+                    "rounded-lg shadow-strong flex overflow-hidden border border-black/10"
                 )}
-                initial={{ scale: 0.95, y: 10, opacity: 0 }} // Subtle entry animation
+                initial={{ scale: 0.95, y: 10, opacity: 0 }}
                 animate={{ scale: 1, y: 0, opacity: 1 }}
-                exit={{ scale: 0.95, y: 5, opacity: 0, transition: { duration: 0.15 } }} // Subtle exit
-                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }} // Emphasized ease
-                onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()} // Prevent closing when clicking inside modal, specified type
+                exit={{ scale: 0.95, y: 5, opacity: 0, transition: { duration: 0.15 } }}
+                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
             >
-                {/* Settings Sidebar - Apply glass effect */}
-                <div className="w-52 bg-glass-alt-100 backdrop-blur-lg border-r border-black/10 p-3 flex flex-col shrink-0"> {/* Stronger alt glass */}
-                    {/* Navigation */}
+                {/* Settings Sidebar - Apply STRONG glass effect */}
+                <div className="w-52 bg-glass-alt-100 backdrop-blur-xl border-r border-black/10 p-3 flex flex-col shrink-0"> {/* Stronger alt glass */}
                     <nav className="space-y-0.5 flex-1 mt-2">
                         {settingsSections.map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => setSelectedTab(item.id)}
                                 className={twMerge(
-                                    'flex items-center w-full px-2 py-1 h-7 text-sm rounded-md transition-colors duration-100 ease-apple', // Standard item style
+                                    'flex items-center w-full px-2 py-1 h-7 text-sm rounded-md transition-colors duration-100 ease-apple',
                                     selectedTab === item.id
-                                        ? 'bg-primary/15 text-primary font-medium' // Active state
-                                        : 'text-gray-600 hover:bg-black/10 hover:text-gray-800' // Inactive state for glass
+                                        ? 'bg-primary/20 text-primary font-medium backdrop-blur-xs' // Active glass
+                                        : 'text-gray-600 hover:bg-black/15 hover:text-gray-800 hover:backdrop-blur-xs' // Hover glass
                                 )}
                                 aria-current={selectedTab === item.id ? 'page' : undefined}
                             >
@@ -218,30 +210,27 @@ const SettingsModal: React.FC = () => {
                             </button>
                         ))}
                     </nav>
-                    {/* Logout Button moved to Account Settings */}
                 </div>
 
                 {/* Content Area - Use subtle glass */}
-                <div className="flex-1 flex flex-col overflow-hidden bg-glass backdrop-blur-lg relative"> {/* Subtle glass content area */}
+                <div className="flex-1 flex flex-col overflow-hidden bg-glass backdrop-blur-lg relative"> {/* Primary content glass */}
                     {/* Header within content area - Subtle tint */}
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 flex-shrink-0 h-[53px] bg-black/2.5"> {/* Slight tint */}
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 flex-shrink-0 h-[53px] bg-glass-alt-200 backdrop-blur-md"> {/* Header glass */}
                         <h2 id="settingsModalTitle" className="text-lg font-semibold text-gray-800">
                             {settingsSections.find(s => s.id === selectedTab)?.label ?? 'Settings'}
                         </h2>
                         <Button
                             variant="ghost"
                             size="icon"
+                            icon="x" // Use icon prop
                             onClick={handleClose}
-                            className="text-muted-foreground hover:bg-black/10 w-7 h-7 -mr-2" // Adjusted hover for glass
+                            className="text-muted-foreground hover:bg-black/10 w-7 h-7 -mr-2"
                             aria-label="Close settings"
-                        >
-                            <Icon name="x" size={16} />
-                        </Button>
+                        />
                     </div>
 
                     {/* Scrollable Content */}
                     <div className="flex-1 p-5 overflow-y-auto styled-scrollbar">
-                        {/* Animated Content Switch */}
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={selectedTab} // Key change triggers animation
@@ -250,7 +239,7 @@ const SettingsModal: React.FC = () => {
                                 exit={{ opacity: 0, y: -8 }}
                                 transition={{ duration: 0.15, ease: 'easeOut' }}
                             >
-                                {renderContent()}
+                                {renderContent}
                             </motion.div>
                         </AnimatePresence>
                     </div>

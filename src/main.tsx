@@ -8,10 +8,6 @@ import './styles/index.css'; // Main CSS import
 // Import react-day-picker base styles (used alongside Tailwind customizations)
 import 'react-day-picker/dist/style.css';
 
-// StrictMode helps identify potential problems in an application.
-// JotaiProvider makes Jotai state available to the component tree.
-// BrowserRouter enables routing capabilities using the HTML5 history API.
-
 const rootElement = document.getElementById('root');
 if (!rootElement) {
     throw new Error("Failed to find the root element. Ensure your HTML has an element with id='root'.");

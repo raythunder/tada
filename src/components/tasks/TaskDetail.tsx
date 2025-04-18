@@ -1,6 +1,5 @@
 // src/components/tasks/TaskDetail.tsx
-// src/components/tasks/TaskDetail.tsx
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
     selectedTaskAtom,
@@ -11,81 +10,69 @@ import {
 import Icon from '../common/Icon';
 import Button from '../common/Button';
 import CodeMirrorEditor, { CodeMirrorEditorRef } from '../common/CodeMirrorEditor';
-import { formatDateTime, formatRelativeDate, isOverdue, safeParseDate } from '@/utils/dateUtils';
+import { formatDateTime, formatRelativeDate, isOverdue, safeParseDate, isValid, startOfDay, addDays } from '@/utils/dateUtils';
 import { Task } from '@/types';
 import { motion, AnimatePresence } from 'framer-motion';
-// Import react-day-picker
-import { DayPicker, SelectSingleEventHandler } from 'react-day-picker'; // Added ActiveModifiers
-// Default styles imported in main.tsx
+import { DayPicker, SelectSingleEventHandler } from 'react-day-picker';
 import { twMerge } from 'tailwind-merge';
 import { usePopper } from 'react-popper';
 import { IconName } from "@/components/common/IconMap.tsx";
-
 
 // --- Custom Hook for Click Away ---
 function useClickAway(ref: React.RefObject<HTMLElement>, handler: (event: MouseEvent | TouchEvent) => void) {
     useEffect(() => {
         const listener = (event: MouseEvent | TouchEvent) => {
             const el = ref.current;
-            // Do nothing if clicking ref's element or descendent elements
             if (!el || el.contains(event.target as Node)) {
                 return;
             }
-            handler(event); // Call the handler otherwise
+            handler(event);
         };
-
         document.addEventListener('mousedown', listener);
         document.addEventListener('touchstart', listener);
-
-        // Cleanup function
         return () => {
             document.removeEventListener('mousedown', listener);
             document.removeEventListener('touchstart', listener);
         };
-    }, [ref, handler]); // Re-run if ref or handler changes
+    }, [ref, handler]);
 }
 
-// --- Reusable Dropdown Component ---
-interface DropdownRenderProps {
-    close: () => void;
-}
+// --- Reusable Dropdown Component (Memoized) ---
+interface DropdownRenderProps { close: () => void; }
 interface DropdownProps {
     trigger: React.ReactElement;
     children: React.ReactNode | ((props: DropdownRenderProps) => React.ReactNode);
     contentClassName?: string;
-    placement?: import('@popperjs/core').Placement; // Allow custom placement
+    placement?: import('@popperjs/core').Placement;
 }
 
-const Dropdown: React.FC<DropdownProps> = ({ trigger, children, contentClassName, placement = 'bottom-start' }) => {
+const Dropdown: React.FC<DropdownProps> = memo(({ trigger, children, contentClassName, placement = 'bottom-start' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [referenceElement, setReferenceElement] = useState<HTMLButtonElement | null>(null);
     const [popperElement, setPopperElement] = useState<HTMLDivElement | null>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null); // Ref encompassing trigger and popper
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const { styles, attributes } = usePopper(referenceElement, popperElement, {
         placement: placement,
-        modifiers: [{ name: 'offset', options: { offset: [0, 6] } }], // Standard offset
+        modifiers: [{ name: 'offset', options: { offset: [0, 6] } }],
     });
 
     const close = useCallback(() => setIsOpen(false), []);
-
-    // Use the custom click away hook
     useClickAway(dropdownRef, close);
 
-    // Clone the trigger to attach ref and toggle handler
     const TriggerElement = React.cloneElement(trigger, {
         ref: setReferenceElement,
-        onClick: (e: React.MouseEvent<HTMLButtonElement>) => { // Specified type
-            e.stopPropagation(); // Prevent immediate close from click away
+        onClick: (e: React.MouseEvent<HTMLButtonElement>) => {
+            e.stopPropagation();
             setIsOpen(prev => !prev);
-            trigger.props.onClick?.(e); // Call original onClick if exists
+            trigger.props.onClick?.(e);
         },
-        'aria-haspopup': 'true', // Indicate it controls a popup
+        'aria-haspopup': 'true',
         'aria-expanded': isOpen,
     });
 
     return (
-        <div ref={dropdownRef} className="relative inline-block w-full"> {/* Ensure div takes width */}
+        <div ref={dropdownRef} className="relative inline-block w-full">
             {TriggerElement}
             <AnimatePresence>
                 {isOpen && (
@@ -94,309 +81,304 @@ const Dropdown: React.FC<DropdownProps> = ({ trigger, children, contentClassName
                         style={styles.popper}
                         {...attributes.popper}
                         className={twMerge(
-                            // Base dropdown styles (removed explicit bg/blur here)
+                            // Apply strong glass effect by default
                             'z-30 min-w-[180px] overflow-hidden',
-                            // Default glass effect applied here, can be overridden by contentClassName
-                            'bg-glass-100 backdrop-blur-md rounded-lg shadow-strong border border-black/10',
-                            contentClassName // Allow override (e.g., for DayPicker specific padding/bg)
+                            'bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10', // Strongest glass
+                            contentClassName // Allow overrides
                         )}
-                        initial={{ opacity: 0, scale: 0.95, y: -4 }} // Subtle entry
+                        initial={{ opacity: 0, scale: 0.95, y: -4 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -4, transition: { duration: 0.1 } }} // Subtle exit
+                        exit={{ opacity: 0, scale: 0.95, y: -4, transition: { duration: 0.1 } }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
-                        // Prevent clicks inside the dropdown from closing it via click away
-                        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()} // Specified type
+                        onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
                     >
-                        {/* Render children, passing close function if it's a render prop */}
                         {typeof children === 'function' ? children({ close }) : children}
                     </motion.div>
                 )}
             </AnimatePresence>
         </div>
     );
+});
+Dropdown.displayName = 'Dropdown';
+
+// --- Redesigned Date Picker Popover Content ---
+interface DatePickerPopoverProps {
+    selectedDate: Date | undefined;
+    onSelect: (date: Date | undefined) => void; // Handles Date and undefined for clearing
+    close: () => void; // Function to close the popover
+}
+
+const DatePickerPopoverContent: React.FC<DatePickerPopoverProps> = ({ selectedDate, onSelect, close }) => {
+    const today = useMemo(() => startOfDay(new Date()), []);
+    const tomorrow = useMemo(() => startOfDay(addDays(today, 1)), [today]);
+    const nextWeek = useMemo(() => startOfDay(addDays(today, 7)), [today]);
+
+    const handleQuickSelect = (date: Date | null) => {
+        onSelect(date ?? undefined); // Pass Date or undefined
+        close();
+    };
+
+    // DayPicker requires SelectSingleEventHandler signature
+    const handleDayPickerSelect: SelectSingleEventHandler = (day) => {
+        onSelect(day); // day is Date | undefined
+        close();
+    };
+
+    const footer = (
+        <div className="flex justify-end pt-2 border-t border-black/10 mt-2 px-1">
+            <Button
+                variant="link"
+                size="sm"
+                onClick={() => handleQuickSelect(null)} // Clear date
+                disabled={!selectedDate}
+                className="text-xs text-muted-foreground hover:text-red-500"
+                icon="x-circle"
+            >
+                Clear Date
+            </Button>
+        </div>
+    );
+
+    return (
+        // Overall container with padding
+        <div className="p-2">
+            {/* Quick Select Buttons */}
+            <div className="grid grid-cols-2 gap-1.5 mb-2">
+                <Button variant="glass" size="sm" onClick={() => handleQuickSelect(today)} icon="calendar-check">Today</Button>
+                <Button variant="glass" size="sm" onClick={() => handleQuickSelect(tomorrow)} icon="sunset">Tomorrow</Button>
+                <Button variant="glass" size="sm" onClick={() => handleQuickSelect(nextWeek)} icon="calendar-plus">Next Week</Button>
+                <Button variant="glass" size="sm" onClick={() => handleQuickSelect(null)} icon="moon">No Date</Button>
+            </div>
+
+            {/* Separator */}
+            <hr className="border-black/10 my-2" />
+
+            {/* DayPicker Calendar */}
+            <DayPicker
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDayPickerSelect} // Use the correctly typed handler
+                modifiersClassNames={{
+                    today: 'rdp-day_today',
+                    selected: 'rdp-day_selected',
+                    outside: 'rdp-day_outside',
+                    disabled: 'rdp-day_disabled',
+                }}
+                showOutsideDays
+                fixedWeeks
+                footer={footer}
+            />
+        </div>
+    );
 };
 
-// Metadata Row Component
-const MetaRow: React.FC<{ icon: IconName; label: string; children: React.ReactNode, disabled?: boolean }> = ({ icon, label, children, disabled=false }) => (
-    <div className={twMerge("flex items-center justify-between group min-h-[34px] px-1", disabled && "opacity-60 pointer-events-none")}> {/* Slightly increased height */}
-        <span className="text-muted-foreground flex items-center text-xs font-medium w-20 flex-shrink-0">
-            <Icon name={icon} size={14} className="mr-1.5 opacity-70"/>{label}
-        </span>
-        <div className="flex-1 text-right min-w-0"> {/* Added min-w-0 */}
-            {children}
-        </div>
-    </div>
-);
 
-
-// --- TaskDetail Component ---
+// --- TaskDetail Component (Redesigned) ---
 const TaskDetail: React.FC = () => {
-    // Global state
-    const selectedTask = useAtomValue(selectedTaskAtom); // Read-only derived state
-    const setTasks = useSetAtom(tasksAtom); // Setter only
-    const setSelectedTaskId = useSetAtom(selectedTaskIdAtom); // Setter only
-    const userLists = useAtomValue(userListNamesAtom); // Read-only list names
+    const selectedTask = useAtomValue(selectedTaskAtom);
+    const setTasks = useSetAtom(tasksAtom);
+    const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
+    const userLists = useAtomValue(userListNamesAtom);
 
-    // Local state for inline editing, synced with selectedTask
     const [editableTitle, setEditableTitle] = useState('');
     const [editableContent, setEditableContent] = useState('');
-    const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>(undefined); // Use undefined for DayPicker
+    const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>(undefined);
     const [tagInputValue, setTagInputValue] = useState('');
 
-    // Refs
     const titleInputRef = useRef<HTMLInputElement>(null);
     const editorRef = useRef<CodeMirrorEditorRef>(null);
-    const isSavingRef = useRef(false); // Prevent rapid saves/race conditions
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Ref for debounced save
-    const hasUnsavedChanges = useRef(false); // Track if changes occurred since last save trigger
+    const isSavingRef = useRef(false);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const hasUnsavedChanges = useRef(false);
 
-    // Effect to synchronize local state when the selected task changes
+    // Effect to sync local state when selected task changes
     useEffect(() => {
-        // Clear any pending saves when task changes
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         isSavingRef.current = false;
-        hasUnsavedChanges.current = false; // Reset unsaved changes flag
+        hasUnsavedChanges.current = false;
 
         if (selectedTask) {
             setEditableTitle(selectedTask.title);
             setEditableContent(selectedTask.content || '');
             const initialDate = safeParseDate(selectedTask.dueDate);
-            setSelectedDueDate(initialDate ?? undefined); // Convert null to undefined for DayPicker
-            setTagInputValue((selectedTask.tags ?? []).join(', ')); // Join tags for input
+            setSelectedDueDate(initialDate && isValid(initialDate) ? initialDate : undefined);
+            setTagInputValue((selectedTask.tags ?? []).join(', '));
 
-            // Focus title input when a *new* task is selected (title is empty)
             if (selectedTask.title === '') {
-                const timer = setTimeout(() => {
-                    titleInputRef.current?.focus();
-                }, 120); // Slightly longer delay after animation potentially
+                const timer = setTimeout(() => { titleInputRef.current?.focus(); }, 120);
                 return () => clearTimeout(timer);
             }
-
         }
-        // No need to clear state when selectedTask is null, component will unmount
-
-    }, [selectedTask]); // Re-run ONLY when the selected task object itself changes
+    }, [selectedTask]);
 
     // --- Debounced Save Function ---
-    const saveChanges = useCallback((updatedFields: Partial<Omit<Task, 'groupCategory'>>) => { // Omit groupCategory as it's derived
-        if (!selectedTask || isSavingRef.current) return; // Prevent save if no task or already in the process of saving
-
-        // Flag that a change requiring a save has occurred
+    const saveChanges = useCallback((updatedFields: Partial<Omit<Task, 'groupCategory' | 'order'>> = {}) => {
+        if (!selectedTask || isSavingRef.current) return;
         hasUnsavedChanges.current = true;
-
-        // Clear previous timeout if exists
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
-        // Debounce the actual save logic
         saveTimeoutRef.current = setTimeout(() => {
-            // Re-check task existence and if changes were flagged within the timeout scope
-            // Use a local copy of selectedTask from the outer scope for comparison
-            const taskAtDebounceStart = selectedTask;
+            const taskAtDebounceStart = selectedTask; // Use closure value
             if (!taskAtDebounceStart || !hasUnsavedChanges.current) {
-                isSavingRef.current = false; // Ensure saving flag is reset if save is skipped
+                isSavingRef.current = false;
                 return;
             }
-            // console.log("Executing debounced save for task:", taskAtDebounceStart.id, updatedFields);
-            isSavingRef.current = true; // Set saving flag for the actual update
+            isSavingRef.current = true;
 
-            // Determine the final state based on current local edits + specific updates
             const currentTitle = editableTitle.trim() || "Untitled Task";
             const currentContent = editableContent;
-            const currentTags = tagInputValue.split(',').map(t => t.trim()).filter(Boolean);
-            const currentDueDateMs = selectedDueDate ? selectedDueDate.getTime() : null;
+            const currentTags = tagInputValue.split(',').map(t => t.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i); // Unique tags
+            const currentDueDateMs = selectedDueDate && isValid(selectedDueDate) ? selectedDueDate.getTime() : null;
 
             const currentState = {
-                ...taskAtDebounceStart, // Use task state from when debounce was triggered
+                ...taskAtDebounceStart,
                 title: currentTitle,
                 content: currentContent,
                 tags: currentTags,
                 dueDate: currentDueDateMs,
             };
-
-            // Merge specific field updates (e.g., from priority/list change) passed via argument
             const mergedFields = { ...currentState, ...updatedFields };
 
-            // --- Deep Equality Check (Optimized) ---
-            let needsServerUpdate = false;
-            if (mergedFields.title !== taskAtDebounceStart.title) needsServerUpdate = true;
-            else if (mergedFields.content !== (taskAtDebounceStart.content || '')) needsServerUpdate = true;
-            else if (mergedFields.completed !== taskAtDebounceStart.completed) needsServerUpdate = true;
-            else if (mergedFields.list !== taskAtDebounceStart.list) needsServerUpdate = true;
-            else if (mergedFields.priority !== taskAtDebounceStart.priority) needsServerUpdate = true;
-            else if (mergedFields.dueDate !== taskAtDebounceStart.dueDate) needsServerUpdate = true;
-            else if (JSON.stringify((mergedFields.tags ?? []).sort()) !== JSON.stringify((taskAtDebounceStart.tags ?? []).sort())) needsServerUpdate = true;
-            // --- End Deep Equality Check ---
+            // Simplified Check: Compare key fields directly
+            const needsServerUpdate =
+                mergedFields.title !== taskAtDebounceStart.title ||
+                mergedFields.content !== (taskAtDebounceStart.content || '') ||
+                mergedFields.completed !== taskAtDebounceStart.completed ||
+                mergedFields.list !== taskAtDebounceStart.list ||
+                mergedFields.priority !== taskAtDebounceStart.priority ||
+                mergedFields.dueDate !== taskAtDebounceStart.dueDate ||
+                JSON.stringify((mergedFields.tags ?? []).sort()) !== JSON.stringify((taskAtDebounceStart.tags ?? []).sort());
+
 
             if (!needsServerUpdate) {
-                // console.log("No actual changes detected, skipping save update.");
                 isSavingRef.current = false;
-                hasUnsavedChanges.current = false; // Reset flag
-                return; // Skip update if nothing actually changed
+                hasUnsavedChanges.current = false;
+                return;
             }
 
             const finalUpdatedTask: Task = {
-                ...taskAtDebounceStart, // Start with original task state at debounce trigger
-                ...mergedFields, // Apply merged updates based on latest local state + specific updates
-                updatedAt: Date.now(), // Always update timestamp
-                // groupCategory will be updated automatically by the tasksAtom setter logic
+                ...taskAtDebounceStart,
+                ...mergedFields,
+                updatedAt: Date.now(),
+                // order and groupCategory are handled by tasksAtom setter
             };
 
-            // Update the tasks atom
-            setTasks((prevTasks: Task[]) =>
-                prevTasks.map((t: Task) => (t.id === taskAtDebounceStart.id ? finalUpdatedTask : t))
+            setTasks((prevTasks) =>
+                prevTasks.map((t) => (t.id === taskAtDebounceStart.id ? finalUpdatedTask : t))
             );
 
-            // Reset flags after save logic execution is complete
             isSavingRef.current = false;
-            hasUnsavedChanges.current = false; // Reset unsaved changes flag
+            hasUnsavedChanges.current = false;
+        }, 350); // Slightly longer debounce
 
-        }, 300); // 300ms debounce interval
-
-    }, [selectedTask, setTasks, editableTitle, editableContent, selectedDueDate, tagInputValue]); // Dependencies for reading current values
-
+    }, [selectedTask, setTasks, editableTitle, editableContent, selectedDueDate, tagInputValue]);
 
     // --- Event Handlers ---
-
-    // Close Task Detail pane
     const handleClose = useCallback(() => {
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); // Clear pending debounce
-        if (hasUnsavedChanges.current && selectedTask) { // Only save if changes were flagged & task still selected
-            // Trigger save immediately based on current state, don't wait for debounce
-            isSavingRef.current = false; // Allow immediate save
-            saveChanges({}); // Trigger save logic based on current state
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        if (hasUnsavedChanges.current && selectedTask) {
+            isSavingRef.current = false;
+            saveChanges({});
         }
-        setSelectedTaskId(null); // Clear selected task ID
-    }, [setSelectedTaskId, saveChanges, selectedTask]); // Added selectedTask dependency
+        setSelectedTaskId(null);
+    }, [setSelectedTaskId, saveChanges, selectedTask]);
 
-    // Title Handlers
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setEditableTitle(e.target.value);
-        saveChanges({}); // Debounced save on change
+        saveChanges();
     };
+
     const handleTitleBlur = () => {
-        // Ensure final title trim is saved if different & debounce hasn't fired yet
         const trimmedTitle = editableTitle.trim();
         if (selectedTask && trimmedTitle !== selectedTask.title) {
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); // Clear pending debounce
-            isSavingRef.current = false; // Allow immediate save
-            saveChanges({ title: trimmedTitle }); // Trigger immediate save
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            isSavingRef.current = false;
+            saveChanges({ title: trimmedTitle });
         }
     };
     const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            titleInputRef.current?.blur(); // Blur triggers potential final save
-        } else if (e.key === 'Escape') {
-            if (selectedTask) setEditableTitle(selectedTask.title); // Revert
-            hasUnsavedChanges.current = false; // Discard changes flag
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); // Clear pending save
-            titleInputRef.current?.blur(); // Blur to remove focus
+        if (e.key === 'Enter') { e.preventDefault(); titleInputRef.current?.blur(); }
+        else if (e.key === 'Escape') {
+            if (selectedTask) setEditableTitle(selectedTask.title);
+            hasUnsavedChanges.current = false;
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            titleInputRef.current?.blur();
         }
     };
 
-    // Content Handlers
     const handleContentChange = useCallback((newValue: string) => {
         setEditableContent(newValue);
-        saveChanges({}); // Debounced save on change
+        saveChanges();
     }, [saveChanges]);
 
     const handleContentBlur = useCallback(() => {
-        // Save on blur only if content truly changed and debounce might not have fired
         if (selectedTask && editableContent !== (selectedTask.content || '')) {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-            isSavingRef.current = false; // Allow immediate save
+            isSavingRef.current = false;
             saveChanges({ content: editableContent });
         }
     }, [saveChanges, selectedTask, editableContent]);
 
+    // --- Date Picker Handler ---
+    const handleDatePickerSelect = useCallback((day: Date | undefined) => {
+        const newDate = day && isValid(day) ? startOfDay(day) : undefined; // Ensure time is stripped unless time picker added
+        setSelectedDueDate(newDate);
+        saveChanges({ dueDate: newDate ? newDate.getTime() : null });
+    }, [saveChanges]);
 
-    // Day Picker Handler - This function has the correct signature now
-    const handleDayPickerSelect: SelectSingleEventHandler = (
-        day: Date | undefined, // The selected day or undefined if deselected/disabled
-        // selectedDay: Date, // The day element clicked
-        // activeModifiers: ActiveModifiers, // Modifiers active for selectedDay
-        // e: React.MouseEvent | React.KeyboardEvent // The event
-    ) => {
-        // We only need the first argument 'day'
-        setSelectedDueDate(day); // Update local state immediately (Date or undefined)
-        saveChanges({ dueDate: day ? day.getTime() : null }); // Trigger save (timestamp or null)
-    };
 
-    // List Change Handler (from Dropdown)
-    const handleListChange = (newList: string, closeDropdown?: () => void) => {
+    const handleListChange = useCallback((newList: string, closeDropdown?: () => void) => {
         saveChanges({ list: newList });
-        closeDropdown?.(); // Close the dropdown after selection
-    };
+        closeDropdown?.();
+    }, [saveChanges]);
 
-    // Priority Change Handler (from Dropdown)
-    const handlePriorityChange = (newPriority: number | null, closeDropdown?: () => void) => {
+    const handlePriorityChange = useCallback((newPriority: number | null, closeDropdown?: () => void) => {
         saveChanges({ priority: newPriority });
-        closeDropdown?.(); // Close the dropdown
-    };
+        closeDropdown?.();
+    }, [saveChanges]);
 
-    // Tag Input Handlers
     const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setTagInputValue(e.target.value);
-        saveChanges({}); // Debounced save
+        saveChanges();
     };
     const handleTagInputBlur = () => {
-        const newTags = tagInputValue.split(',')
-            .map(tag => tag.trim())
-            .filter(tag => tag !== ''); // Remove empty tags
-        const uniqueTags = Array.from(new Set(newTags)); // Ensure uniqueness
-        // Trigger save only if the sorted tags array actually changed
-        if (selectedTask && JSON.stringify(uniqueTags.sort()) !== JSON.stringify((selectedTask.tags ?? []).sort())) {
+        const newTags = tagInputValue.split(',').map(tag => tag.trim()).filter(tag => tag !== '').filter((v, i, a) => a.indexOf(v) === i);
+        if (selectedTask && JSON.stringify(newTags.sort()) !== JSON.stringify((selectedTask.tags ?? []).sort())) {
             if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-            isSavingRef.current = false; // Allow immediate save
-            saveChanges({ tags: uniqueTags });
+            isSavingRef.current = false;
+            saveChanges({ tags: newTags });
         }
     };
     const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            (e.target as HTMLInputElement).blur(); // Blur triggers potential final save
-        } else if (e.key === 'Escape') {
-            if (selectedTask) setTagInputValue((selectedTask.tags ?? []).join(', ')); // Revert
-            hasUnsavedChanges.current = false; // Discard changes flag
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); // Clear pending save
-            (e.target as HTMLInputElement).blur(); // Blur
+        if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLInputElement).blur(); }
+        else if (e.key === 'Escape') {
+            if (selectedTask) setTagInputValue((selectedTask.tags ?? []).join(', '));
+            hasUnsavedChanges.current = false;
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            (e.target as HTMLInputElement).blur();
         }
     };
 
-    // Delete/Trash Handler
     const handleDelete = useCallback(() => {
         if (!selectedTask) return;
-        setTasks((prevTasks: Task[]) =>
-            prevTasks.map((t: Task) =>
-                t.id === selectedTask.id
-                    ? { ...t, list: 'Trash', completed: false, updatedAt: Date.now() } // Move to Trash, mark incomplete
-                    : t
-            )
+        setTasks(prevTasks =>
+            prevTasks.map(t => t.id === selectedTask.id ? { ...t, list: 'Trash', completed: false, updatedAt: Date.now() } : t)
         );
-        setSelectedTaskId(null); // Deselect after moving to trash
+        setSelectedTaskId(null);
     }, [selectedTask, setTasks, setSelectedTaskId]);
 
-    // Restore Handler
     const handleRestore = useCallback(() => {
         if (!selectedTask || selectedTask.list !== 'Trash') return;
-        setTasks((prevTasks: Task[]) =>
-            prevTasks.map((t: Task) =>
-                t.id === selectedTask.id
-                    ? { ...t, list: 'Inbox', updatedAt: Date.now() } // Restore to Inbox
-                    : t
-            )
+        setTasks(prevTasks =>
+            prevTasks.map(t => t.id === selectedTask.id ? { ...t, list: 'Inbox', updatedAt: Date.now() } : t)
         );
-        // Keep task selected after restore to view it in its new list
     }, [selectedTask, setTasks]);
 
-
-    // Toggle Complete Handler
-    const handleToggleComplete = () => {
-        if (!selectedTask || selectedTask.list === 'Trash') return; // Don't toggle in trash
+    const handleToggleComplete = useCallback(() => {
+        if (!selectedTask || selectedTask.list === 'Trash') return;
         saveChanges({ completed: !selectedTask.completed });
-    };
+    }, [selectedTask, saveChanges]); // Depends on selectedTask and saveChanges
 
-    // Priority mapping for display
     const priorityMap: Record<number, { label: string; iconColor: string }> = useMemo(() => ({
         1: { label: 'High', iconColor: 'text-red-500' },
         2: { label: 'Medium', iconColor: 'text-orange-500' },
@@ -404,67 +386,82 @@ const TaskDetail: React.FC = () => {
         4: { label: 'Lowest', iconColor: 'text-gray-500' },
     }), []);
 
-
     // --- Render Logic ---
+    const dueDateObj = useMemo(() => selectedTask && selectedDueDate ? safeParseDate(selectedDueDate) : undefined, [selectedTask, selectedDueDate]);
+    const isTrash = selectedTask?.list === 'Trash';
+    const isCompleted = selectedTask?.completed && !isTrash;
+    const overdue = useMemo(() => dueDateObj && !isCompleted && isOverdue(dueDateObj), [dueDateObj, isCompleted]);
 
-    // Placeholder when no task is selected (handled by MainPage's AnimatePresence)
-    if (!selectedTask) {
-        return null; // Render nothing if no task selected
-    }
+    if (!selectedTask) return null;
 
-    // Main Task Detail View
     return (
-        // Removed key prop here, let MainPage handle presence animation
         <motion.div
-            className="border-l border-border-color/60 w-[380px] shrink-0 bg-glass backdrop-blur-lg h-full flex flex-col shadow-lg z-10" // Apply glass effect
-            // Animation for slide-in/out (handled by AnimatePresence in MainPage)
+            className={twMerge(
+                "border-l border-black/10 w-[420px] shrink-0 h-full flex flex-col shadow-xl z-10", // Wider, stronger shadow
+                "bg-glass-100 backdrop-blur-xl" // Strongest glass effect
+            )}
             initial={{ x: '100%' }}
             animate={{ x: '0%' }}
             exit={{ x: '100%' }}
-            transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }} // Faster, standard ease for slide
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }} // Slightly slower ease
         >
-            {/* Header: Stronger Glass Effect */}
-            <div className="px-3 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 h-11 bg-glass-200 backdrop-blur-md"> {/* Glass header */}
-                <span className="text-xs text-muted-foreground truncate pr-4 font-medium">
-                     {/* Show List / Title context */}
-                    {selectedTask.list !== 'Inbox' && selectedTask.list !== 'Trash' ? `${selectedTask.list} / ` : ''}
-                    {selectedTask.list === 'Trash' ? 'Trash / ' : ''}
-                    <span className="text-gray-700">{selectedTask.title || 'Untitled Task'}</span>
-                 </span>
-                {/* Close Button - Use Icon Button */}
-                <Button variant="ghost" size="icon" onClick={handleClose} aria-label="Close task details" className="text-muted-foreground hover:bg-black/10 w-7 h-7 -mr-1">
-                    <Icon name="x" size={16} />
-                </Button>
+            {/* Header: Actions & Context - Glass */}
+            <div className="px-3 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 h-11 bg-glass-alt-100 backdrop-blur-lg">
+                {/* Left Actions (Contextual: Delete/Restore) */}
+                <div className="w-16 flex justify-start">
+                    {isTrash ? (
+                        <Button variant="ghost" size="sm" icon="arrow-left" onClick={handleRestore} className="text-green-600 hover:bg-green-400/20 hover:text-green-700 text-xs px-1.5"> Restore </Button>
+                    ) : (
+                        <Button variant="ghost" size="icon" icon="trash" onClick={handleDelete} className="text-red-600 hover:bg-red-400/20 hover:text-red-700 w-7 h-7" aria-label="Move task to Trash" />
+                    )}
+                </div>
+
+                {/* Center: Saving Indicator */}
+                <div className="flex-1 text-center">
+                    <AnimatePresence>
+                        {(isSavingRef.current || (hasUnsavedChanges.current && !isSavingRef.current)) && (
+                            <motion.span
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="text-[10px] text-muted-foreground font-medium"
+                            >
+                                Saving...
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                {/* Right Actions: Close */}
+                <div className="w-16 flex justify-end">
+                    <Button variant="ghost" size="icon" icon="x" onClick={handleClose} aria-label="Close task details" className="text-muted-foreground hover:bg-black/10 w-7 h-7" />
+                </div>
             </div>
 
-            {/* Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto p-4 styled-scrollbar space-y-4">
+            {/* Main Content Area (Scrollable) */}
+            <div className="flex-1 overflow-y-auto p-5 styled-scrollbar space-y-5">
 
-                {/* Title Input Row with Checkbox */}
-                <div className="flex items-start space-x-2.5">
+                {/* Title Input Row */}
+                <div className="flex items-start space-x-3">
                     {/* Checkbox */}
                     <button
                         onClick={handleToggleComplete}
                         className={twMerge(
-                            "mt-[3px] flex-shrink-0 h-4 w-4 rounded border-2 flex items-center justify-center transition-all duration-150 ease-in-out appearance-none", // appearance-none
-                            "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1",
-                            // Custom checkbox style
-                            selectedTask.completed
-                                ? 'bg-gray-300 border-gray-300 hover:bg-gray-400' // Completed style
-                                : 'bg-canvas border-gray-400 hover:border-primary/80', // Incomplete style
-                            // Checkmark SVG for completed state
+                            "mt-[5px] flex-shrink-0 h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all duration-150 ease-in-out appearance-none",
+                            "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-100", // Adjust offset for glass
+                            isCompleted ? 'bg-gray-400 border-gray-400 hover:bg-gray-500'
+                                : 'bg-white/40 border-gray-400 hover:border-primary/80 backdrop-blur-sm', // Glassy checkbox
                             'relative after:content-[""] after:absolute after:left-1/2 after:top-1/2 after:-translate-x-1/2 after:-translate-y-1/2',
-                            'after:h-2 after:w-1 after:rotate-45 after:border-b-2 after:border-r-2 after:border-solid after:border-transparent after:transition-opacity after:duration-100',
-                            selectedTask.completed ? 'after:border-white after:opacity-100' : 'after:opacity-0',
-                            // Disabled style
-                            selectedTask.list === 'Trash' && 'cursor-not-allowed opacity-50 !border-gray-300 hover:!border-gray-300 !bg-gray-200 after:!border-gray-400'
+                            'after:h-[10px] after:w-[5px] after:rotate-45 after:border-b-[2.5px] after:border-r-[2.5px] after:border-solid after:border-transparent after:transition-opacity after:duration-100',
+                            isCompleted ? 'after:border-white after:opacity-100' : 'after:opacity-0',
+                            isTrash && 'cursor-not-allowed opacity-50 !border-gray-300 hover:!border-gray-300 !bg-gray-200/50 after:!border-gray-400'
                         )}
-                        aria-pressed={selectedTask.completed}
-                        disabled={selectedTask.list === 'Trash'}
-                        aria-label={selectedTask.completed ? 'Mark task as incomplete' : 'Mark task as complete'}
+                        aria-pressed={isCompleted}
+                        disabled={isTrash}
+                        aria-label={isCompleted ? 'Mark task as incomplete' : 'Mark task as complete'}
                     />
 
-                    {/* Title Input */}
+                    {/* Title Input - Larger */}
                     <input
                         ref={titleInputRef}
                         type="text"
@@ -473,126 +470,75 @@ const TaskDetail: React.FC = () => {
                         onBlur={handleTitleBlur}
                         onKeyDown={handleTitleKeyDown}
                         className={twMerge(
-                            "w-full text-base font-medium border-none focus:ring-0 focus:outline-none bg-transparent p-0 m-0 leading-tight", // Reset input styles
+                            "w-full text-lg font-medium border-none focus:ring-0 focus:outline-none bg-transparent p-0 m-0 leading-tight",
                             "placeholder:text-muted placeholder:font-normal",
-                            selectedTask.completed && "line-through text-muted-foreground",
-                            selectedTask.list === 'Trash' && "text-muted-foreground line-through", // Style title in trash
-                            "task-detail-title-input" // Class for focusing
+                            (isCompleted || isTrash) && "line-through text-muted-foreground",
+                            "task-detail-title-input"
                         )}
                         placeholder="Task title..."
-                        disabled={selectedTask.list === 'Trash'}
+                        disabled={isTrash}
                         aria-label="Task title"
                     />
                 </div>
 
-                {/* Metadata Section - Refined layout */}
-                <div className="space-y-1 text-sm border-t border-b border-border-color/60 py-2 my-3">
-
-                    {/* Due Date with react-day-picker */}
-                    <MetaRow icon="calendar" label="Due Date" disabled={selectedTask.list === 'Trash'}>
+                {/* Metadata Section - Minimalist */}
+                <div className="space-y-1.5 text-sm border-t border-b border-black/10 py-2.5 my-4">
+                    {/* Due Date */}
+                    <MetaRow icon="calendar" label="Due Date" disabled={isTrash}>
                         <Dropdown
                             trigger={
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     className={twMerge(
-                                        "text-xs h-7 px-1.5 w-full text-left justify-start font-normal truncate", // Base style, allow truncation
-                                        selectedDueDate ? 'text-gray-700' : 'text-muted-foreground', // Color based on selection
-                                        selectedDueDate && isOverdue(selectedDueDate) && !selectedTask.completed && 'text-red-600 font-medium', // Overdue style
-                                        selectedTask.list === 'Trash' && 'text-muted line-through' // Trash style
+                                        "text-xs h-7 px-1.5 w-full text-left justify-start font-normal truncate",
+                                        selectedDueDate ? 'text-gray-700' : 'text-muted-foreground',
+                                        overdue && 'text-red-600 font-medium',
+                                        isTrash && 'text-muted line-through'
                                     )}
-                                    disabled={selectedTask.list === 'Trash'}
+                                    disabled={isTrash}
                                 >
                                     {selectedDueDate ? formatRelativeDate(selectedDueDate) : 'Set date'}
                                 </Button>
                             }
                             // Apply DayPicker specific styles and glass effect to the dropdown content
-                            contentClassName="day-picker-dropdown w-auto" // Use specific class, auto width
+                            contentClassName="date-picker-popover-content w-auto" // Use specific class, auto width
                             placement="bottom-end"
                         >
-                            {({ close }) => ( // Use render prop to get close function
-                                <DayPicker
-                                    mode="single"
-                                    selected={selectedDueDate}
-                                    // CORRECTED: Pass handleDayPickerSelect directly OR use inline func with correct signature
-                                    // Option 1: Pass directly (cleaner if no extra logic like close() needed inside)
-                                    // onSelect={handleDayPickerSelect}
-                                    // Option 2: Use inline func with correct signature AND call close()
-                                    onSelect={(day, selectedDay, activeModifiers, e) => {
-                                        handleDayPickerSelect(day, selectedDay, activeModifiers, e);
-                                        close(); // Close dropdown on select
-                                    }}
-                                    modifiersClassNames={{
-                                        today: 'rdp-day_today',
-                                        selected: 'rdp-day_selected',
-                                        outside: 'rdp-day_outside',
-                                        disabled: 'rdp-day_disabled',
-                                    }}
-                                    showOutsideDays
-                                    fixedWeeks // Keep grid consistent
-                                    footer={
-                                        <div className="flex justify-between items-center pt-1 border-t border-black/5 mt-1">
-                                            <Button
-                                                variant="link"
-                                                size="sm"
-                                                // Use inline function for 'Today' to correctly call handler and close
-                                                onClick={() => {
-                                                    const today = new Date();
-                                                    // Manually call handler with today's date
-                                                    handleDayPickerSelect(today, today, {}, {} as React.MouseEvent); // Provide dummy args
-                                                    close();
-                                                }}
-                                                className="text-xs"
-                                            >
-                                                Today
-                                            </Button>
-                                            <Button
-                                                variant="link"
-                                                size="sm"
-                                                // Use inline function for 'Clear' to correctly call handler and close
-                                                onClick={() => {
-                                                    // Manually call handler with undefined
-                                                    handleDayPickerSelect(undefined, new Date(), {}, {} as React.MouseEvent); // Provide dummy args
-                                                    close();
-                                                }}
-                                                disabled={!selectedDueDate}
-                                                className="text-xs text-muted-foreground hover:text-red-500"
-                                            >
-                                                Clear Date
-                                            </Button>
-                                        </div>
-                                    }
+                            {({ close }) => (
+                                <DatePickerPopoverContent
+                                    selectedDate={selectedDueDate}
+                                    onSelect={handleDatePickerSelect}
+                                    close={close}
                                 />
                             )}
                         </Dropdown>
                     </MetaRow>
 
                     {/* List Selector */}
-                    <MetaRow icon="list" label="List" disabled={selectedTask.list === 'Trash'}>
+                    <MetaRow icon="list" label="List" disabled={isTrash}>
                         <Dropdown
                             trigger={
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-xs h-7 px-1.5 w-full text-left justify-start text-gray-700 font-normal disabled:text-muted disabled:line-through truncate" // Added truncate
-                                    disabled={selectedTask.list === 'Trash'}
-                                    iconPosition="right"
+                                    className="text-xs h-7 px-1.5 w-full text-left justify-start text-gray-700 font-normal disabled:text-muted disabled:line-through truncate"
+                                    disabled={isTrash}
                                 >
                                     {selectedTask.list || 'Inbox'}
                                 </Button>
                             }
-                            contentClassName="max-h-48 overflow-y-auto styled-scrollbar py-1" // Scrollable content, padding
+                            contentClassName="max-h-48 overflow-y-auto styled-scrollbar py-1"
                         >
                             {({ close }) => (
                                 <>
-                                    {/* Use filter to exclude Trash from selectable lists */}
                                     {userLists.filter(l => l !== 'Trash').map(list => (
                                         <button
                                             key={list}
                                             onClick={() => handleListChange(list, close)}
                                             className={twMerge(
-                                                "block w-full text-left px-2.5 py-1 text-sm hover:bg-black/10", // Adjusted hover for glass
-                                                selectedTask.list === list && "bg-primary/10 text-primary font-medium" // Highlight selected
+                                                "block w-full text-left px-2.5 py-1 text-sm hover:bg-black/15", // Adjusted hover for glass
+                                                selectedTask.list === list && "bg-primary/20 text-primary font-medium" // Highlight selected
                                             )}
                                             role="menuitem"
                                         >
@@ -605,35 +551,34 @@ const TaskDetail: React.FC = () => {
                     </MetaRow>
 
                     {/* Priority Selector */}
-                    <MetaRow icon="flag" label="Priority" disabled={selectedTask.list === 'Trash'}>
+                    <MetaRow icon="flag" label="Priority" disabled={isTrash}>
                         <Dropdown
                             trigger={
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     className={twMerge(
-                                        "text-xs h-7 px-1.5 w-full text-left justify-start font-normal disabled:text-muted disabled:line-through truncate", // Added truncate
-                                        selectedTask.priority ? priorityMap[selectedTask.priority]?.iconColor : 'text-gray-700' // Apply color based on priority
+                                        "text-xs h-7 px-1.5 w-full text-left justify-start font-normal disabled:text-muted disabled:line-through truncate",
+                                        selectedTask.priority ? priorityMap[selectedTask.priority]?.iconColor : 'text-gray-700'
                                     )}
-                                    icon={selectedTask.priority ? 'flag' : undefined} // Show flag icon if priority set
-                                    iconPosition="left"
-                                    disabled={selectedTask.list === 'Trash'}
+                                    icon={selectedTask.priority ? 'flag' : undefined}
+                                    disabled={isTrash}
                                 >
                                     {selectedTask.priority ? `P${selectedTask.priority} ${priorityMap[selectedTask.priority]?.label}` : 'Set Priority'}
                                 </Button>
                             }
-                            contentClassName="py-1" // Add padding to dropdown content
+                            contentClassName="py-1"
                         >
                             {({ close }) => (
                                 <>
-                                    {[1, 2, 3, 4, null].map(p => ( // Include null for 'None'
+                                    {[1, 2, 3, 4, null].map(p => (
                                         <button
                                             key={p ?? 'none'}
                                             onClick={() => handlePriorityChange(p, close)}
                                             className={twMerge(
-                                                "block w-full text-left px-2.5 py-1 text-sm hover:bg-black/10 flex items-center", // Adjusted hover
-                                                selectedTask.priority === p && "bg-primary/10 text-primary font-medium", // Highlight selected
-                                                p && priorityMap[p]?.iconColor // Apply color to text/icon
+                                                "block w-full text-left px-2.5 py-1 text-sm hover:bg-black/15 flex items-center", // Adjusted hover
+                                                selectedTask.priority === p && "bg-primary/20 text-primary font-medium",
+                                                p && priorityMap[p]?.iconColor
                                             )}
                                             role="menuitem"
                                         >
@@ -647,8 +592,7 @@ const TaskDetail: React.FC = () => {
                     </MetaRow>
 
                     {/* Tags Input */}
-                    <MetaRow icon="tag" label="Tags" disabled={selectedTask.list === 'Trash'}>
-                        {/* Use a standard input, styled like a ghost button when empty */}
+                    <MetaRow icon="tag" label="Tags" disabled={isTrash}>
                         <input
                             type="text"
                             value={tagInputValue}
@@ -657,19 +601,20 @@ const TaskDetail: React.FC = () => {
                             onKeyDown={handleTagInputKeyDown}
                             placeholder="Add tags..."
                             className={twMerge(
-                                "flex-1 text-xs h-7 px-1.5 border-none focus:ring-0 bg-transparent rounded-sm w-full", // Take full width
-                                "hover:bg-gray-500/10 focus:bg-gray-500/10", // Subtle hover/focus background for glass
+                                "flex-1 text-xs h-7 px-1.5 border-none focus:ring-0 bg-transparent rounded-sm w-full",
+                                "hover:bg-white/10 focus:bg-white/20 backdrop-blur-sm", // Subtle hover/focus glass
                                 "placeholder:text-muted placeholder:font-normal",
-                                "disabled:bg-transparent disabled:hover:bg-transparent disabled:text-muted disabled:line-through disabled:placeholder:text-transparent" // Disabled styles
+                                "disabled:bg-transparent disabled:hover:bg-transparent disabled:text-muted disabled:line-through disabled:placeholder:text-transparent"
                             )}
-                            disabled={selectedTask.list === 'Trash'}
+                            disabled={isTrash}
                             aria-label="Tags (comma-separated)"
                         />
                     </MetaRow>
                 </div>
 
-                {/* Content Editor - Use Glass Effect */}
-                <div className="min-h-[150px] task-detail-content-editor flex-1 mb-4"> {/* Allow editor to grow */}
+
+                {/* Content Editor - Use Glass Effect provided by CodeMirrorEditor */}
+                <div className="min-h-[200px] task-detail-content-editor flex-1 mb-4"> {/* More space */}
                     <CodeMirrorEditor
                         ref={editorRef}
                         value={editableContent}
@@ -677,47 +622,39 @@ const TaskDetail: React.FC = () => {
                         onBlur={handleContentBlur}
                         placeholder="Add notes, links, or details here... Markdown is supported."
                         className={twMerge(
-                            "min-h-[150px] h-full text-sm !border-0 focus-within:!ring-0 focus-within:!border-0 shadow-none", // Base styles
-                            (selectedTask.list === 'Trash' || selectedTask.completed) && "opacity-70" // Dim if completed or trash
+                            "min-h-[200px] h-full text-sm !border-0 focus-within:!ring-0 focus-within:!border-0 shadow-none !bg-transparent", // Make editor fully transparent
+                            (isCompleted || isTrash) && "opacity-70"
                         )}
-                        readOnly={selectedTask.list === 'Trash'} // Readonly in trash
-                        useGlassEffect // Enable glass styling for the editor container
+                        readOnly={isTrash}
+                        // useGlassEffect is handled by editor component itself
                     />
                 </div>
 
-                {/* Timestamps - Subtle */}
-                <div className="text-[11px] text-muted-foreground space-y-0.5 border-t border-border-color/60 pt-3 mt-auto text-right flex-shrink-0">
-                    <p>Created: {formatDateTime(selectedTask.createdAt)}</p>
-                    <p>Updated: {formatDateTime(selectedTask.updatedAt)}</p>
-                </div>
             </div>
 
-            {/* Footer Actions - Glass Effect */}
-            <div className="px-3 py-2 border-t border-black/10 flex justify-between items-center flex-shrink-0 h-10 bg-glass-alt-200 backdrop-blur-sm"> {/* Glass footer */}
-                {/* Conditional Delete/Restore Button */}
-                {selectedTask.list === 'Trash' ? (
-                    <Button variant="ghost" size="sm" icon="arrow-left" onClick={handleRestore} className="text-green-600 hover:bg-green-400/20 hover:text-green-700 text-xs px-2">
-                        Restore
-                    </Button>
-                ) : (
-                    <Button variant="ghost" size="icon" icon="trash" onClick={handleDelete} className="text-red-600 hover:bg-red-400/20 hover:text-red-700 w-7 h-7" aria-label="Move task to Trash" />
-                )}
-
-                {/* Saving Indicator (Optional) */}
-                {/* Show subtle saving indicator (removed pulse) */}
-                {(isSavingRef.current || (hasUnsavedChanges.current && !isSavingRef.current)) && ( // Corrected logic: show if saving OR if changes are pending but not yet saving
-                    <span className="text-[10px] text-muted-foreground">Saving...</span>
-                )}
-
-
-                {/* Spacer to push delete/restore left */}
-                <div className="flex-1"></div>
-
-                {/* Other actions could go here */}
-
+            {/* Footer: Timestamps - Glass */}
+            <div className="px-4 py-2 border-t border-black/10 flex justify-end items-center flex-shrink-0 h-9 bg-glass-alt-200 backdrop-blur-sm">
+                <div className="text-[11px] text-muted-foreground space-x-4">
+                    <span>Created: {formatDateTime(selectedTask.createdAt)}</span>
+                    <span>Updated: {formatDateTime(selectedTask.updatedAt)}</span>
+                </div>
             </div>
         </motion.div>
     );
 };
+
+// Metadata Row Component (Memoized)
+const MetaRow: React.FC<{ icon: IconName; label: string; children: React.ReactNode, disabled?: boolean }> = React.memo(({ icon, label, children, disabled=false }) => (
+    <div className={twMerge("flex items-center justify-between group min-h-[34px] px-1", disabled && "opacity-60 pointer-events-none")}>
+        <span className="text-muted-foreground flex items-center text-xs font-medium w-24 flex-shrink-0"> {/* Wider label */}
+            <Icon name={icon} size={14} className="mr-1.5 opacity-70"/>{label}
+        </span>
+        <div className="flex-1 text-right min-w-0">
+            {children}
+        </div>
+    </div>
+));
+MetaRow.displayName = 'MetaRow';
+
 
 export default TaskDetail;

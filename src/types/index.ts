@@ -20,7 +20,7 @@ export interface Task {
     tags?: string[];
     priority?: number | null; // e.g., 1 (High) - 4 (Low), null for none
     // Derived property for DND date change context and grouping
-    groupCategory?: TaskGroupCategory;
+    groupCategory: TaskGroupCategory; // Now non-optional, calculated by atom setter
 }
 
 export type TaskFilter = 'all' | 'today' | 'next7days' | 'completed' | 'trash' | `list-${string}` | `tag-${string}`;

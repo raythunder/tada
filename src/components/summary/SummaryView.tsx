@@ -6,7 +6,7 @@ import CodeMirrorEditor, { CodeMirrorEditorRef } from '../common/CodeMirrorEdito
 import { useAtomValue } from 'jotai';
 import { tasksAtom } from '@/store/atoms';
 import {
-    endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, isValid, safeParseDate, startOfDay, endOfDay, subWeeks, enUS // Use utils
+    endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, isValid, safeParseDate, startOfDay, endOfDay, subWeeks, enUS
 } from '@/utils/dateUtils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { twMerge } from "tailwind-merge";
@@ -43,17 +43,14 @@ const useDateCalculations = (period: SummaryPeriod) => {
 
     const formatDateRange = useCallback((startDt: Date, endDt: Date): string => {
         if (!isValid(startDt) || !isValid(endDt)) return "Invalid Date Range";
-
         const startFormat = 'MMM d';
-        const endFormat = 'MMM d, yyyy'; // Always include year at the end
-
+        const endFormat = 'MMM d, yyyy';
         if (startDt.getFullYear() !== endDt.getFullYear()) {
             return `${format(startDt, 'MMM d, yyyy')} - ${format(endDt, endFormat)}`;
         }
         if (startDt.getMonth() !== endDt.getMonth()) {
             return `${format(startDt, startFormat)} - ${format(endDt, endFormat)}`;
         }
-        // Use standard format even for same day for clarity with range picker style
         return `${format(startDt, startFormat)} - ${format(endDt, endFormat)}`;
     }, []);
 
@@ -81,9 +78,9 @@ const useDateCalculations = (period: SummaryPeriod) => {
         return [
             { value: 'this-week', label: 'This Week', rangeLabel: formatDateRange(thisWeekStart, thisWeekEnd) },
             { value: 'last-week', label: 'Last Week', rangeLabel: formatDateRange(lastWeekStart, lastWeekEnd) },
-            { value: 'this-month', label: 'This Month', rangeLabel: formatDateRange(thisMonthStart, thisMonthEnd)}, // Show range for clarity
-            { value: 'last-month', label: 'Last Month', rangeLabel: formatDateRange(lastMonthStart, lastMonthEnd) }, // Show range for clarity
-        ] as const; // Use 'as const' for stricter typing
+            { value: 'this-month', label: 'This Month', rangeLabel: formatDateRange(thisMonthStart, thisMonthEnd)},
+            { value: 'last-month', label: 'Last Month', rangeLabel: formatDateRange(lastMonthStart, lastMonthEnd) },
+        ] as const;
     }, [formatDateRange]);
 
 
@@ -93,67 +90,58 @@ const useDateCalculations = (period: SummaryPeriod) => {
 
 // --- Summary View Component ---
 const SummaryView: React.FC = () => {
-    const tasks = useAtomValue(tasksAtom); // Read-only tasks
+    const tasks = useAtomValue(tasksAtom);
     const [summaryContent, setSummaryContent] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [period, setPeriod] = useState<SummaryPeriod>('this-week');
-    const editorRef = useRef<CodeMirrorEditorRef>(null); // Ref for editor methods
+    const editorRef = useRef<CodeMirrorEditorRef>(null);
 
     const { getDateRange, formatDateRange, getPeriodLabel, periodOptions } = useDateCalculations(period);
 
     const generateSummary = useCallback(async () => {
         setIsLoading(true);
-        setSummaryContent(''); // Clear previous content
+        setSummaryContent('');
 
-        // Simulate async operation (e.g., API call, complex processing)
-        await new Promise(resolve => setTimeout(resolve, 500)); // Slightly faster delay
+        await new Promise(resolve => setTimeout(resolve, 400)); // Slightly faster delay
 
         const { start: rangeStart, end: rangeEnd } = getDateRange();
-        const rangeEndInclusive = endOfDay(rangeEnd); // Ensure end date is inclusive
+        const rangeEndInclusive = endOfDay(rangeEnd);
 
-        // Filter tasks completed within the date range (non-trashed)
         const completedInRange = tasks.filter(task =>
             task.completed &&
             task.list !== 'Trash' &&
             task.updatedAt >= rangeStart.getTime() &&
-            task.updatedAt <= rangeEndInclusive.getTime() // Use inclusive end time
-        ).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)); // Sort by completion time DESC
+            task.updatedAt <= rangeEndInclusive.getTime()
+        ).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
-        // Filter tasks added within the date range (non-trashed)
         const addedInRange = tasks.filter(task =>
             task.list !== 'Trash' &&
             task.createdAt >= rangeStart.getTime() &&
-            task.createdAt <= rangeEndInclusive.getTime() // Use inclusive end time
-        ).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // Sort by creation time DESC
+            task.createdAt <= rangeEndInclusive.getTime()
+        ).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-
-        // --- Generate Markdown Summary ---
         const periodTitle = getPeriodLabel(period);
         const dateRangeStr = formatDateRange(rangeStart, rangeEnd);
 
-        let generatedText = `# Summary for ${periodTitle}\n`; // H1 for main title
-        generatedText += `*${dateRangeStr}*\n\n`; // Italic date range
+        let generatedText = `# Summary for ${periodTitle}\n`;
+        generatedText += `*${dateRangeStr}*\n\n`;
 
-        // Completed Tasks Section
-        generatedText += `## ✅ Completed Tasks (${completedInRange.length})\n`; // H2 for section
+        generatedText += `## ✅ Completed Tasks (${completedInRange.length})\n`;
         if (completedInRange.length > 0) {
             completedInRange.forEach(task => {
                 const completedDate = safeParseDate(task.updatedAt);
-                // Check if completedDate is valid before formatting
                 const dateStr = completedDate && isValid(completedDate) ? format(completedDate, 'MMM d') : 'Unknown Date';
-                generatedText += `- ${task.title || 'Untitled Task'} *(Done: ${dateStr})*\n`; // Simpler completion note
+                generatedText += `- ${task.title || 'Untitled Task'} *(Done: ${dateStr})*\n`;
             });
         } else {
             generatedText += `*No tasks completed during this period.*\n`;
         }
-        generatedText += "\n"; // Add space between sections
+        generatedText += "\n";
 
-        // Added Tasks Section
-        generatedText += `## ➕ Added Tasks (${addedInRange.length})\n`; // H2 for section
+        generatedText += `## ➕ Added Tasks (${addedInRange.length})\n`;
         if (addedInRange.length > 0) {
             addedInRange.forEach(task => {
                 const createdDate = safeParseDate(task.createdAt);
-                // Check if createdDate is valid before formatting
                 const dateStr = createdDate && isValid(createdDate) ? format(createdDate, 'MMM d') : 'Unknown Date';
                 generatedText += `- ${task.title || 'Untitled Task'} *(Added: ${dateStr})*\n`;
             });
@@ -161,55 +149,46 @@ const SummaryView: React.FC = () => {
             generatedText += `*No new tasks added during this period.*\n`;
         }
 
-        // --- End Markdown Generation ---
-
         setSummaryContent(generatedText);
         setIsLoading(false);
-
-        // Focus the editor after content generation
         editorRef.current?.focus();
 
     }, [tasks, period, getDateRange, formatDateRange, getPeriodLabel]); // Dependencies
 
-    // --- Render ---
     return (
-        // Apply glass effect to main container
-        <div className="h-full flex flex-col bg-glass backdrop-blur-lg">
-            {/* Header with Glass Effect */}
-            <div className="px-4 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 bg-glass-100 backdrop-blur-md z-10 h-11"> {/* Stronger glass */}
+        // Apply STRONG glass effect to main container
+        <div className="h-full flex flex-col bg-glass backdrop-blur-xl">
+            {/* Header with Strong Glass Effect */}
+            <div className="px-4 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 bg-glass-100 backdrop-blur-lg z-10 h-11"> {/* Stronger glass */}
                 <h1 className="text-lg font-semibold text-gray-800">AI Summary</h1>
-                {/* Generate Button */}
                 <Button
                     variant="primary"
                     size="sm"
-                    icon="sparkles" // Use sparkles icon
+                    icon="sparkles"
                     onClick={generateSummary}
                     loading={isLoading}
                     disabled={isLoading}
-                    className="!h-[30px] px-3" // Ensure padding, adjusted height
+                    className="!h-[30px] px-3"
                 >
                     {isLoading ? 'Generating...' : 'Generate'}
                 </Button>
             </div>
 
-            {/* Filters Bar - Subtle Glass Background */}
-            <div className="px-4 py-1.5 border-b border-black/5 flex justify-start items-center flex-shrink-0 bg-glass-alt-200 backdrop-blur-sm space-x-1 h-9 z-[5]"> {/* Glass filter bar */}
+            {/* Filters Bar - Glass Background */}
+            <div className="px-4 py-1.5 border-b border-black/10 flex justify-start items-center flex-shrink-0 bg-glass-alt-200 backdrop-blur-lg space-x-1 h-9 z-[5]"> {/* Glass filter bar */}
                 <span className="text-xs text-muted-foreground mr-2 font-medium">Period:</span>
                 {periodOptions.map(opt => (
                     <Button
                         key={opt.value}
                         onClick={() => setPeriod(opt.value)}
-                        // Use 'glass' variant for buttons, primary for active
-                        variant={period === opt.value ? 'primary' : 'glass'}
+                        variant={period === opt.value ? 'primary' : 'glass'} // Use glass/primary
                         size="sm"
                         className={twMerge(
-                            "text-xs !h-6 px-2 font-medium", // Ensure font weight consistency, small height
-                            // Active state for primary button
+                            "text-xs !h-6 px-2 font-medium",
                             period === opt.value && "!text-primary-foreground",
-                            // Inactive state for glass button
-                            period !== opt.value && "!text-gray-600 !border-black/5 hover:!bg-glass-alt-100"
+                            period !== opt.value && "!text-gray-600 hover:!bg-glass-100" // Adjust inactive glass hover
                         )}
-                        title={opt.rangeLabel} // Show date range on hover
+                        title={opt.rangeLabel}
                         aria-pressed={period === opt.value}
                     >
                         {opt.label}
@@ -219,13 +198,12 @@ const SummaryView: React.FC = () => {
 
             {/* Editor Area */}
             <div className="flex-1 p-3 overflow-hidden relative">
-                {/* Add relative positioning to the container */}
-                <div className="h-full w-full relative rounded-md overflow-hidden border border-black/5 shadow-inner"> {/* Subtle border */}
-                    {/* Loading Overlay - More subtle */}
+                {/* Container now provides the glass effect FOR the editor via className */}
+                <div className="h-full w-full relative rounded-md overflow-hidden border border-black/10 shadow-inner"> {/* Subtle border, inner shadow */}
                     <AnimatePresence>
                         {isLoading && (
                             <motion.div
-                                className="absolute inset-0 bg-canvas/80 backdrop-blur-xs flex items-center justify-center z-10 rounded-md" // Cover editor area, match rounding
+                                className="absolute inset-0 bg-canvas/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-md" // Match rounding, add blur
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
@@ -236,20 +214,20 @@ const SummaryView: React.FC = () => {
                         )}
                     </AnimatePresence>
 
-                    {/* CodeMirror Editor - Use Glass Effect */}
+                    {/* CodeMirror Editor - Now uses glass effect from its container */}
                     <CodeMirrorEditor
                         ref={editorRef}
                         value={summaryContent}
-                        onChange={setSummaryContent} // Allow manual edits
-                        // Apply styling via className to integrate better
-                        className="h-full w-full !border-0 !shadow-none focus-within:!ring-0 rounded-md" // Remove default CM container styles, ensure rounding
+                        onChange={setSummaryContent}
+                        // No internal border/shadow needed, let container handle glass
+                        className="h-full w-full !border-0 !shadow-none focus-within:!ring-0 !bg-transparent rounded-md" // Make editor transparent
                         placeholder={
                             isLoading
-                                ? "Generating summary..." // Placeholder during loading
+                                ? "Generating summary..."
                                 : "Click 'Generate' to create a report for the selected period,\nor start typing your own notes...\n\nSupports **Markdown** formatting."
                         }
-                        readOnly={isLoading} // Prevent editing while loading
-                        useGlassEffect // Enable glass theme for the editor
+                        readOnly={isLoading}
+                        // useGlassEffect is now implicitly handled by the container + theme
                     />
                 </div>
             </div>

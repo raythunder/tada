@@ -7,10 +7,12 @@
 @layer base {
   /* Apply base font stack, background, text color, and smoothing */
   body {
-    @apply bg-canvas font-sans text-gray-900 antialiased; /* Slightly darker base text */
+    @apply bg-canvas font-sans text-gray-900 antialiased;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Apply a subtle background pattern or gradient if desired */
+    /* background-image: linear-gradient(to bottom right, hsl(220, 40%, 99%), hsl(0, 0%, 100%)); */
   }
 
   /* Define consistent focus-visible styles using primary color */
@@ -34,8 +36,8 @@
 @layer components {
   /* Custom refined scrollbar styling */
   .styled-scrollbar::-webkit-scrollbar {
-    width: 6px; /* Thinner scrollbar */
-    height: 6px;
+    width: 7px; /* Slightly wider for easier interaction */
+    height: 7px;
   }
 
   .styled-scrollbar::-webkit-scrollbar-track {
@@ -43,166 +45,141 @@
   }
 
   .styled-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-gray-300/50 rounded-full border-[1px] border-solid border-transparent; /* Subtle border for padding */
+    @apply bg-gray-900/15 rounded-full border-2 border-solid border-transparent; /* Slightly darker, more visible thumb */
     background-clip: padding-box; /* Clip background to padding box */
     transition: background-color 0.15s ease-out;
   }
 
-  /* Darker scrollbar thumb on hover - more subtle */
+  /* Darker scrollbar thumb on hover */
   .styled-scrollbar:hover::-webkit-scrollbar-thumb {
-    @apply bg-gray-400/60;
+    @apply bg-gray-900/25;
   }
   .styled-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400/70;
+    @apply bg-gray-900/30;
+  }
+  .styled-scrollbar::-webkit-scrollbar-thumb:active {
+    @apply bg-gray-900/35;
   }
 
 
   /* --- react-day-picker style overrides (Tailwind-based) --- */
 
-  /* Popper container for DayPicker (will be applied via Dropdown contentClassName) */
-  .day-picker-dropdown {
-    @apply rounded-lg border border-black/5 shadow-strong overflow-hidden p-1 z-50;
-    @apply bg-glass-100 backdrop-blur-md; /* Use configured glass effect */
+  /* Popper container for DayPicker (applied via Dropdown contentClassName) */
+  /* Ensures the popover itself has the glass effect */
+  .date-picker-popover-content.date-picker-popover-content { /* Increased specificity */
+    @apply p-0; /* Remove padding from Dropdown base */
+    /* Apply glass effect directly here */
+    @apply bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10;
   }
 
   /* General DayPicker styling */
   .rdp {
-    --rdp-cell-size: 32px; /* Slightly smaller cells */
-    --rdp-accent-color: hsl(208, 100%, 50%); /* Use theme primary */
-    --rdp-background-color: hsla(208, 100%, 50%, 0.1); /* Subtle selected background */
+    --rdp-cell-size: 34px; /* Slightly larger cells */
+    --rdp-accent-color: hsl(208, 100%, 50%);
+    --rdp-background-color: hsla(208, 100%, 50%, 0.15); /* More visible selected bg */
     --rdp-accent-color-dark: hsl(208, 100%, 45%);
-    --rdp-background-color-dark: hsla(208, 100%, 50%, 0.15);
-    margin: 0; /* Remove default margin */
-    font-size: 0.8rem; /* Smaller base font */
+    --rdp-background-color-dark: hsla(208, 100%, 50%, 0.2);
+    margin: 0;
+    font-size: 0.8rem;
+    width: 270px; /* Fixed width for consistency */
   }
-  .rdp-month {
-    @apply space-y-1; /* Spacing between weeks */
-  }
-  .rdp-caption {
-    @apply flex justify-center relative items-center h-8 mb-1; /* Caption spacing */
-  }
-  .rdp-caption_label {
-    @apply text-sm font-medium text-gray-700;
-  }
-  .rdp-nav {
-    @apply space-x-1 flex items-center;
-  }
+  .rdp-month { @apply space-y-1 p-2; } /* Add padding around month */
+  .rdp-caption { @apply flex justify-center relative items-center h-8 mb-1.5; }
+  .rdp-caption_label { @apply text-sm font-medium text-gray-700; }
+  .rdp-nav { @apply space-x-1 flex items-center; }
   .rdp-nav_button {
-    @apply h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 flex items-center justify-center rounded-md hover:bg-black/5 transition-colors;
+    @apply h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 flex items-center justify-center rounded-md hover:bg-black/10 transition-colors;
     @apply focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:outline-none;
   }
-  .rdp-nav_button--prev { @apply absolute left-1; }
-  .rdp-nav_button--next { @apply absolute right-1; }
+  .rdp-nav_button--prev { @apply absolute left-2; } /* Adjust position */
+  .rdp-nav_button--next { @apply absolute right-2; }
 
-  .rdp-table { @apply w-full border-collapse space-y-1; }
-  .rdp-head_row, .rdp-row { @apply flex w-full mt-1; } /* Adjusted spacing */
+  .rdp-table { @apply w-full border-collapse; }
+  .rdp-head_row, .rdp-row { @apply flex w-full mt-1; }
   .rdp-cell {
-    @apply text-center text-sm p-0 relative first:rounded-l-md last:rounded-r-md w-[--rdp-cell-size] h-[--rdp-cell-size] flex items-center justify-center;
-    /* Focus ring for keyboard nav */
-    &:focus-within:not(.rdp-cell--disabled) {
-      @apply ring-1 ring-primary/50 z-10;
-    }
+    @apply text-center text-sm p-0 relative w-[--rdp-cell-size] h-[--rdp-cell-size] flex items-center justify-center;
+    &:focus-within:not([disabled]) > .rdp-day { @apply ring-1 ring-primary/60 z-10; } /* Ring on the day itself */
   }
-  .rdp-head_cell {
-    @apply text-muted-foreground rounded-md font-medium text-[0.75rem] w-[--rdp-cell-size]; /* Smaller weekday names */
-  }
+  .rdp-head_cell { @apply text-muted-foreground rounded-md font-medium text-[0.75rem] w-[--rdp-cell-size]; }
   .rdp-day {
-    @apply h-[--rdp-cell-size] w-[--rdp-cell-size] p-0 font-normal flex items-center justify-center rounded-[5px] text-gray-700; /* Use slightly rounded square */
+    @apply h-[calc(var(--rdp-cell-size)-4px)] w-[calc(var(--rdp-cell-size)-4px)] p-0 font-normal flex items-center justify-center rounded-[6px] text-gray-700; /* Square with margin */
     @apply transition-colors duration-100 ease-out;
-    @apply hover:bg-black/5 aria-selected:opacity-100;
-    @apply focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:outline-none;
+    @apply hover:bg-black/10 aria-selected:opacity-100;
+    @apply focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/60 focus-visible:bg-black/5;
   }
-  .rdp-day_today {
-    @apply font-semibold text-primary bg-primary/5;
+  .rdp-day_today:not(.rdp-day_selected) { /* Style today only if not selected */
+    @apply font-semibold text-primary bg-primary/10 border border-primary/30;
   }
   .rdp-day_selected,
   .rdp-day_selected:hover,
   .rdp-day_selected:focus {
-    @apply bg-primary text-primary-foreground font-semibold; /* Use defined foreground color */
-    /* @apply hover:bg-primary-dark focus:bg-primary; */
+    @apply bg-primary text-primary-foreground font-semibold;
+    @apply hover:bg-primary-dark focus:bg-primary;
   }
   .rdp-day_outside {
-    @apply text-muted opacity-50 aria-selected:bg-primary/50 aria-selected:text-muted aria-selected:opacity-30;
-    pointer-events: none; /* Prevent interaction */
-  }
-  .rdp-day_disabled {
     @apply text-muted opacity-50;
     pointer-events: none;
+  }
+  .rdp-day_disabled {
+    @apply text-muted opacity-40;
+    pointer-events: none;
+  }
+  /* Ensure footer inside DayPicker uses consistent styling */
+  .rdp-footer {
+    @apply bg-glass-alt-100 backdrop-blur-md border-t border-black/10 p-1.5; /* Add footer glass */
   }
 
   /* --- End react-day-picker Styles --- */
 
 
   /* --- CodeMirror Editor adjustments --- */
-  /* Base container for CodeMirror */
-  /* Styles like border, bg, rounded should be applied via `className` prop to CodeMirrorEditor */
-
-  /* Focused state for the container */
-  .cm-editor-container.focus-within {
-    @apply border-primary/80 ring-1 ring-primary/50;
+  /* Base container gets the glass effect */
+  .cm-editor-container {
+    /* Applied via className prop */
   }
 
-  /* The editor itself */
+  /* Editor needs to be transparent */
   .cm-editor {
-    @apply text-sm h-full; /* Base text size, fill height */
-    &.cm-focused {
-      outline: none; /* Remove CodeMirror's default outline, container handles focus */
-    }
+    @apply text-sm h-full bg-transparent;
+    &.cm-focused { outline: none; }
   }
 
-  /* Scroller within the editor */
+  /* Scroller needs to be transparent */
   .cm-scroller {
-    @apply h-full styled-scrollbar; /* Fill height, use custom scrollbar */
-    font-family: var(--font-mono); /* Use monospace font stack */
-    line-height: 1.6; /* Improve readability */
+    @apply h-full styled-scrollbar bg-transparent;
+    font-family: var(--font-mono);
+    line-height: 1.6;
   }
 
-  /* Gutters (line numbers, folding) */
+  /* Gutters get stronger glass */
   .cm-gutters {
-    /* Apply subtle glass effect to gutters */
-    @apply bg-glass-inset-200 border-r border-border-color/60 text-muted text-xs opacity-90 pr-2 backdrop-blur-sm;
+    @apply bg-glass-alt-100/80 backdrop-blur-lg border-r border-black/10 text-muted text-xs opacity-90 pr-2;
     user-select: none;
     -webkit-user-select: none;
   }
-  /* Highlight for active line number gutter */
-  .cm-activeLineGutter {
-    @apply bg-primary/10;
+  .cm-activeLineGutter { @apply bg-primary/15; }
+
+  /* Content area needs to be transparent */
+  .cm-content {
+    @apply p-2.5 bg-transparent;
+    caret-color: hsl(208, 100%, 50%);
+  }
+  .cm-line { @apply leading-relaxed px-1; }
+  .cm-placeholder { @apply text-muted italic opacity-70 pointer-events-none absolute top-0 left-0 p-2.5; }
+  .cm-selectionBackground, ::selection { @apply bg-primary/20; }
+  /* Active line slightly more visible on glass */
+  .cm-activeLine { background-color: hsla(210, 60%, 95%, 0.7); }
+  .cm-foldMarker {
+    color: hsl(210, 10%, 65%); margin-left: 2px; padding: 0 2px; cursor: pointer;
+    &:hover { color: hsl(210, 10%, 45%); }
+  }
+  .cm-foldGutter .cm-gutterElement { padding-left: 4px !important; text-align: center; }
+  /* Search match styling */
+  .cm-searchMatch {
+    @apply bg-yellow-300/40 outline-none rounded-[2px];
+  }
+  .cm-searchMatch-selected {
+    @apply bg-yellow-400/60;
   }
 
-  /* Main content area where text is typed */
-  .cm-content {
-    @apply p-2.5; /* Consistent padding */
-    caret-color: hsl(208, 100%, 50%); /* Primary color caret */
-  }
-  /* Individual lines */
-  .cm-line {
-    @apply leading-relaxed px-1; /* Add slight horizontal padding to lines */
-  }
-  /* Placeholder text style */
-  .cm-placeholder {
-    @apply text-muted italic opacity-70 pointer-events-none absolute top-0 left-0 p-2.5; /* Match content padding */
-  }
-  /* Text selection style */
-  .cm-selectionBackground, ::selection {
-    @apply bg-primary/20; /* Subtle primary selection */
-  }
-  /* Active line background */
-  .cm-activeLine {
-    background-color: hsla(210, 60%, 95%, 0.6); /* Very subtle active line highlight */
-  }
-  /* Fold marker (arrow) */
-  .cm-foldMarker {
-    color: hsl(210, 10%, 65%); /* Muted color */
-    margin-left: 2px;
-    padding: 0 2px;
-    cursor: pointer;
-    &:hover {
-      color: hsl(210, 10%, 45%); /* Darken on hover */
-    }
-  }
-  /* Gutter element containing the fold marker */
-  .cm-foldGutter .cm-gutterElement {
-    padding-left: 4px !important; /* Space before fold arrow */
-    text-align: center;
-  }
 }

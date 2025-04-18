@@ -6,82 +6,80 @@ import MainPage from './pages/MainPage';
 import SummaryPage from './pages/SummaryPage';
 import CalendarPage from './pages/CalendarPage';
 import { TaskFilter } from './types';
-import { useAtom, useSetAtom } from 'jotai'; // useSetAtom for setters only
-import { currentFilterAtom, selectedTaskIdAtom } from './store/atoms';
+import { useAtom, useSetAtom } from 'jotai';
+import { currentFilterAtom, selectedTaskIdAtom, searchTermAtom } from './store/atoms'; // Added searchTermAtom
 
-// Helper Component to Update Filter State and Clear Selection on Route Change
+// Helper Component to Update Filter State and Clear Selection/Search on Route Change
 const RouteChangeHandler: React.FC = () => {
-    const [currentFilterInternal, setCurrentFilter] = useAtom(currentFilterAtom); // Need getter here to compare
-    const setSelectedTaskId = useSetAtom(selectedTaskIdAtom); // Only need setter
+    const [currentFilterInternal, setCurrentFilter] = useAtom(currentFilterAtom);
+    const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
+    const setSearchTerm = useSetAtom(searchTermAtom); // Setter for search term
     const location = useLocation();
     const params = useParams();
 
     useEffect(() => {
         let newFilter: TaskFilter = 'all'; // Default filter
-        let clearSelection = true; // Default to clearing selection
+        let shouldClearSelection = true; // Default to clearing selection
+        let shouldClearSearch = true; // Default to clearing search
 
-        // Determine filter based on pathname
         const pathname = location.pathname;
+        const listName = params.listName ? decodeURIComponent(params.listName) : '';
+        const tagName = params.tagName ? decodeURIComponent(params.tagName) : '';
+
+        // Determine filter based on route
         if (pathname === '/today') newFilter = 'today';
         else if (pathname === '/next7days') newFilter = 'next7days';
         else if (pathname === '/completed') newFilter = 'completed';
         else if (pathname === '/trash') newFilter = 'trash';
         else if (pathname === '/all') newFilter = 'all';
-        else if (pathname.startsWith('/list/')) {
-            const listName = params.listName ? decodeURIComponent(params.listName) : '';
-            if (listName) newFilter = `list-${listName}`;
-            // Keep selection when switching between list/tag/standard views
-            clearSelection = false;
-        } else if (pathname.startsWith('/tag/')) {
-            const tagName = params.tagName ? decodeURIComponent(params.tagName) : '';
-            if (tagName) newFilter = `tag-${tagName}`;
-            // Keep selection when switching between list/tag/standard views
-            clearSelection = false;
-        } else if (pathname === '/summary' || pathname === '/calendar') {
-            // Views without a task list filter; keep filter atom as 'all' for sidebar consistency.
-            newFilter = 'all'; // Or potentially keep previous filter if desired: `newFilter = currentFilterInternal;`
-            clearSelection = true; // Always clear selection for non-list views
-        } else if (pathname === '/') {
-            newFilter = 'all'; // Index route maps to 'all'
-            // Keep selection when initially landing on default route
-            clearSelection = false;
-        } else {
-            // Handle other static routes like 'today', 'all', 'next7days' etc.
-            clearSelection = false;
+        else if (pathname.startsWith('/list/') && listName) newFilter = `list-${listName}`;
+        else if (pathname.startsWith('/tag/') && tagName) newFilter = `tag-${tagName}`;
+        else if (pathname === '/summary' || pathname === '/calendar') newFilter = currentFilterInternal; // Keep filter for sidebar consistency
+        else if (pathname === '/') newFilter = 'all'; // Index maps to 'all'
+        else newFilter = 'all'; // Fallback
+
+        // Determine if selection/search should be cleared
+        // Keep selection/search when navigating between list/tag/standard views
+        const isListOrTagView = newFilter.startsWith('list-') || newFilter.startsWith('tag-');
+        const isStandardView = ['all', 'today', 'next7days'].includes(newFilter);
+
+        if (isListOrTagView || isStandardView) {
+            shouldClearSelection = false; // Don't clear selection within these views
+            shouldClearSearch = false; // Don't clear search term when navigating lists/tags/standard filters
+        }
+        // Always clear selection for special views (completed, trash, calendar, summary)
+        if (['completed', 'trash', '/calendar', '/summary'].some(val => newFilter.includes(val) || pathname.startsWith(val))) {
+            shouldClearSelection = true;
+            // Also clear search when going to non-list views? Yes, usually.
+            shouldClearSearch = true;
         }
 
 
         // Update filter atom only if it changed
         if (currentFilterInternal !== newFilter) {
             setCurrentFilter(newFilter);
-            // Clear selection only when the filter *type* changes drastically (e.g., list to calendar)
-            // or navigating to special views like completed/trash.
-            if (clearSelection || ['completed', 'trash'].includes(newFilter)) {
+            // Clear selection only when filter type changes significantly or for special views
+            if (shouldClearSelection) {
                 setSelectedTaskId(null);
             }
         }
 
-        // Always clear selection specifically for calendar and summary views regardless of filter change
-        if (pathname === '/summary' || pathname === '/calendar') {
-            setSelectedTaskId(null);
+        // Clear search term if needed
+        if (shouldClearSearch) {
+            setSearchTerm('');
         }
 
-
-    }, [location.pathname, params, currentFilterInternal, setCurrentFilter, setSelectedTaskId]); // Add dependencies
+    }, [location.pathname, params, currentFilterInternal, setCurrentFilter, setSelectedTaskId, setSearchTerm]); // Added setSearchTerm
 
     return <Outlet />; // Render nested routes
 };
 
 
-// Wrapper for List Pages to extract params and pass props
+// Wrapper for List Pages
 const ListPageWrapper: React.FC = () => {
     const { listName } = useParams<{ listName: string }>();
-    // Default to 'Inbox' if listName is somehow undefined or empty after decode
     const decodedListName = listName ? decodeURIComponent(listName) : 'Inbox';
-
-    // Redirect if listName is invalid (e.g., empty after decode, though unlikely now with default)
     if (!decodedListName) return <Navigate to="/all" replace />;
-
     const filter: TaskFilter = `list-${decodedListName}`;
     return <MainPage title={decodedListName} filter={filter} />;
 };
@@ -90,11 +88,8 @@ const ListPageWrapper: React.FC = () => {
 const TagPageWrapper: React.FC = () => {
     const { tagName } = useParams<{ tagName: string }>();
     const decodedTagName = tagName ? decodeURIComponent(tagName) : '';
-
     if (!decodedTagName) return <Navigate to="/all" replace />;
-
     const filter: TaskFilter = `tag-${decodedTagName}`;
-    // Use # prefix for title display
     return <MainPage title={`#${decodedTagName}`} filter={filter} />;
 };
 
@@ -103,30 +98,19 @@ const TagPageWrapper: React.FC = () => {
 const App: React.FC = () => {
     return (
         <Routes>
-            {/* Main Layout wraps all primary routes */}
             <Route path="/" element={<MainLayout />}>
-                {/* RouteChangeHandler sits inside MainLayout to access context and handle changes */}
+                {/* RouteChangeHandler manages filter/selection based on route */}
                 <Route element={<RouteChangeHandler/>}>
-                    {/* Index route defaults to 'All Tasks' */}
-                    {/* Redirect index to /all to ensure a filter is always active */}
                     <Route index element={<Navigate to="/all" replace />} />
-
-                    {/* Static Filter Routes */}
                     <Route path="all" element={<MainPage title="All Tasks" filter="all" />} />
                     <Route path="today" element={<MainPage title="Today" filter="today" />} />
                     <Route path="next7days" element={<MainPage title="Next 7 Days" filter="next7days" />} />
                     <Route path="completed" element={<MainPage title="Completed" filter="completed" />} />
                     <Route path="trash" element={<MainPage title="Trash" filter="trash" />} />
-
-                    {/* Standalone Views (Sidebar is hidden via MainLayout logic) */}
                     <Route path="summary" element={<SummaryPage />} />
                     <Route path="calendar" element={<CalendarPage />} />
-
-                    {/* Dynamic routes for lists and tags */}
                     <Route path="list/:listName" element={<ListPageWrapper />} />
                     <Route path="tag/:tagName" element={<TagPageWrapper />} />
-
-                    {/* Fallback route - redirect any unmatched paths to the default view */}
                     <Route path="*" element={<Navigate to="/all" replace />} />
                 </Route>
             </Route>

@@ -12,7 +12,7 @@ export const iconMap = {
     'trash': LucideIcons.Trash2,
     'list': LucideIcons.List,
     'grid': LucideIcons.Grid,
-    'clock': LucideIcons.Clock,
+    'clock': LucideIcons.Clock, // Used in custom date picker
     'alert-circle': LucideIcons.AlertCircle,
     'plus': LucideIcons.Plus,
     'more-horizontal': LucideIcons.MoreHorizontal,
@@ -20,8 +20,10 @@ export const iconMap = {
     'chevron-up': LucideIcons.ChevronUp,
     'chevron-left': LucideIcons.ChevronLeft,
     'chevron-right': LucideIcons.ChevronRight,
-    'sun': LucideIcons.Sun, // For Today filter / maybe Appearance
-    'moon': LucideIcons.Moon, // For Appearance
+    'sun': LucideIcons.Sun, // For Today filter / date picker
+    'sunset': LucideIcons.Sunset, // For date picker 'Tomorrow'
+    'moon': LucideIcons.Moon, // For date picker 'No Date'
+    'calendar-plus': LucideIcons.CalendarPlus, // For date picker 'Next Week'
     'edit': LucideIcons.Edit3, // For placeholder / edit actions
     'check': LucideIcons.Check,
     'x': LucideIcons.X,
@@ -59,6 +61,8 @@ export const iconMap = {
     'folder': LucideIcons.Folder, // Could be used for Lists section header
     'minus': LucideIcons.Minus, // For collapsing sections maybe?
     'inbox': LucideIcons.Inbox,
+    'x-circle': LucideIcons.XCircle, // For clear search / clear date
+    'calendar-check': LucideIcons.CalendarCheck, // For date picker 'Today'
 };
 
 // Utility type for Icon names based on the map
