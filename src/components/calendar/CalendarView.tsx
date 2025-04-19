@@ -78,7 +78,6 @@ interface DroppableDayCellContentProps {
 }
 
 const DroppableDayCellContent: React.FC<DroppableDayCellContentProps> = React.memo(({ children, className, isOver }) => {
-    // Removed motion.div and scale animation
     return (
         <div
             className={twMerge(
@@ -116,7 +115,6 @@ const CalendarView: React.FC = () => {
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const [currentMonthDate, setCurrentMonthDate] = useState(startOfDay(new Date()));
     const [draggingTaskId, setDraggingTaskId] = useState<UniqueIdentifier | null>(null);
-    // Removed monthDirection state - no animation
 
     const draggingTask = useMemo(() => {
         if (!draggingTaskId) return null;
@@ -142,8 +140,16 @@ const CalendarView: React.FC = () => {
                 }
             }
         });
+        // Sort tasks within each day: priority first, then creation date
         Object.values(grouped).forEach(dayTasks => {
-            dayTasks.sort((a, b) => ((a.priority ?? 5) - (b.priority ?? 5)) || (b.createdAt - a.createdAt));
+            dayTasks.sort((a, b) => {
+                const priorityA = a.priority ?? 5;
+                const priorityB = b.priority ?? 5;
+                if (priorityA !== priorityB) {
+                    return priorityA - priorityB;
+                }
+                return b.createdAt - a.createdAt; // Newest first if same priority
+            });
         });
         return grouped;
     }, [tasks]);
@@ -182,11 +188,13 @@ const CalendarView: React.FC = () => {
                 const currentDueDateStart = originalDateTime ? startOfDay(originalDateTime) : null;
                 const newDueDateStart = startOfDay(targetDay);
 
+                // Only update if the day has actually changed
                 if (!currentDueDateStart || !isSameDay(currentDueDateStart, newDueDateStart)) {
                     setTasks(prevTasks =>
                         prevTasks.map(task => {
                             if (task.id === taskId) {
                                 let newTimestamp = newDueDateStart.getTime();
+                                // Preserve original time if it exists
                                 const currentTaskDateTime = safeParseDate(task.dueDate);
                                 if (currentTaskDateTime && isValid(currentTaskDateTime)) {
                                     const hours = currentTaskDateTime.getHours();
@@ -196,6 +204,7 @@ const CalendarView: React.FC = () => {
                                     updatedDateWithTime.setHours(hours, minutes, seconds, 0);
                                     newTimestamp = updatedDateWithTime.getTime();
                                 }
+                                // Update task with new dueDate and updatedAt timestamp
                                 return { ...task, dueDate: newTimestamp, updatedAt: Date.now() };
                             }
                             return task;
@@ -206,7 +215,6 @@ const CalendarView: React.FC = () => {
         }
     }, [setTasks]);
 
-    // Removed monthTextVariants
 
     const weekDays = useMemo(() => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], []);
 
@@ -217,7 +225,7 @@ const CalendarView: React.FC = () => {
         const isToday = isTodayFn(day);
         const dayOfWeek = getDay(day);
 
-        const MAX_VISIBLE_TASKS = 3;
+        const MAX_VISIBLE_TASKS = 3; // Limit visible tasks per day
 
         return (
             <DroppableDayCell
@@ -227,11 +235,12 @@ const CalendarView: React.FC = () => {
                     'flex flex-col relative transition-colors duration-150 ease-apple overflow-hidden',
                     isCurrentMonthDay ? 'bg-glass/90' : 'bg-glass-alt/60',
                     'border-t border-l border-black/10 backdrop-blur-md',
-                    dayOfWeek === 0 && 'border-l-0',
-                    index < 7 && 'border-t-0',
+                    dayOfWeek === 0 && 'border-l-0', // No left border for Sunday
+                    index < 7 && 'border-t-0', // No top border for the first row
                     'group'
                 )}
             >
+                {/* Day Number Header */}
                 <div className="flex justify-between items-center px-1.5 pt-1 pb-0.5 flex-shrink-0">
                     <span className={clsx(
                         'text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full transition-colors duration-150 ease-apple',
@@ -241,12 +250,12 @@ const CalendarView: React.FC = () => {
                         {format(day, 'd')}
                     </span>
                     {dayTasks.length > 0 && isCurrentMonthDay && (
-                        // Removed motion.span animation
                         <span className="text-[10px] text-muted-foreground bg-black/10 backdrop-blur-sm px-1 py-0.5 rounded-full font-mono">
                             {dayTasks.length}
                         </span>
                     )}
                 </div>
+                {/* Task Area */}
                 <div className="overflow-y-auto styled-scrollbar flex-1 space-y-0.5 px-1 pb-1 min-h-[50px]">
                     {isCurrentMonthDay && dayTasks.slice(0, MAX_VISIBLE_TASKS).map((task) => (
                         <DraggableCalendarTask
@@ -261,6 +270,7 @@ const CalendarView: React.FC = () => {
                         </div>
                     )}
                 </div>
+                {/* Overlay for non-current month days */}
                 {!isCurrentMonthDay && (
                     <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/20 to-gray-500/10 backdrop-blur-md opacity-80 pointer-events-none rounded-[1px]"></div>
                 )}
@@ -276,6 +286,7 @@ const CalendarView: React.FC = () => {
             measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         >
             <div className="h-full flex flex-col bg-glass backdrop-blur-xl overflow-hidden">
+                {/* Header */}
                 <div className="px-4 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 bg-glass-100 backdrop-blur-xl z-10 h-11">
                     <h1 className="text-lg font-semibold text-gray-800">Calendar</h1>
                     <div className="flex items-center space-x-3">
@@ -284,13 +295,12 @@ const CalendarView: React.FC = () => {
                             variant="glass"
                             size="sm"
                             className="!h-[30px] px-2.5 backdrop-blur-lg"
-                            disabled={isSameMonth(currentMonthDate, new Date()) && isTodayFn(currentMonthDate)}
+                            disabled={isSameMonth(currentMonthDate, new Date())}
                         >
                             Today
                         </Button>
                         <div className="flex items-center">
                             <Button onClick={() => changeMonth(-1)} variant="ghost" size="icon" icon="chevron-left" aria-label="Previous month" className="w-7 h-7 text-muted-foreground hover:bg-black/15" />
-                            {/* Removed AnimatePresence for month text */}
                             <span className="mx-2 text-sm font-medium w-28 text-center tabular-nums text-gray-700">
                                 {format(currentMonthDate, 'MMMM yyyy', { locale: enUS })}
                             </span>
@@ -299,8 +309,10 @@ const CalendarView: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Calendar Body */}
                 <div className="flex-1 overflow-hidden p-3">
                     <div className="h-full w-full flex flex-col rounded-lg overflow-hidden shadow-strong border border-black/10 bg-glass backdrop-blur-xl">
+                        {/* Weekday Headers */}
                         <div className="grid grid-cols-7 flex-shrink-0 border-b border-black/10 bg-glass-alt-100 backdrop-blur-xl">
                             {weekDays.map((day) => (
                                 <div key={day} className="text-center py-1.5 text-[11px] font-semibold text-muted-foreground border-l border-black/5 first:border-l-0">
@@ -308,6 +320,7 @@ const CalendarView: React.FC = () => {
                                 </div>
                             ))}
                         </div>
+                        {/* Day Grid */}
                         <div className="grid grid-cols-7 grid-rows-6 flex-1 min-h-0">
                             {daysInGrid.map(renderCalendarDay)}
                         </div>
@@ -315,11 +328,12 @@ const CalendarView: React.FC = () => {
                 </div>
             </div>
 
+            {/* Drag Overlay for Task */}
             <DragOverlay dropAnimation={null}>
                 {draggingTask ? (
                     <DraggableCalendarTask
                         task={draggingTask}
-                        onClick={() => {}}
+                        onClick={() => {}} // No click action needed for overlay
                         style={{ cursor: 'grabbing' }}
                     />
                 ) : null}

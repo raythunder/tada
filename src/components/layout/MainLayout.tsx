@@ -8,8 +8,9 @@ import { useAtomValue } from 'jotai';
 import { isSettingsOpenAtom, searchTermAtom } from '@/store/atoms';
 import Icon from "@/components/common/Icon";
 import { twMerge } from 'tailwind-merge';
+// import AddListModal from '@/components/common/AddListModal'; // Import modal for rendering here if needed
 
-// Loading Spinner remains the same
+// Simple loading spinner
 const LoadingSpinner: React.FC = () => (
     <div className="absolute inset-0 flex items-center justify-center bg-glass/70 backdrop-blur-md z-50">
         <Icon name="loader" size={32} className="text-primary animate-spin" />
@@ -21,32 +22,41 @@ const MainLayout: React.FC = () => {
     const searchTerm = useAtomValue(searchTermAtom);
     const location = useLocation();
 
+    // Determine if Sidebar should be hidden
+    // Hide Sidebar if not searching AND on Calendar or Summary pages
     const hideSidebar = !searchTerm && ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
 
+    // AddListModal state is managed in Sidebar, but rendered here to overlay properly
+    // const isAddListModalOpen = useAtomValue(isAddListModalOpenAtom); // Uncomment if moving modal render here
+
     return (
-        <div className="flex h-screen bg-canvas-alt overflow-hidden">
+        <div className="flex h-screen bg-canvas-alt overflow-hidden font-sans">
             <IconBar />
 
-            {/* Removed motion.div and AnimatePresence for Sidebar */}
+            {/* Conditional Sidebar rendering without motion/transition */}
             {!hideSidebar && (
-                <div className="w-56 flex-shrink-0 h-full relative"> {/* Use fixed width */}
+                <div className="w-56 flex-shrink-0 h-full relative"> {/* Fixed width */}
                     <Sidebar />
                 </div>
             )}
 
+            {/* Main Content Area */}
             <main className={twMerge(
-                "flex-1 overflow-hidden relative flex flex-col min-w-0",
-                "bg-glass/30 backdrop-blur-lg"
+                "flex-1 overflow-hidden relative flex flex-col min-w-0", // Flex properties for layout
+                "bg-glass/30 backdrop-blur-lg" // Background styling
             )}>
+                {/* Suspense for lazy-loaded route components */}
                 <Suspense fallback={<LoadingSpinner />}>
-                    <Outlet />
+                    <Outlet /> {/* Renders the matched child route */}
                 </Suspense>
             </main>
 
-            {/* Removed AnimatePresence for Modals */}
-            {/* Modals will now appear/disappear instantly based on their internal logic or state */}
+            {/* Modals - Render based on Jotai state, no AnimatePresence */}
+            {/* Render modals here ensures they are above other layout elements */}
             {isSettingsOpen && <SettingsModal key="settings-modal" />}
-            {/* Add other potential modals here */}
+            {/* Example: If AddListModal rendering is moved here */}
+            {/* {isAddListModalOpen && <AddListModal onAdd={...} />}  */}
+            {/* Add other global modals here */}
         </div>
     );
 };

@@ -3,31 +3,48 @@ export interface User {
     id: string;
     name: string;
     email: string;
-    avatar?: string;
-    isPremium: boolean;
+    avatar?: string; // Optional avatar URL
+    isPremium: boolean; // Premium status flag
 }
 
 export interface Task {
     id: string;
     title: string;
     completed: boolean;
-    dueDate?: number | null; // Store as timestamp (milliseconds since epoch)
-    list: string; // e.g., 'Inbox', 'Work', 'Personal'
-    content?: string; // Markdown content
-    order: number; // For manual sorting within filters/lists
-    createdAt: number; // Timestamp
-    updatedAt: number; // Timestamp
-    tags?: string[];
-    priority?: number | null; // e.g., 1 (High) - 4 (Low), null for none
-    // Derived property for DND date change context and grouping
-    groupCategory: TaskGroupCategory; // Now non-optional, calculated by atom setter
+    dueDate?: number | null; // Store as timestamp (milliseconds since epoch) or null
+    list: string; // List name (e.g., 'Inbox', 'Work', 'Trash')
+    content?: string; // Optional Markdown content for notes
+    order: number; // Fractional index for sorting
+    createdAt: number; // Timestamp when created
+    updatedAt: number; // Timestamp when last updated
+    tags?: string[]; // Optional array of tag strings
+    priority?: number | null; // Priority level (e.g., 1-4) or null
+    groupCategory: TaskGroupCategory; // Derived category for grouping (non-optional)
 }
 
-export type TaskFilter = 'all' | 'today' | 'next7days' | 'completed' | 'trash' | `list-${string}` | `tag-${string}`;
+// Defines the possible filter strings used for routing and state
+export type TaskFilter =
+    | 'all'
+    | 'today'
+    | 'next7days'
+    | 'completed'
+    | 'trash'
+    | `list-${string}` // e.g., 'list-Inbox', 'list-Work'
+    | `tag-${string}`; // e.g., 'tag-urgent', 'tag-review'
 
+// Defines the possible tabs in the settings modal
 export type SettingsTab =
-    | 'account' | 'appearance' | 'premium' | 'notifications' | 'integrations'
+    | 'account'
+    | 'appearance'
+    | 'premium'
+    | 'notifications'
+    | 'integrations'
     | 'about';
 
-// Grouping category for 'All Tasks' view
-export type TaskGroupCategory = 'overdue' | 'today' | 'next7days' | 'later' | 'nodate';
+// Defines the categories used for grouping tasks in the 'All Tasks' view
+export type TaskGroupCategory =
+    | 'overdue'
+    | 'today'
+    | 'next7days'
+    | 'later' // Due date is beyond 7 days
+    | 'nodate'; // No due date assigned

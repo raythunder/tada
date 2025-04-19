@@ -47,9 +47,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'transition-colors duration-150 ease-apple', // Keep color transition
             isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             fullWidth && 'w-full',
-            'rounded-md'
+            'rounded-md' // Use theme border radius
         );
 
+        // Refined variant styles for better consistency
         const variantClasses: Record<ButtonVariant, string> = {
             primary: clsx(
                 'bg-primary text-primary-foreground shadow-subtle border border-primary/90',
@@ -86,14 +87,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             sm: 'text-xs px-2.5 h-[30px]',
             md: 'text-sm px-3 h-[32px]',
             lg: 'text-base px-3.5 h-[36px]',
-            icon: 'h-8 w-8 p-0',
+            icon: 'h-8 w-8 p-0', // Standard icon button size
         };
 
         const iconSizeClasses: Record<ButtonSize, number> = {
             sm: 14,
             md: 16,
             lg: 18,
-            icon: 18,
+            icon: 18, // Consistent icon size for icon buttons
         };
 
         const getIconMargin = (pos: 'left' | 'right') => {
@@ -102,11 +103,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             return pos === 'left' ? 'mr-1.5' : 'ml-1.5';
         };
 
-        // Removed motionProps
-
-        const finalAriaLabel = ariaLabel || (size === 'icon' ? undefined : (typeof children === 'string' ? children : undefined));
-        if (size === 'icon' && !finalAriaLabel && !loading) {
-            console.warn("Icon-only button is missing an 'aria-label' prop for accessibility.", { icon, children });
+        // Determine aria-label, warn if missing for icon-only buttons
+        const finalAriaLabel = ariaLabel || (size === 'icon' && !children ? undefined : (typeof children === 'string' ? children : undefined));
+        if (size === 'icon' && !finalAriaLabel && !loading && !children) {
+            console.warn("Icon-only button without children is missing an 'aria-label' prop for accessibility.", { icon });
         }
 
         return (
@@ -115,13 +115,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 type={type}
                 className={twMerge(
                     baseClasses,
-                    variant !== 'link' && sizeClasses[size],
+                    variant !== 'link' && sizeClasses[size], // Don't apply sizing for link variant
                     variantClasses[variant],
                     className
                 )}
                 disabled={isDisabled}
                 aria-label={finalAriaLabel}
-                {...props} // Pass standard button props
+                {...props} // Pass standard button props like onClick, etc.
             >
                 {loading ? (
                     <Icon name="loader" size={iconSizeClasses[size]} className="animate-spin" />
@@ -132,10 +132,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                                 name={icon}
                                 size={iconSizeClasses[size]}
                                 className={twMerge(getIconMargin('left'))}
-                                aria-hidden="true"
+                                aria-hidden="true" // Icon is decorative if text is present
                             />
                         )}
-                        <span className={clsx(size === 'icon' ? 'sr-only' : 'flex-shrink-0')}>{children}</span>
+                        {/* Render children, make sr-only if it's an icon-only button with label */}
+                        <span className={clsx(size === 'icon' && !children ? 'sr-only' : 'flex-shrink-0')}>{children}</span>
                         {icon && iconPosition === 'right' && (
                             <Icon
                                 name={icon}

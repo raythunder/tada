@@ -8,57 +8,66 @@ import { twMerge } from 'tailwind-merge';
 import Button from "@/components/common/Button";
 import { IconName } from "@/components/common/IconMap";
 
+// Consistent Icon Bar Styling
 const IconBar: React.FC = () => {
     const currentUser = useAtomValue(currentUserAtom);
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
 
+    // Define navigation items clearly
     const navigationItems: { path: string; icon: IconName, label: string }[] = [
-        { path: '/all', icon: 'archive', label: 'All Tasks' },
+        { path: '/all', icon: 'archive', label: 'All Tasks' }, // Use 'archive' for consistency with Sidebar
         { path: '/calendar', icon: 'calendar-days', label: 'Calendar' },
         { path: '/summary', icon: 'sparkles', label: 'AI Summary' },
     ];
 
+    // Callback to open settings modal
     const handleAvatarClick = useCallback(() => {
         setIsSettingsOpen(true);
     }, [setIsSettingsOpen]);
 
+    // Callback to generate NavLink class names based on active state
     const getNavLinkClass = useCallback(({ isActive }: { isActive: boolean }): string =>
         twMerge(
-            'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-150 ease-apple group relative',
+            'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-150 ease-apple group relative', // Base styling
             isActive
-                ? 'bg-primary/25 text-primary backdrop-blur-md ring-1 ring-inset ring-primary/30'
-                : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm'
+                ? 'bg-primary/25 text-primary backdrop-blur-md ring-1 ring-inset ring-primary/30' // Active state
+                : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm' // Inactive state
         ), []);
 
     return (
         <div className="w-16 bg-glass-alt-100 backdrop-blur-xl border-r border-black/10 flex flex-col items-center py-4 flex-shrink-0 z-20 shadow-strong">
+            {/* App Logo */}
             <div
-                className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-gradient-to-br from-primary/90 to-blue-500/80 rounded-lg text-white font-bold text-xl shadow-inner"
+                className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-gradient-to-br from-primary/90 to-blue-500/80 rounded-lg text-white font-bold text-xl shadow-inner select-none"
                 aria-label="Tada App Logo"
+                title="Tada"
             >
                 <span className="-mt-0.5">T</span>
             </div>
 
+            {/* Main Navigation */}
             <nav className="flex flex-col items-center space-y-2 flex-1">
                 {navigationItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}
                         className={getNavLinkClass}
-                        title={item.label}
-                        aria-label={item.label}
+                        title={item.label} // Tooltip
+                        aria-label={item.label} // Accessibility
+                        // Use `end` prop for '/' or '/all' to prevent matching nested routes
                         end={item.path === '/all'}
                     >
-                        {/* Removed motion.div for icon scale */}
+                        {/* Icon without extra motion wrapper */}
                         <Icon name={item.icon} size={20} strokeWidth={1.75} />
                     </NavLink>
                 ))}
             </nav>
 
+            {/* User Avatar / Settings Trigger */}
             <div className="mt-auto mb-1">
                 <Button
                     onClick={handleAvatarClick}
-                    variant="glass"
+                    variant="glass" // Use glass variant for consistency
                     size="icon"
                     className="w-9 h-9 rounded-full overflow-hidden p-0 border border-black/10 shadow-inner hover:bg-black/15 backdrop-blur-md"
                     aria-label="Account Settings"
@@ -67,9 +76,10 @@ const IconBar: React.FC = () => {
                         <img
                             src={currentUser.avatar}
                             alt={currentUser.name || 'User Avatar'}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover" // Ensure image covers the button
                         />
                     ) : (
+                        // Fallback initials or icon
                         <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-medium text-sm">
                             {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : <Icon name="user" size={16} />}
                         </div>

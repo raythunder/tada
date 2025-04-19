@@ -18,9 +18,16 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
 
     const handleClose = useCallback(() => setIsOpen(false), [setIsOpen]);
 
+    // Reset state when modal opens/closes
     useEffect(() => {
-        if (isOpen) { // Focus only when modal becomes open
-            inputRef.current?.focus();
+        if (isOpen) {
+            setListName(''); // Clear name on open
+            setError(null); // Clear error on open
+            // Focus input after a short delay to ensure it's rendered
+            const timer = setTimeout(() => {
+                inputRef.current?.focus();
+            }, 100); // Adjust delay if needed
+            return () => clearTimeout(timer);
         }
     }, [isOpen]);
 
@@ -38,7 +45,8 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
             inputRef.current?.select();
             return;
         }
-        const reservedNames = ['trash', 'archive', 'all', 'today', 'next 7 days', 'completed'];
+        // Added more reserved names
+        const reservedNames = ['inbox', 'trash', 'archive', 'all', 'today', 'next 7 days', 'completed', 'later', 'nodate', 'overdue'];
         if (reservedNames.includes(trimmedName.toLowerCase())) {
             setError(`"${trimmedName}" is a reserved system name.`);
             inputRef.current?.select();
@@ -50,26 +58,25 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
         handleClose();
     }, [listName, allListNames, onAdd, handleClose]);
 
-    // Return null if not open, as AnimatePresence is removed from parent
+    // Return null if not open (parent removed AnimatePresence)
     if (!isOpen) return null;
 
     return (
-        // Removed outer motion.div
         <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 flex items-center justify-center p-4"
-            onClick={handleClose}
+            onClick={handleClose} // Click outside closes
             aria-modal="true"
             role="dialog"
             aria-labelledby="addListModalTitle"
         >
-            {/* Removed inner motion.div */}
             <div
                 className={twMerge(
                     "bg-glass-100 backdrop-blur-xl w-full max-w-sm rounded-xl shadow-strong overflow-hidden border border-black/10",
-                    "flex flex-col"
+                    "flex flex-col" // Ensure flex column layout
                 )}
-                onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+                onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()} // Prevent closing when clicking inside
             >
+                {/* Header */}
                 <div className="px-4 py-3 border-b border-black/10 flex justify-between items-center flex-shrink-0 bg-glass-alt-100 backdrop-blur-lg">
                     <h2 id="addListModalTitle" className="text-base font-semibold text-gray-800">Create New List</h2>
                     <Button
@@ -82,6 +89,7 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
                     />
                 </div>
 
+                {/* Form */}
                 <form onSubmit={handleSubmit} className="p-5 space-y-4">
                     <div>
                         <label htmlFor="listNameInput" className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -94,14 +102,15 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
                             value={listName}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                                 setListName(e.target.value);
-                                if (error) setError(null);
+                                if (error) setError(null); // Clear error on typing
                             }}
                             placeholder="e.g., Groceries, Project X"
                             className={twMerge(
                                 "w-full h-9 px-3 text-sm bg-glass-inset-100 backdrop-blur-md border rounded-md focus:border-primary/50 focus:ring-1 focus:ring-primary/30 placeholder:text-muted shadow-inner",
                                 error ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : 'border-black/10',
-                                "focus:bg-glass-inset-200"
+                                "focus:bg-glass-inset-200" // Slight visual feedback on focus
                             )}
+                            required // HTML5 required attribute
                             aria-required="true"
                             aria-invalid={!!error}
                             aria-describedby={error ? "listNameError" : undefined}
@@ -109,6 +118,7 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
                         {error && <p id="listNameError" className="text-xs text-red-600 mt-1.5">{error}</p>}
                     </div>
 
+                    {/* Actions */}
                     <div className="flex justify-end space-x-2 pt-2">
                         <Button variant="glass" size="md" onClick={handleClose}>
                             Cancel

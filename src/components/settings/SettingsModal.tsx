@@ -6,7 +6,7 @@ import { SettingsTab } from '@/types';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
 import { twMerge } from 'tailwind-merge';
-import { IconName } from "@/components/common/IconMap.tsx";
+import { IconName } from "@/components/common/IconMap"; // Corrected import path
 
 // --- Setting Sections Definition ---
 interface SettingsItem {
@@ -17,46 +17,53 @@ interface SettingsItem {
 
 const settingsSections: SettingsItem[] = [
     { id: 'account', label: 'Account', icon: 'user' },
-    { id: 'appearance', label: 'Appearance', icon: 'settings' },
+    { id: 'appearance', label: 'Appearance', icon: 'settings' }, // Changed icon for variety
     { id: 'premium', label: 'Premium', icon: 'crown' },
     { id: 'notifications', label: 'Notifications', icon: 'bell' },
     { id: 'integrations', label: 'Integrations', icon: 'share' },
     { id: 'about', label: 'About', icon: 'info' },
 ];
 
-// --- Placeholder Content Components ---
+// --- Reusable Settings Row Component ---
 const SettingsRow: React.FC<{label: string, value?: React.ReactNode, action?: React.ReactNode, children?: React.ReactNode, description?: string}> =
     React.memo(({label, value, action, children, description}) => (
         <div className="flex justify-between items-center py-2.5 min-h-[44px] border-b border-black/5 last:border-b-0">
+            {/* Left Side: Label & Description */}
             <div className="flex-1 mr-4">
                 <span className="text-sm text-gray-700 font-medium block">{label}</span>
                 {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
             </div>
+            {/* Right Side: Value or Action(s) */}
             <div className="text-sm text-gray-800 flex items-center space-x-2 flex-shrink-0">
+                {/* Display simple value if no action/children */}
                 {value && !action && !children && <span className="text-muted-foreground text-right">{value}</span>}
+                {/* Display single action button */}
                 {action && !children && <div className="flex justify-end">{action}</div>}
+                {/* Display multiple children (e.g., buttons) */}
                 {children && <div className="flex justify-end space-x-2">{children}</div>}
             </div>
         </div>
     ));
 SettingsRow.displayName = 'SettingsRow';
 
+// --- Account Settings Panel ---
 const AccountSettings: React.FC = () => {
     const [currentUser] = useAtom(currentUserAtom);
-    const handleEdit = useCallback(() => console.log("Edit action"), []);
-    const handleChangePassword = useCallback(() => console.log("Change password action"), []);
-    const handleUnlink = useCallback(() => console.log("Unlink action"), []);
-    const handleLinkApple = useCallback(() => console.log("Link Apple ID action"), []);
-    const handleBackup = useCallback(() => console.log("Backup action"), []);
-    const handleImport = useCallback(() => console.log("Import action"), []);
-    const handleDeleteAccount = useCallback(() => console.log("Delete account action"), []);
-    const handleLogout = useCallback(() => { console.log("Logout action"); }, []);
+    // Placeholder actions - replace with actual logic
+    const handleEdit = useCallback(() => console.log("Edit action triggered"), []);
+    const handleChangePassword = useCallback(() => console.log("Change password action triggered"), []);
+    const handleUnlink = useCallback(() => console.log("Unlink Google action triggered"), []);
+    const handleLinkApple = useCallback(() => console.log("Link Apple ID action triggered"), []);
+    const handleBackup = useCallback(() => console.log("Backup action triggered"), []);
+    const handleImport = useCallback(() => console.log("Import action triggered"), []);
+    const handleDeleteAccount = useCallback(() => console.log("Delete account action triggered"), []);
+    const handleLogout = useCallback(() => { console.log("Logout action triggered"); /* Add actual logout logic here */ }, []);
 
     return (
-        // Removed motion.div animation wrapper
+        // Container without motion div
         <div className="space-y-6">
+            {/* Profile Header */}
             <div className="flex items-center space-x-4 mb-4">
-                {/* Removed motion.div animation wrapper */}
                 <div className="w-16 h-16 rounded-full overflow-hidden shadow-medium flex-shrink-0 border-2 border-white backdrop-blur-sm bg-white/40">
                     {currentUser?.avatar ? (
                         <img src={currentUser.avatar} alt={currentUser.name ?? 'User Avatar'} className="w-full h-full object-cover" />
@@ -78,18 +85,22 @@ const AccountSettings: React.FC = () => {
                 </div>
             </div>
 
+            {/* Account Details */}
             <div className="space-y-0">
                 <SettingsRow label="Name" value={currentUser?.name ?? '-'} action={<Button variant="link" size="sm" onClick={handleEdit}>Edit</Button>} />
                 <SettingsRow label="Email Address" value={currentUser?.email ?? '-'} description="Used for login and notifications."/>
                 <SettingsRow label="Password" action={<Button variant="link" size="sm" onClick={handleChangePassword}>Change Password</Button>} />
             </div>
 
+            {/* Connected Accounts */}
             <div className="space-y-0">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 mt-4">Connected Accounts</h4>
-                <SettingsRow label="Google Account" value="Linked" action={<Button variant="link" size="sm" className="text-muted-foreground hover:text-red-600" onClick={handleUnlink}>Unlink</Button>} />
+                {/* Example: Assume Google is linked, Apple is not */}
+                <SettingsRow label="Google Account" value={currentUser?.email ? "Linked" : "Not Linked"} action={ currentUser?.email ? <Button variant="link" size="sm" className="text-muted-foreground hover:text-red-600" onClick={handleUnlink}>Unlink</Button> : undefined } />
                 <SettingsRow label="Apple ID" action={<Button variant="link" size="sm" onClick={handleLinkApple}>Link Apple ID</Button>} />
             </div>
 
+            {/* Data Management */}
             <div className="space-y-0">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 mt-4">Data Management</h4>
                 <SettingsRow label="Backup & Restore" description="Save or load your task data.">
@@ -101,6 +112,7 @@ const AccountSettings: React.FC = () => {
                 } />
             </div>
 
+            {/* Logout Button */}
             <div className="mt-6">
                 <Button variant="glass" size="md" icon="logout" onClick={handleLogout} className="w-full sm:w-auto">
                     Logout
@@ -110,8 +122,9 @@ const AccountSettings: React.FC = () => {
     );
 };
 
+// --- Placeholder for other settings panels ---
 const PlaceholderSettings: React.FC<{ title: string, icon?: IconName }> = ({ title, icon = 'settings' }) => (
-    // Removed motion.div animation wrapper
+    // Container without motion div
     <div className="p-6 text-center text-gray-400 h-full flex flex-col items-center justify-center">
         <Icon name={icon} size={44} className="mx-auto mb-4 text-gray-300 opacity-70" />
         <p className="text-base font-medium text-gray-500">{title} Settings</p>
@@ -120,13 +133,15 @@ const PlaceholderSettings: React.FC<{ title: string, icon?: IconName }> = ({ tit
 );
 
 
-// Main Settings Modal Component
+// --- Main Settings Modal Component ---
 const SettingsModal: React.FC = () => {
-    const [isOpen, setIsSettingsOpen] = useAtom(isSettingsOpenAtom); // Use state to control visibility
+    const [isOpen, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
     const [selectedTab, setSelectedTab] = useAtom(settingsSelectedTabAtom);
 
+    // Close modal function
     const handleClose = useCallback(() => setIsSettingsOpen(false), [setIsSettingsOpen]);
 
+    // Determine which content panel to render based on selectedTab
     const renderContent = useMemo(() => {
         switch (selectedTab) {
             case 'account': return <AccountSettings />;
@@ -137,41 +152,45 @@ const SettingsModal: React.FC = () => {
             case 'about': return <PlaceholderSettings title="About" icon="info" />;
             default:
                 console.warn("Unknown settings tab:", selectedTab);
-                return <AccountSettings />;
+                return <AccountSettings />; // Fallback to account settings
         }
     }, [selectedTab]);
 
-    // Return null if not open, parent removed AnimatePresence
+    // Render null if the modal isn't open
     if (!isOpen) return null;
 
     return (
-        // Removed outer motion.div animation wrapper
+        // Modal Backdrop / Overlay
         <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 flex items-center justify-center p-4"
-            onClick={handleClose}
-            aria-modal="true"
+            onClick={handleClose} // Click outside closes
             role="dialog"
+            aria-modal="true"
             aria-labelledby="settingsModalTitle"
         >
-            {/* Removed inner motion.div animation wrapper */}
+            {/* Modal Container */}
             <div
                 className={twMerge(
-                    "bg-glass-100 backdrop-blur-xl w-full max-w-3xl h-[75vh] max-h-[600px]",
-                    "rounded-xl shadow-strong flex overflow-hidden border border-black/10"
+                    "bg-glass-100 backdrop-blur-xl w-full max-w-3xl h-[75vh] max-h-[600px]", // Sizing and max height
+                    "rounded-xl shadow-strong flex overflow-hidden border border-black/10" // Appearance
                 )}
-                onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+                onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()} // Prevent closing on inner click
             >
+                {/* Settings Sidebar */}
                 <div className="w-52 bg-glass-alt-100 backdrop-blur-xl border-r border-black/10 p-3 flex flex-col shrink-0">
+                    {/* Optional: Title or Branding */}
+                    {/* <h3 className="text-sm font-semibold px-2 mb-3 mt-1">Settings</h3> */}
                     <nav className="space-y-0.5 flex-1 mt-2">
                         {settingsSections.map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => setSelectedTab(item.id)}
                                 className={twMerge(
-                                    'flex items-center w-full px-2 py-1 h-7 text-sm rounded-md transition-colors duration-150 ease-apple',
+                                    'flex items-center w-full px-2 py-1 h-7 text-sm rounded-md transition-colors duration-150 ease-apple', // Base styling
                                     selectedTab === item.id
-                                        ? 'bg-primary/25 text-primary font-medium backdrop-blur-sm'
-                                        : 'text-gray-600 hover:bg-black/15 hover:text-gray-800 hover:backdrop-blur-sm'
+                                        ? 'bg-primary/25 text-primary font-medium backdrop-blur-sm' // Active state
+                                        : 'text-gray-600 hover:bg-black/15 hover:text-gray-800 hover:backdrop-blur-sm', // Inactive state
+                                    'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100' // Focus state
                                 )}
                                 aria-current={selectedTab === item.id ? 'page' : undefined}
                             >
@@ -182,11 +201,15 @@ const SettingsModal: React.FC = () => {
                     </nav>
                 </div>
 
+                {/* Settings Content Area */}
                 <div className="flex-1 flex flex-col overflow-hidden bg-glass backdrop-blur-lg relative">
+                    {/* Content Header */}
                     <div className="flex items-center justify-between px-5 py-3 border-b border-black/10 flex-shrink-0 h-[53px] bg-glass-alt-200 backdrop-blur-lg">
                         <h2 id="settingsModalTitle" className="text-lg font-semibold text-gray-800">
+                            {/* Dynamically set title based on selected tab */}
                             {settingsSections.find(s => s.id === selectedTab)?.label ?? 'Settings'}
                         </h2>
+                        {/* Close Button */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -197,8 +220,9 @@ const SettingsModal: React.FC = () => {
                         />
                     </div>
 
+                    {/* Scrollable Content Panel */}
                     <div className="flex-1 p-5 overflow-y-auto styled-scrollbar">
-                        {/* Removed AnimatePresence and motion.div for content switching */}
+                        {/* Render the active settings panel - No animation wrapper */}
                         {renderContent}
                     </div>
                 </div>
