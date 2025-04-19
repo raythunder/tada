@@ -1,17 +1,17 @@
 // src/components/tasks/TaskItem.tsx
-import React, { useMemo, useCallback } from 'react';
-import { Task, TaskGroupCategory } from '@/types';
+import React, {useCallback, useMemo} from 'react';
+import {Task, TaskGroupCategory} from '@/types';
 import {formatDate, formatRelativeDate, isOverdue, safeParseDate} from '@/utils/dateUtils';
-import { useAtom, useSetAtom } from 'jotai';
-import { selectedTaskIdAtom, tasksAtom, searchTermAtom } from '@/store/atoms';
+import {useAtom, useSetAtom} from 'jotai';
+import {searchTermAtom, selectedTaskIdAtom, tasksAtom} from '@/store/atoms';
 import Icon from '../common/Icon';
-import { twMerge } from 'tailwind-merge';
-import { clsx } from 'clsx';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import {twMerge} from 'tailwind-merge';
+import {clsx} from 'clsx';
+import {useSortable} from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
 import Button from "@/components/common/Button";
 import Highlighter from "react-highlight-words";
-import { IconName } from "@/components/common/IconMap";
+import {IconName} from "@/components/common/IconMap";
 
 interface TaskItemProps {
     task: Task;
@@ -55,7 +55,7 @@ function generateContentSnippet(content: string, term: string, length: number = 
 }
 
 
-const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = false, style: overlayStyle }) => {
+const TaskItem: React.FC<TaskItemProps> = ({task, groupCategory, isOverlay = false, style: overlayStyle}) => {
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
@@ -76,7 +76,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
     } = useSortable({
         id: task.id,
         disabled: !isSortable, // Disable sorting for completed/trashed items
-        data: { task, type: 'task-item', groupCategory: groupCategory ?? task.groupCategory }, // Pass data for drop logic
+        data: {task, type: 'task-item', groupCategory: groupCategory ?? task.groupCategory}, // Pass data for drop logic
     });
 
     // Combine overlay style (positioning) with DND transform/transition
@@ -114,7 +114,12 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
         const isChecked = e.target.checked;
         setTasks(prevTasks =>
             prevTasks.map(t =>
-                t.id === task.id ? { ...t, completed: isChecked, completedAt: isChecked ? Date.now() : null, updatedAt: Date.now() } : t
+                t.id === task.id ? {
+                    ...t,
+                    completed: isChecked,
+                    completedAt: isChecked ? Date.now() : null,
+                    updatedAt: Date.now()
+                } : t
             )
         );
         if (isChecked && isSelected) {
@@ -137,7 +142,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
     // Base classes for the task item container
     const baseClasses = twMerge(
         'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]', // Layout and border
-        'transition-colors ease-apple', // Background color transition only
+        'transition-colors duration-30 ease-apple', // Background color transition only
         isOverlay
             ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong'
             : isSelected && !isDragging
@@ -162,7 +167,10 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
             onClick={handleTaskClick}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleTaskClick(e as any); }}
+            onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                if (e.key === 'Enter' || e.key === ' ')
+                    handleTaskClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+            }}
             aria-selected={isSelected}
             aria-label={`Task: ${task.title || 'Untitled'}${task.completed ? ' (Completed)' : ''}`}
         >
@@ -181,9 +189,9 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
                         aria-label="Drag task to reorder"
                         tabIndex={-1}
                     >
-                        <Icon name="grip-vertical" size={15} strokeWidth={2} />
+                        <Icon name="grip-vertical" size={15} strokeWidth={2}/>
                     </button>
-                ) : ( <div className="w-[27px]" aria-hidden="true"></div> )}
+                ) : (<div className="w-[27px]" aria-hidden="true"></div>)}
             </div>
 
             {/* Checkbox */}
@@ -207,7 +215,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
                     aria-labelledby={`task-title-${task.id}`}
                     disabled={isTrashItem}
                 />
-                <label htmlFor={`task-checkbox-${task.id}`} className="sr-only">Complete task {task.title || 'Untitled'}</label>
+                <label htmlFor={`task-checkbox-${task.id}`} className="sr-only">Complete
+                    task {task.title || 'Untitled'}</label>
             </div>
 
             {/* Task Info */}
@@ -223,32 +232,43 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
                         (task.completed || isTrashItem) && "line-through text-muted-foreground"
                     )}
                 />
-                <div className="flex items-center flex-wrap text-[11px] text-muted-foreground space-x-2 mt-1 leading-tight gap-y-0.5">
+                <div
+                    className="flex items-center flex-wrap text-[11px] text-muted-foreground space-x-2 mt-1 leading-tight gap-y-0.5">
                     {!!task.priority && task.priority <= 2 && !task.completed && !isTrashItem && (
-                        <span className={clsx("flex items-center", { 'text-red-600': task.priority === 1, 'text-orange-500': task.priority === 2 })} title={`Priority ${task.priority === 1 ? 'High' : 'Medium'}`}>
+                        <span className={clsx("flex items-center", {
+                            'text-red-600': task.priority === 1,
+                            'text-orange-500': task.priority === 2
+                        })} title={`Priority ${task.priority === 1 ? 'High' : 'Medium'}`}>
                             <Icon name="flag" size={11} strokeWidth={2.5}/>
                         </span>
                     )}
                     {dueDate && !task.completed && !isTrashItem && (
-                        <span className={clsx('flex items-center whitespace-nowrap', overdue && 'text-red-600 font-medium')} title={formatDate(dueDate)}>
-                            <Icon name="calendar" size={11} className="mr-0.5 opacity-70" />
+                        <span
+                            className={clsx('flex items-center whitespace-nowrap', overdue && 'text-red-600 font-medium')}
+                            title={formatDate(dueDate)}>
+                            <Icon name="calendar" size={11} className="mr-0.5 opacity-70"/>
                             {formatRelativeDate(dueDate)}
                         </span>
                     )}
-                    {task.list && task.list !== 'Inbox' && !isTrashItem && !task.completed && (!isSelected || isDragging || isOverlay) && (
-                        <span className="flex items-center whitespace-nowrap bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[80px] truncate backdrop-blur-sm" title={task.list}>
-                            <Icon name={listIcon} size={10} className="mr-0.5 opacity-70 flex-shrink-0" />
+                    {task.list && task.list !== 'Inbox' && !isTrashItem && !task.completed && (
+                        <span
+                            className="flex items-center whitespace-nowrap bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[80px] truncate backdrop-blur-sm"
+                            title={task.list}>
+                            <Icon name={listIcon} size={10} className="mr-0.5 opacity-70 flex-shrink-0"/>
                             <span className="truncate">{task.list}</span>
                         </span>
                     )}
                     {task.tags && task.tags.length > 0 && !task.completed && !isTrashItem && (
                         <span className="flex items-center space-x-1 flex-wrap gap-y-0.5">
                             {task.tags.slice(0, 2).map(tag => (
-                                <span key={tag} className="bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[70px] truncate backdrop-blur-sm" title={tag}>
+                                <span key={tag}
+                                      className="bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[70px] truncate backdrop-blur-sm"
+                                      title={tag}>
                                      #{tag}
                                  </span>
                             ))}
-                            {task.tags.length > 2 && <span className="text-muted-foreground text-[10px]">+{task.tags.length - 2}</span>}
+                            {task.tags.length > 2 &&
+                                <span className="text-muted-foreground text-[10px]">+{task.tags.length - 2}</span>}
                          </span>
                     )}
                     {showContentHighlight && (
@@ -265,7 +285,8 @@ const TaskItem: React.FC<TaskItemProps> = ({ task, groupCategory, isOverlay = fa
 
             {/* More Actions Button */}
             {(isSortable || isTrashItem) && !isOverlay && (
-                <div className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple">
+                <div
+                    className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple">
                     <Button
                         variant="ghost"
                         size="icon"
