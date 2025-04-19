@@ -16,7 +16,7 @@ import { IconName } from "@/components/common/IconMap";
 import Highlighter from "react-highlight-words";
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Debounce Hook (remains the same)
+// Debounce Hook
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
     useEffect(() => {
@@ -26,26 +26,54 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
-// Sidebar Navigation Item Component (Memoized, remains the same)
+// Helper function
+function generateContentSnippet(content: string, term: string, length: number = 35): string {
+    if (!content || !term) return '';
+    const lowerContent = content.toLowerCase();
+    const searchWords = term.toLowerCase().split(' ').filter(Boolean);
+    let firstMatchIndex = -1;
+    let matchedWord = '';
+
+    for (const word of searchWords) {
+        const index = lowerContent.indexOf(word);
+        if (index !== -1) {
+            firstMatchIndex = index;
+            matchedWord = word;
+            break;
+        }
+    }
+
+    if (firstMatchIndex === -1) {
+        return content.substring(0, length) + (content.length > length ? '...' : '');
+    }
+
+    const start = Math.max(0, firstMatchIndex - Math.floor(length / 3));
+    const end = Math.min(content.length, firstMatchIndex + matchedWord.length + Math.ceil(length * 2 / 3));
+    let snippet = content.substring(start, end);
+
+    if (start > 0) snippet = '...' + snippet;
+    if (end < content.length) snippet = snippet + '...';
+
+    return snippet;
+}
+
+
+// Sidebar Navigation Item Component
 const SidebarItem: React.FC<{
     to: string; filter: TaskFilter; icon: IconName; label: string; count?: number; isUserList?: boolean;
 }> = React.memo(({ to, filter, icon, label, count, isUserList = false }) => {
-    // ... (previous implementation is correct)
-    const [currentActiveFilter, setCurrentFilter] = useAtom(currentFilterAtom);
-    const setSearchTerm = useSetAtom(searchTermAtom);
-    const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
+    const [currentActiveFilter, ] = useAtom(currentFilterAtom);
+    // Removed setSearchTerm, setSelectedTaskId from here - handled by RouteChangeHandler
     const navigate = useNavigate();
     const isActive = currentActiveFilter === filter;
 
     const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
         if (currentActiveFilter !== filter) {
-            setCurrentFilter(filter);
-            setSearchTerm('');
-            setSelectedTaskId(null);
+            // Only navigate, state changes handled by RouteChangeHandler
             navigate(to);
         }
-    }, [setCurrentFilter, filter, navigate, to, setSearchTerm, setSelectedTaskId, currentActiveFilter]);
+    }, [filter, navigate, currentActiveFilter]);
 
     return (
         <Link
@@ -70,18 +98,17 @@ const SidebarItem: React.FC<{
                     {count}
                 </span>
             )}
-            {isUserList && <div className="w-4 h-4 ml-1 flex-shrink-0"></div>}
+            {isUserList && <div className="w-4 h-4 ml-1 flex-shrink-0"></div>} {/* Placeholder for potential future icon */}
         </Link>
     );
 });
 SidebarItem.displayName = 'SidebarItem';
 
 
-// Collapsible Section Component (Memoized, remains the same)
+// Collapsible Section Component
 const CollapsibleSection: React.FC<{
     title: string; children: React.ReactNode; icon?: IconName; initiallyOpen?: boolean; action?: React.ReactNode;
 }> = React.memo(({ title, icon, children, initiallyOpen = true, action }) => {
-    // ... (previous implementation is correct)
     const [isOpen, setIsOpen] = useState(initiallyOpen);
     const sectionId = `section-content-${title.replace(/\s+/g, '-')}`;
 
@@ -100,7 +127,25 @@ const CollapsibleSection: React.FC<{
                 </button>
                 {action && <div className="-mr-1 ml-1 flex-shrink-0">{action}</div>}
             </div>
-            {isOpen && ( <div id={sectionId} className="mt-0.5 overflow-hidden"> {children} </div> )}
+            <AnimatePresence initial={false}>
+                {isOpen && (
+                    <motion.div
+                        id={sectionId}
+                        key="content"
+                        initial="collapsed"
+                        animate="open"
+                        exit="collapsed"
+                        variants={{
+                            open: { opacity: 1, height: 'auto', marginTop: '0.125rem' },
+                            collapsed: { opacity: 0, height: 0, marginTop: 0 }
+                        }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="overflow-hidden"
+                    >
+                        {children}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 });
@@ -113,9 +158,7 @@ const Sidebar: React.FC = () => {
     const userLists = useAtomValue(userListNamesAtom);
     const userTags = useAtomValue(userTagNamesAtom);
     const allTasks = useAtomValue(tasksAtom);
-    // ---- FIX: Get both value and setter for currentFilterAtom ----
-    const [currentFilterValue, setCurrentFilter] = useAtom(currentFilterAtom);
-    // ---- End Fix ----
+    // const [currentFilterValue, setCurrentFilter] = useAtom(currentFilterAtom);
     const [searchTerm, setSearchTerm] = useAtom(searchTermAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const setUserDefinedLists = useSetAtom(userDefinedListsAtom);
@@ -129,64 +172,68 @@ const Sidebar: React.FC = () => {
     const [searchResults, setSearchResults] = useState<Task[]>([]);
     const isSearching = useMemo(() => debouncedSearchTerm.trim().length > 0, [debouncedSearchTerm]);
 
-    // Search effect (remains the same)
+    // Search effect
     useEffect(() => {
         if (isSearching) {
             const lowerCaseTerm = debouncedSearchTerm.toLowerCase();
             const words = lowerCaseTerm.split(' ').filter(w => w.length > 0);
-            const results = allTasks.filter(task => task.list !== 'Trash' && ( words.every(word => task.title.toLowerCase().includes(word) || (task.content && task.content.toLowerCase().includes(word)) || (task.tags && task.tags.some(tag => tag.toLowerCase().includes(word))) ) ) ).sort((a, b) => (a.order - b.order) || (a.createdAt - b.createdAt));
+            const results = allTasks.filter(task =>
+                task.list !== 'Trash' &&
+                words.every(word =>
+                    task.title.toLowerCase().includes(word) ||
+                    (task.content && task.content.toLowerCase().includes(word)) ||
+                    (task.tags && task.tags.some(tag => tag.toLowerCase().includes(word)))
+                )
+            ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.createdAt - b.createdAt);
             setSearchResults(results);
         } else {
             setSearchResults([]);
         }
     }, [debouncedSearchTerm, allTasks, isSearching]);
 
-    // Add list handlers (remain the same)
+    // Add list handlers
     const handleAddNewListClick = useCallback(() => { setIsModalOpen(true); }, [setIsModalOpen]);
     const handleListAdded = useCallback((newListName: string) => {
+        const trimmedName = newListName.trim();
+        if (!trimmedName || trimmedName === 'Inbox') return;
         setUserDefinedLists((prevLists = []) => {
-            const uniqueLists = new Set([...prevLists.filter(l => l !== 'Inbox'), newListName]);
+            const uniqueLists = new Set([...prevLists.filter(l => l !== 'Inbox'), trimmedName]);
             return [...uniqueLists].sort((a, b) => a.localeCompare(b));
         });
-        const newListFilter: TaskFilter = `list-${newListName}`;
-        setCurrentFilter(newListFilter);
-        setSearchTerm('');
-        setSelectedTaskId(null);
-        navigate(`/list/${encodeURIComponent(newListName)}`);
-    }, [setUserDefinedLists, setCurrentFilter, navigate, setSearchTerm, setSelectedTaskId]);
+        // Navigation triggers RouteChangeHandler, which sets filter/clears state
+        navigate(`/list/${encodeURIComponent(trimmedName)}`);
+    }, [setUserDefinedLists, navigate]);
 
-    // Search input handlers (remain the same)
+    // Search input handlers
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => { setSearchTerm(e.target.value); };
     const handleClearSearch = useCallback(() => {
         setSearchTerm('');
-        setSearchResults([]);
+        // searchResults will clear via useEffect reacting to debouncedSearchTerm
         searchInputRef.current?.focus();
     }, [setSearchTerm]);
 
-    // --- FIX: Corrected handleSearchResultClick ---
+    // Handle clicking a search result
     const handleSearchResultClick = useCallback((task: Task) => {
         setSelectedTaskId(task.id);
-        const targetFilter: TaskFilter = `list-${task.list}`;
+        // const targetFilter: TaskFilter = `list-${task.list}`;
         const targetPath = `/list/${encodeURIComponent(task.list)}`;
 
-        // ---- FIX: Compare currentFilterValue (the actual string) with targetFilter ----
-        if (currentFilterValue !== targetFilter && !['/calendar', '/summary'].some(p => location.pathname.startsWith(p))) {
-            setCurrentFilter(targetFilter); // Update the atom
-            navigate(targetPath); // Navigate if needed
+        // Navigate if necessary. RouteChangeHandler will handle filter state.
+        // Only navigate if we are not already on the correct list page.
+        if (location.pathname !== targetPath) {
+            navigate(targetPath);
         }
-        // ---- End Fix ----
+        // No need to clear search here, user might want to click another result.
+        // If navigation occurs, RouteChangeHandler might clear search based on its logic.
+    }, [setSelectedTaskId, navigate, location.pathname]);
 
-        // Optional: Clear search after clicking a result
-        // setSearchTerm('');
-    }, [setSelectedTaskId, setCurrentFilter, navigate, location.pathname, currentFilterValue]); // <-- Add currentFilterValue dependency
-    // --- End Fix ---
 
     const myListsToDisplay = userLists.filter(list => list !== 'Inbox');
 
     return (
         <>
             <aside className="w-56 bg-glass-alt-100 backdrop-blur-xl border-r border-black/10 h-full flex flex-col shrink-0 z-10 pt-3 pb-2 shadow-strong">
-                {/* Search Input Area (remains the same) */}
+                {/* Search Input Area */}
                 <div className="px-2.5 mb-2 flex-shrink-0">
                     <div className="relative">
                         <label htmlFor="sidebar-search" className="sr-only">Search Tasks</label>
@@ -208,20 +255,33 @@ const Sidebar: React.FC = () => {
 
                 {/* Scrollable Filters/Search Results Area */}
                 <div className="flex-1 overflow-y-auto styled-scrollbar">
+                    {/* Use mode="wait" to ensure one view exits before the next enters */}
                     <AnimatePresence mode="wait">
                         {isSearching ? (
-                            // Search Results View (remains the same)
-                            <motion.div key="search-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15, ease: 'linear' }} className="px-1.5">
+                            // Search Results View
+                            <motion.div key="search-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1, ease: 'linear' }} className="px-1.5">
                                 {searchResults.length > 0 ? (
                                     <>
                                         <p className="text-xs font-medium text-muted px-1 py-1">{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</p>
                                         {searchResults.map(task => (
-                                            <button key={task.id} onClick={() => handleSearchResultClick(task)} className="flex items-center w-full px-2 py-1.5 text-left rounded-md hover:bg-black/15 hover:backdrop-blur-sm text-sm group transition-colors duration-100 ease-apple focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100" aria-label={`Search result: ${task.title || 'Untitled Task'}`}>
-                                                <Icon name={task.list === 'Inbox' ? 'inbox' : 'file-text'} size={15} className="mr-2 flex-shrink-0 text-muted opacity-70" aria-hidden="true"/>
+                                            <button key={task.id} onClick={() => handleSearchResultClick(task)} className="flex items-start w-full px-2 py-1.5 text-left rounded-md hover:bg-black/15 hover:backdrop-blur-sm text-sm group transition-colors duration-100 ease-apple focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100" aria-label={`Search result: ${task.title || 'Untitled Task'}`}>
+                                                <Icon name={task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list')} size={15} className="mr-2 mt-[2px] flex-shrink-0 text-muted opacity-70" aria-hidden="true"/>
                                                 <div className="flex-1 overflow-hidden">
-                                                    <Highlighter highlightClassName="bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs" searchWords={debouncedSearchTerm.split(' ')} autoEscape={true} textToHighlight={task.title || 'Untitled Task'} className={twMerge("block truncate text-gray-800", task.completed && "line-through text-muted")}/>
-                                                    {task.content?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) && !task.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) && (
-                                                        <Highlighter highlightClassName="bg-yellow-300/70 rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs" searchWords={debouncedSearchTerm.split(' ')} autoEscape={true} textToHighlight={generateContentSnippet(task.content, debouncedSearchTerm)} className="block truncate text-xs text-muted mt-0.5"/>
+                                                    <Highlighter
+                                                        highlightClassName="bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs"
+                                                        searchWords={debouncedSearchTerm.split(' ').filter(Boolean)}
+                                                        autoEscape={true}
+                                                        textToHighlight={task.title || 'Untitled Task'}
+                                                        className={twMerge("block truncate text-gray-800", task.completed && "line-through text-muted")}
+                                                    />
+                                                    {task.content && generateContentSnippet(task.content, debouncedSearchTerm) && (
+                                                        <Highlighter
+                                                            highlightClassName="bg-yellow-300/70 rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs"
+                                                            searchWords={debouncedSearchTerm.split(' ').filter(Boolean)}
+                                                            autoEscape={true}
+                                                            textToHighlight={generateContentSnippet(task.content, debouncedSearchTerm)}
+                                                            className="block truncate text-xs text-muted mt-0.5"
+                                                        />
                                                     )}
                                                 </div>
                                             </button>
@@ -230,8 +290,8 @@ const Sidebar: React.FC = () => {
                                 ) : ( <p className="text-xs text-muted text-center py-4 px-2 italic">No tasks found matching "{debouncedSearchTerm}".</p> )}
                             </motion.div>
                         ) : (
-                            // Standard Filter Navigation View (remains the same)
-                            <motion.div key="filters" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15, ease: 'linear' }} className="px-1.5">
+                            // Standard Filter Navigation View
+                            <motion.div key="filters" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1, ease: 'linear' }} className="px-1.5">
                                 <nav className="mb-1">
                                     <SidebarItem to="/all" filter="all" icon="archive" label="All Tasks" count={counts.all} />
                                     <SidebarItem to="/today" filter="today" icon="sun" label="Today" count={counts.today} />
@@ -251,25 +311,13 @@ const Sidebar: React.FC = () => {
                     </AnimatePresence>
                 </div>
             </aside>
-            {/* Add List Modal (remains the same) */}
-            {isModalOpen && <AddListModal onAdd={handleListAdded}/>}
+            {/* Add List Modal */}
+            <AnimatePresence>
+                {isModalOpen && <AddListModal onAdd={handleListAdded} />}
+            </AnimatePresence>
         </>
     );
 };
 
-// Helper function (remains the same)
-function generateContentSnippet(content: string, term: string, length: number = 35): string {
-    if (!content || !term) return '';
-    const lowerContent = content.toLowerCase();
-    const lowerTerm = term.toLowerCase().split(' ')[0];
-    const firstMatchIndex = lowerContent.indexOf(lowerTerm);
-    if (firstMatchIndex === -1) return content.substring(0, length) + '...';
-    const start = Math.max(0, firstMatchIndex - Math.floor(length / 3));
-    const end = Math.min(content.length, firstMatchIndex + lowerTerm.length + Math.ceil(length * 2 / 3));
-    let snippet = content.substring(start, end);
-    if (start > 0) snippet = '...' + snippet;
-    if (end < content.length) snippet = snippet + '...';
-    return snippet;
-}
 
 export default Sidebar;

@@ -5,84 +5,73 @@
 
 @layer base {
   html {
-    /* Smoother scrolling */
     scroll-behavior: smooth;
   }
   body {
     @apply bg-canvas-alt font-sans text-gray-900 antialiased;
-    /* System font stack for native feel */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: hsl(220, 40%, 98%); /* Match canvas-alt */
   }
-  /* Consistent focus outline */
   *:focus-visible {
     @apply outline-none ring-1 ring-primary/70 ring-offset-1 ring-offset-canvas;
   }
-  /* Remove default focus outline from buttons if using custom ring */
   button:focus {
     outline: none;
   }
-  /* CSS Variables for theming */
   :root {
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --primary-h: 208;
     --primary-s: 100%;
     --primary-l: 50%;
+    --canvas-alt: hsl(220, 40%, 98%);
+    --canvas: hsl(0, 0%, 100%);
   }
 }
 
 @layer components {
   /* Custom Scrollbar Styling */
+  .styled-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsla(0, 0%, 0%, 0.3) transparent;
+  }
   .styled-scrollbar::-webkit-scrollbar {
-    width: 8px; /* Width of vertical scrollbar */
-    height: 8px; /* Height of horizontal scrollbar */
+    width: 8px;
+    height: 8px;
   }
   .styled-scrollbar::-webkit-scrollbar-track {
-    background-color: transparent; /* Make track invisible */
+    background-color: transparent;
   }
   .styled-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-black/20 rounded-full border-[2.5px] border-solid border-transparent; /* Thumb style with padding */
-    background-clip: padding-box; /* Clip background to padding box */
-    transition: background-color 0.15s ease-out; /* Smooth color transition */
+    @apply bg-black/20 rounded-full border-[2.5px] border-solid border-transparent;
+    background-clip: padding-box;
+    transition: background-color 0.15s ease-out;
   }
-  .styled-scrollbar:hover::-webkit-scrollbar-thumb {
-    @apply bg-black/30; /* Darker thumb on hover */
-  }
-  .styled-scrollbar::-webkit-scrollbar-thumb:hover {
-    @apply bg-black/35; /* Even darker on thumb hover */
-  }
-  .styled-scrollbar::-webkit-scrollbar-thumb:active {
-    @apply bg-black/40; /* Darkest on thumb active */
-  }
+  .styled-scrollbar:hover::-webkit-scrollbar-thumb { @apply bg-black/30; }
+  .styled-scrollbar::-webkit-scrollbar-thumb:hover { @apply bg-black/35; }
+  .styled-scrollbar::-webkit-scrollbar-thumb:active { @apply bg-black/40; }
 
-  .hover-isolate {
-    isolation: isolate;
-  }
+  .hover-isolate { isolation: isolate; }
+  .date-picker-popover .group-hover\:opacity-100 { opacity: 0 !important; }
 
-  /* Special class to disable tooltips when the date picker is active */
-  .date-picker-popover .group-hover\:opacity-100 {
-    opacity: 0 !important;
-  }
-
-  /* --- CodeMirror Editor Base Styles --- */
-  .cm-editor-container { /* Base container class */ }
+  /* CodeMirror Editor Base Styles */
+  .cm-editor-container { }
   .cm-editor { @apply text-sm h-full bg-transparent; &.cm-focused { outline: none; } }
-  .cm-scroller { @apply h-full styled-scrollbar bg-transparent; font-family: var(--font-mono); line-height: 1.65; }
+  .cm-scroller { @apply h-full styled-scrollbar bg-transparent overflow-auto; font-family: var(--font-mono); line-height: 1.65; }
   .cm-gutters { @apply bg-glass-alt-100/80 backdrop-blur-lg border-r border-black/10 text-muted text-xs opacity-90 pr-2; user-select: none; -webkit-user-select: none; }
-  .cm-activeLineGutter { @apply bg-primary/20; } /* Highlight gutter for active line */
+  .cm-activeLineGutter { @apply bg-primary/20; }
   .cm-content { @apply p-3.5 bg-transparent; caret-color: hsl(var(--primary-h), var(--primary-s), var(--primary-l)); }
   .cm-line { @apply leading-relaxed px-1; }
-  .cm-placeholder { @apply text-muted italic opacity-70 pointer-events-none absolute top-0 left-0 p-3.5; } /* Style placeholder */
-  .cm-selectionBackground, ::selection { @apply bg-primary/30; } /* Selection color */
-  .cm-activeLine { background-color: hsla(var(--primary-h), var(--primary-s), 95%, 0.75); } /* Active line background */
+  .cm-placeholder { @apply text-muted italic opacity-70 pointer-events-none absolute top-[14px] left-[14px] pl-1; }
+  .cm-selectionBackground, ::selection { @apply bg-primary/30; }
+  .cm-activeLine { background-color: hsla(var(--primary-h), var(--primary-s), 95%, 0.75); }
   .cm-foldMarker { color: hsl(210, 10%, 65%); margin-left: 2px; padding: 0 2px; cursor: pointer; &:hover { color: hsl(210, 10%, 45%); } }
   .cm-foldGutter .cm-gutterElement { padding-left: 4px !important; text-align: center; }
-  .cm-searchMatch { @apply bg-yellow-300/50 outline-none rounded-[2px]; } /* Search match highlight */
-  .cm-searchMatch-selected { @apply bg-yellow-400/70; } /* Selected search match */
+  .cm-searchMatch { @apply bg-yellow-300/50 outline-none rounded-[2px]; }
+  .cm-searchMatch-selected { @apply bg-yellow-400/70; }
 }
 
 @layer utilities {
-  /* Performance utility (use with caution) */
   .content-auto { content-visibility: auto; }
 }
