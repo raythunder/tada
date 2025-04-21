@@ -4,8 +4,9 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider as JotaiProvider } from 'jotai';
 import App from './App';
+import 'react-tooltip/dist/react-tooltip.css' // Import tooltip CSS
 
-import './styles/index.css';
+import './styles/index.css'; // Import Tailwind CSS
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -16,7 +17,9 @@ const root = ReactDOM.createRoot(rootElement);
 
 root.render(
     <React.StrictMode>
+        {/* Jotai Provider for global state */}
         <JotaiProvider>
+            {/* BrowserRouter for routing */}
             <BrowserRouter>
                 <App />
             </BrowserRouter>

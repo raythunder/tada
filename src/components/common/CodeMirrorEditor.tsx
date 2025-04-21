@@ -1,7 +1,7 @@
 // src/components/common/CodeMirrorEditor.tsx
 // @ts-expect-error - Explicit React import sometimes needed
 import React, { useRef, useEffect, useImperativeHandle, forwardRef, memo } from 'react';
-import { EditorState, StateEffect, Annotation } from '@codemirror/state'; // Import Facet just in case, though not directly used for reading placeholder here
+import { EditorState, StateEffect, Annotation } from '@codemirror/state';
 import { EditorView, keymap, drawSelection, dropCursor, rectangularSelection, placeholder as viewPlaceholder } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -48,6 +48,7 @@ export interface CodeMirrorEditorRef {
     getView: () => EditorView | null;
 }
 
+// Use forwardRef to allow parent components to get a ref to the editor instance
 const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
     ({
          value,
@@ -59,29 +60,33 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
      }, ref) => {
         const editorRef = useRef<HTMLDivElement>(null);
         const viewRef = useRef<EditorView | null>(null);
-        const onChangeRef = useRef(onChange);
+        const onChangeRef = useRef(onChange); // Use refs for callbacks to avoid re-triggering effects
         const onBlurRef = useRef(onBlur);
 
-        // --- Refs to store previous prop values for comparison ---
+        // Refs to store previous prop values for comparison to optimize reconfigurations
+        const prevValueRef = useRef(value);
         const prevReadOnlyRef = useRef(readOnly);
         const prevPlaceholderRef = useRef(placeholder);
-        // ---
 
-        // Update callback refs
+        // Update callback refs if they change
         useEffect(() => {
             onChangeRef.current = onChange;
+        }, [onChange]);
+        useEffect(() => {
             onBlurRef.current = onBlur;
-        }, [onChange, onBlur]);
+        }, [onBlur]);
 
+        // Expose focus and getView methods via the ref
         useImperativeHandle(ref, () => ({
             focus: () => { viewRef.current?.focus(); },
             getView: () => viewRef.current,
         }), []);
 
-        // Effect for Setup and Teardown - Runs ONCE on mount
+        // Effect for Editor Setup and Teardown - Runs ONCE on mount
         useEffect(() => {
             if (!editorRef.current) return;
 
+            // Function to create extensions, including dynamic ones based on initial props
             const createExtensions = (currentPlaceholder?: string, currentReadOnly?: boolean) => [
                 history(), drawSelection(), dropCursor(), EditorState.allowMultipleSelections.of(true), indentOnInput(),
                 bracketMatching(), closeBrackets(), autocompletion(), rectangularSelection(), highlightSelectionMatches(),
@@ -89,45 +94,64 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
                 markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: true }),
                 EditorView.lineWrapping, EditorView.contentAttributes.of({ 'aria-label': 'Markdown editor content' }),
                 EditorView.updateListener.of((update) => {
+                    // Distinguish between user edits and external value changes
                     const isExternal = update.transactions.some(tr => tr.annotation(externalChangeEvent));
-                    if (update.docChanged && !isExternal) { onChangeRef.current(update.state.doc.toString()); }
-                    if (update.focusChanged && !update.view.hasFocus) { onBlurRef.current?.(); }
+                    if (update.docChanged && !isExternal) {
+                        // Call onChange only for user edits
+                        onChangeRef.current(update.state.doc.toString());
+                    }
+                    if (update.focusChanged && !update.view.hasFocus) {
+                        // Call onBlur when focus is lost
+                        onBlurRef.current?.();
+                    }
                 }),
-                EditorState.readOnly.of(currentReadOnly ?? false), // Use initial prop
-                ...(currentPlaceholder ? [viewPlaceholder(currentPlaceholder)] : []), // Use initial prop
-                editorTheme,
+                EditorState.readOnly.of(currentReadOnly ?? false), // Apply initial readOnly state
+                ...(currentPlaceholder ? [viewPlaceholder(currentPlaceholder)] : []), // Apply initial placeholder
+                editorTheme, // Apply custom theme
             ];
 
+            // Create the initial editor state
             const startState = EditorState.create({
-                doc: value,
-                extensions: createExtensions(placeholder, readOnly)
+                doc: value, // Use initial value prop
+                extensions: createExtensions(placeholder, readOnly) // Use initial placeholder/readOnly props
             });
-            const view = new EditorView({ state: startState, parent: editorRef.current as Element });
+
+            // Create the editor view
+            const view = new EditorView({
+                state: startState,
+                parent: editorRef.current,
+            });
             viewRef.current = view;
 
-            // Update previous prop refs *after* initial setup
+            // Store initial props in refs *after* setup for comparison in later effects
+            prevValueRef.current = value;
             prevReadOnlyRef.current = readOnly;
             prevPlaceholderRef.current = placeholder;
 
+            // Cleanup function: Destroy the editor view when the component unmounts
             return () => {
-                if (viewRef.current) {
-                    viewRef.current.destroy();
-                    viewRef.current = null;
-                }
+                view.destroy();
+                viewRef.current = null;
             };
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, []); // Empty array: Run only once on mount
+        }, []); // Empty dependency array ensures this runs only once on mount
 
         // Effect to handle EXTERNAL value changes from props
         useEffect(() => {
             const view = viewRef.current;
+            // Only update if the view exists and the prop value is different from the editor's current state
             if (view && value !== view.state.doc.toString()) {
+                // console.log("External value change detected, updating editor.");
+                // Use a transaction to replace the entire document content
                 view.dispatch({
                     changes: { from: 0, to: view.state.doc.length, insert: value || '' },
-                    annotations: externalChangeEvent.of(true) // Mark as external
+                    // Annotate the transaction to mark it as an external change
+                    annotations: externalChangeEvent.of(true)
                 });
+                // Update the ref storing the previous value
+                prevValueRef.current = value;
             }
-        }, [value]);
+        }, [value]); // Dependency: Run only when the 'value' prop changes
 
         // Effect to handle dynamic readOnly and placeholder prop changes AFTER mount
         useEffect(() => {
@@ -136,34 +160,28 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
 
             const effects: StateEffect<any>[] = [];
 
-            // --- Compare current prop with previous value from ref ---
+            // Compare current readOnly prop with previous value
             if (readOnly !== prevReadOnlyRef.current) {
-                // console.log("ReadOnly changed, reconfiguring:", readOnly);
-                effects.push(StateEffect.reconfigure.of([EditorState.readOnly.of(readOnly)]));
+                // console.log("ReadOnly prop changed, reconfiguring:", readOnly);
+                // Reconfigure the readOnly state extension
+                effects.push(StateEffect.reconfigure.of(EditorState.readOnly.of(readOnly)));
+                prevReadOnlyRef.current = readOnly; // Update previous value ref
             }
 
-            // --- Compare current prop with previous value from ref ---
+            // Compare current placeholder prop with previous value
             if (placeholder !== prevPlaceholderRef.current) {
-                // console.log("Placeholder changed, reconfiguring:", placeholder);
-                // Reconfigure only the placeholder extension part.
-                // Pass new extension if placeholder exists, empty array otherwise.
+                // console.log("Placeholder prop changed, reconfiguring:", placeholder);
+                // Reconfigure the placeholder view extension
                 effects.push(StateEffect.reconfigure.of(placeholder ? [viewPlaceholder(placeholder)] : []));
-                // Note: Using Compartments is the more idiomatic CodeMirror way for
-                // truly dynamic extension configuration, but reconfigure works here.
+                prevPlaceholderRef.current = placeholder; // Update previous value ref
             }
-            // ---
 
-            // Dispatch effects if any changes were needed
+            // Dispatch effects only if there were actual changes
             if (effects.length > 0) {
                 view.dispatch({ effects });
             }
 
-            // --- Update refs with current prop values for the next render cycle ---
-            prevReadOnlyRef.current = readOnly;
-            prevPlaceholderRef.current = placeholder;
-            // ---
-
-        }, [readOnly, placeholder]); // Dependencies trigger effect when these props change
+        }, [readOnly, placeholder]); // Dependencies: Run when readOnly or placeholder props change
 
 
         return (
@@ -171,9 +189,9 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
                 ref={editorRef}
                 className={twMerge(
                     'cm-editor-container relative h-full w-full overflow-hidden rounded-md',
-                    'bg-glass-inset-100 backdrop-blur-lg border border-black/10 shadow-inner',
-                    'focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/80',
-                    className
+                    'bg-glass-inset-100 backdrop-blur-lg border border-black/10 shadow-inner', // Base appearance
+                    'focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/80', // Focus styling
+                    className // Allow external class overrides
                 )}
             />
         );
@@ -181,4 +199,5 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
 );
 
 CodeMirrorEditor.displayName = 'CodeMirrorEditor';
+// Performance: Export the memoized component directly
 export default memo(CodeMirrorEditor);

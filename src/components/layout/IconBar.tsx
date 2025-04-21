@@ -1,6 +1,7 @@
 // src/components/layout/IconBar.tsx
-import React, {memo, useCallback} from 'react';
-import { NavLink } from 'react-router-dom';
+// src/components/layout/IconBar.tsx
+import React, { memo, useCallback, useMemo } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import Icon from '../common/Icon';
 import { useAtom, useAtomValue } from 'jotai';
 import { currentUserAtom, isSettingsOpenAtom } from '@/store/atoms';
@@ -8,40 +9,47 @@ import { twMerge } from 'tailwind-merge';
 import Button from "@/components/common/Button";
 import { IconName } from "@/components/common/IconMap";
 
-// Consistent Icon Bar Styling
-const IconBar: React.FC = () => {
+// Performance: Memoize IconBar
+const IconBar: React.FC = memo(() => {
     const currentUser = useAtomValue(currentUserAtom);
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
+    const location = useLocation(); // Get current location
 
-    // Define navigation items clearly
-    const navigationItems: { path: string; icon: IconName, label: string }[] = [
-        { path: '/all', icon: 'archive', label: 'All Tasks' }, // Use 'archive' for consistency with Sidebar
+    const navigationItems: { path: string; icon: IconName, label: string }[] = useMemo(() => [
+        { path: '/all', icon: 'archive', label: 'All Tasks' },
         { path: '/calendar', icon: 'calendar-days', label: 'Calendar' },
         { path: '/summary', icon: 'sparkles', label: 'AI Summary' },
-    ];
+    ], []);
 
-    // Callback to open settings modal
     const handleAvatarClick = useCallback(() => {
         setIsSettingsOpen(true);
     }, [setIsSettingsOpen]);
 
-    // Callback to generate NavLink class names based on active state
-    const getNavLinkClass = useCallback(({ isActive }: { isActive: boolean }): string =>
-        twMerge(
+    // Fix Req 2: Update NavLink class logic
+    const getNavLinkClass = useCallback((itemPath: string) => ({ isActive }: { isActive: boolean }): string => {
+        let isEffectivelyActive = isActive; // Start with react-router's determination
+
+        // If this is the 'All Tasks' icon...
+        if (itemPath === '/all') {
+            // It should be active if the current path is *not* Calendar or Summary
+            const isTaskListRelatedView = !location.pathname.startsWith('/calendar') && !location.pathname.startsWith('/summary');
+            isEffectivelyActive = isTaskListRelatedView;
+        }
+        // For other icons (Calendar, Summary), rely solely on react-router's isActive
+        // (assuming their paths are unique prefixes)
+
+        return twMerge(
             'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-30 ease-apple group relative', // Base styling
-            isActive
+            isEffectivelyActive
                 ? 'bg-primary/25 text-primary backdrop-blur-md ring-1 ring-inset ring-primary/30' // Active state
                 : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm' // Inactive state
-        ), []);
+        );
+    }, [location.pathname]); // Dependency on location.pathname
 
     return (
         <div className="w-16 bg-glass-alt-100 backdrop-blur-xl border-r border-black/10 flex flex-col items-center py-4 flex-shrink-0 z-20 shadow-strong">
             {/* App Logo */}
-            <div
-                className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-gradient-to-br from-primary/90 to-blue-500/80 rounded-lg text-white font-bold text-xl shadow-inner select-none"
-                aria-label="Tada App Logo"
-                title="Tada"
-            >
+            <div className="mb-6 mt-1 flex items-center justify-center w-9 h-9 bg-gradient-to-br from-primary/90 to-blue-500/80 rounded-lg text-white font-bold text-xl shadow-inner select-none" aria-label="Tada App Logo" title="Tada">
                 <span className="-mt-0.5">T</span>
             </div>
 
@@ -51,13 +59,14 @@ const IconBar: React.FC = () => {
                     <NavLink
                         key={item.path}
                         to={item.path}
-                        className={getNavLinkClass}
-                        title={item.label} // Tooltip
-                        aria-label={item.label} // Accessibility
-                        // Use `end` prop for '/' or '/all' to prevent matching nested routes
-                        end={item.path === '/all'}
+                        // Apply the correct active class logic based on item path
+                        className={getNavLinkClass(item.path)}
+                        title={item.label}
+                        aria-label={item.label}
+                        // `end` prop ensures exact match for top-level routes like /calendar, /summary
+                        // For /all, our custom logic handles sub-routes, so `end` isn't strictly needed there, but doesn't hurt.
+                        end={item.path === '/all' || item.path === '/calendar' || item.path === '/summary'}
                     >
-                        {/* Icon without extra motion wrapper */}
                         <Icon name={item.icon} size={20} strokeWidth={1.75} />
                     </NavLink>
                 ))}
@@ -67,19 +76,13 @@ const IconBar: React.FC = () => {
             <div className="mt-auto mb-1">
                 <Button
                     onClick={handleAvatarClick}
-                    variant="glass" // Use glass variant for consistency
-                    size="icon"
+                    variant="glass" size="icon"
                     className="w-9 h-9 rounded-full overflow-hidden p-0 border border-black/10 shadow-inner hover:bg-black/15 backdrop-blur-md"
                     aria-label="Account Settings"
                 >
                     {currentUser?.avatar ? (
-                        <img
-                            src={currentUser.avatar}
-                            alt={currentUser.name || 'User Avatar'}
-                            className="w-full h-full object-cover" // Ensure image covers the button
-                        />
+                        <img src={currentUser.avatar} alt={currentUser.name || 'User Avatar'} className="w-full h-full object-cover" />
                     ) : (
-                        // Fallback initials or icon
                         <div className="w-full h-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white font-medium text-sm">
                             {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : <Icon name="user" size={16} />}
                         </div>
@@ -88,6 +91,6 @@ const IconBar: React.FC = () => {
             </div>
         </div>
     );
-};
-
-export default memo(IconBar);
+});
+IconBar.displayName = 'IconBar';
+export default IconBar;

@@ -1,20 +1,21 @@
 // src/components/summary/SummaryView.tsx
-import React, {useCallback, useState, useMemo, useRef} from 'react';
+import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
 import CodeMirrorEditor, { CodeMirrorEditorRef } from '../common/CodeMirrorEditor';
 import { useAtomValue } from 'jotai';
 import { tasksAtom } from '@/store/atoms';
-// import { Task } from '@/types'; // Import Task type
+import { Task } from '@/types'; // Import Task type
 import {
     endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subMonths, isValid, safeParseDate, startOfDay, endOfDay, subWeeks, enUS
-} from '@/utils/dateUtils'; // Ensure all needed utils are imported
+} from '@/utils/dateUtils';
 import { twMerge } from "tailwind-merge";
 
 type SummaryPeriod = 'this-week' | 'last-week' | 'this-month' | 'last-month';
 
-// --- Custom Hook for Date Calculations (Memoized) ---
+// --- Custom Hook for Date Calculations (Memoized internally) ---
 const useDateCalculations = () => {
+    // Performance: useCallback for functions
     const getDateRange = useCallback((period: SummaryPeriod): { start: Date, end: Date } => {
         const now = new Date();
         const todayStart = startOfDay(now);
@@ -48,14 +49,12 @@ const useDateCalculations = () => {
         const startFormat = 'MMM d';
         const endFormat = 'MMM d, yyyy';
 
-        // Handle different formatting based on year and month equality
         if (startDt.getFullYear() !== endDt.getFullYear()) {
             return `${format(startDt, 'MMM d, yyyy')} - ${format(endDt, endFormat)}`;
         }
         if (startDt.getMonth() !== endDt.getMonth()) {
             return `${format(startDt, startFormat)} - ${format(endDt, endFormat)}`;
         }
-        // Same month and year
         return `${format(startDt, startFormat)} - ${format(endDt, 'd, yyyy')}`;
     }, []);
 
@@ -69,7 +68,7 @@ const useDateCalculations = () => {
         }
     }, []);
 
-    // Memoize period options array creation
+    // Performance: Memoize period options array creation
     const periodOptions = useMemo(() => {
         const createOption = (value: SummaryPeriod) => {
             const { start, end } = getDateRange(value);
@@ -82,7 +81,6 @@ const useDateCalculations = () => {
             createOption('last-month'),
         ] as const; // Use const assertion for stricter typing
     }, [getDateRange, getPeriodLabel, formatDateRange]);
-
 
     return { getDateRange, formatDateRange, getPeriodLabel, periodOptions };
 };
@@ -99,33 +97,41 @@ const SummaryView: React.FC = () => {
     // Use the custom hook for date logic
     const { getDateRange, formatDateRange, getPeriodLabel, periodOptions } = useDateCalculations();
 
-    // Function to generate the summary (simulated AI)
+    // Performance: Memoize generateSummary callback
     const generateSummary = useCallback(async () => {
         setIsLoading(true);
-        setSummaryContent(''); // Clear previous summary
+        setSummaryContent(''); // Clear previous summary immediately
 
-        // Simulate AI generation delay
+        // Simulate AI generation delay - Keep this for UX feedback
         await new Promise(resolve => setTimeout(resolve, 450));
 
         const { start: rangeStart, end: rangeEnd } = getDateRange(period);
 
-        // Filter tasks based on the selected date range
-        const completedInRange = tasks.filter(task =>
-            task.completed &&
-            task.list !== 'Trash' &&
-            task.updatedAt >= rangeStart.getTime() &&
-            task.updatedAt <= rangeEnd.getTime() // Use inclusive end date from getDateRange
-        ).sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)); // Sort by completion time
+        // --- Performance: Filter and sort tasks efficiently ---
+        let completedInRange: Task[] = [];
+        let addedInRange: Task[] = [];
 
-        const addedInRange = tasks.filter(task =>
-            task.list !== 'Trash' &&
-            task.createdAt >= rangeStart.getTime() &&
-            task.createdAt <= rangeEnd.getTime()
-        ).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)); // Sort by creation time
+        tasks.forEach(task => {
+            if (task.list !== 'Trash') {
+                // Completed check
+                if (task.completed && task.updatedAt >= rangeStart.getTime() && task.updatedAt <= rangeEnd.getTime()) {
+                    completedInRange.push(task);
+                }
+                // Added check
+                if (task.createdAt >= rangeStart.getTime() && task.createdAt <= rangeEnd.getTime()) {
+                    addedInRange.push(task);
+                }
+            }
+        });
+
+        // Sort results after filtering
+        completedInRange.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)); // Most recently completed first
+        addedInRange.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)); // Most recently added first
+        // --- End Performance Optimization ---
 
         // Format the summary text
         const periodTitle = getPeriodLabel(period);
-        const dateRangeStr = formatDateRange(rangeStart, rangeEnd); // Use start/end from range
+        const dateRangeStr = formatDateRange(rangeStart, rangeEnd);
 
         let generatedText = `# Summary for ${periodTitle}\n`;
         generatedText += `*${dateRangeStr}*\n\n`;
@@ -135,7 +141,6 @@ const SummaryView: React.FC = () => {
         if (completedInRange.length > 0) {
             completedInRange.forEach(task => {
                 const completedDate = safeParseDate(task.updatedAt);
-                // Format date nicely, fallback if invalid
                 const dateStr = completedDate && isValid(completedDate) ? format(completedDate, 'MMM d') : 'Unknown Date';
                 generatedText += `- ${task.title || 'Untitled Task'} *(Done: ${dateStr})*\n`;
             });
@@ -156,18 +161,27 @@ const SummaryView: React.FC = () => {
             generatedText += `*No new tasks added during this period.*\n`;
         }
 
-        setSummaryContent(generatedText); // Update state with generated text
-        setIsLoading(false); // End loading state
+        setSummaryContent(generatedText);
+        setIsLoading(false);
 
-        // Focus the editor after content update
+        // Focus the editor after content update using requestAnimationFrame
         requestAnimationFrame(() => {
             editorRef.current?.focus();
         });
 
-    }, [tasks, period, getDateRange, formatDateRange, getPeriodLabel]);
+    }, [tasks, period, getDateRange, formatDateRange, getPeriodLabel]); // Dependencies
 
-    // Effect to generate summary automatically when period changes? Optional.
-    // useEffect(() => { generateSummary(); }, [generateSummary]);
+    // Optional: Generate summary automatically when period changes or component mounts
+    useEffect(() => {
+        generateSummary();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [period]); // Run only when period changes
+
+    // Performance: Memoize editor placeholder calculation
+    const editorPlaceholder = useMemo(() => {
+        if (isLoading) return "Generating summary...";
+        return "Click 'Generate' to create a report for the selected period,\nor start typing your own notes...\n\nSupports **Markdown** formatting.";
+    }, [isLoading]);
 
     return (
         <div className="h-full flex flex-col bg-glass backdrop-blur-xl overflow-hidden">
@@ -178,7 +192,7 @@ const SummaryView: React.FC = () => {
                     variant="primary"
                     size="sm"
                     icon="sparkles"
-                    onClick={generateSummary}
+                    onClick={generateSummary} // Use memoized callback
                     loading={isLoading}
                     disabled={isLoading}
                     className="!h-[30px] px-3" // Custom button styling
@@ -219,17 +233,13 @@ const SummaryView: React.FC = () => {
                         </div>
                     )}
 
-                    {/* CodeMirror Editor */}
+                    {/* Performance: CodeMirrorEditor is memoized */}
                     <CodeMirrorEditor
                         ref={editorRef}
                         value={summaryContent}
                         onChange={setSummaryContent} // Allow user edits
                         className="h-full w-full !border-0 !shadow-none focus-within:!ring-0 !bg-transparent rounded-md" // Custom styling
-                        placeholder={
-                            isLoading
-                                ? "Generating summary..." // Placeholder while loading
-                                : "Click 'Generate' to create a report for the selected period,\nor start typing your own notes...\n\nSupports **Markdown** formatting." // Default placeholder
-                        }
+                        placeholder={editorPlaceholder} // Use memoized placeholder
                         readOnly={isLoading} // Prevent editing while loading
                     />
                 </div>

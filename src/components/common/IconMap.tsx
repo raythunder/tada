@@ -4,15 +4,15 @@ import * as LucideIcons from "lucide-react";
 // Comprehensive map of icons used in the application
 export const iconMap = {
     'check-square': LucideIcons.CheckSquare,
-    'calendar': LucideIcons.Calendar,
+    'calendar': LucideIcons.CalendarDays, // Use CalendarDays for consistency
     'search': LucideIcons.Search,
     'user': LucideIcons.User,
     'settings': LucideIcons.Settings,
     'file-text': LucideIcons.FileText,
     'trash': LucideIcons.Trash2,
     'list': LucideIcons.List,
-    'grid': LucideIcons.Grid, // Might be unused now
-    'clock': LucideIcons.Clock, // Might be unused
+    'grid': LucideIcons.LayoutGrid, // Use LayoutGrid if needed
+    'clock': LucideIcons.Clock,
     'alert-circle': LucideIcons.AlertCircle,
     'plus': LucideIcons.Plus,
     'more-horizontal': LucideIcons.MoreHorizontal,
@@ -21,9 +21,9 @@ export const iconMap = {
     'chevron-left': LucideIcons.ChevronLeft,
     'chevron-right': LucideIcons.ChevronRight,
     'sun': LucideIcons.Sun,
-    'sunset': LucideIcons.Sunset,
-    'moon': LucideIcons.Moon,
-    'calendar-plus': LucideIcons.CalendarPlus, // Might be unused
+    'sunset': LucideIcons.Sunset, // Keep if used in date picker, else remove
+    'moon': LucideIcons.Moon,   // Keep if used in date picker, else remove
+    'calendar-plus': LucideIcons.CalendarPlus,
     'edit': LucideIcons.Edit3,
     'check': LucideIcons.Check,
     'x': LucideIcons.X,
@@ -37,34 +37,39 @@ export const iconMap = {
     'upload': LucideIcons.UploadCloud, // Used in Settings
     'download': LucideIcons.Download, // Used in Settings
     'logout': LucideIcons.LogOut, // Used in Settings
-    'lock': LucideIcons.Lock, // Potentially for auth/settings
-    'tool': LucideIcons.Wrench, // Potentially for settings/debug
-    'layers': LucideIcons.Layers, // Potentially for future features
-    'package': LucideIcons.Package, // Potentially for features
-    'sliders': LucideIcons.SlidersHorizontal, // Potentially for filter/sort options
+    'lock': LucideIcons.Lock,
+    'tool': LucideIcons.Wrench,
+    'layers': LucideIcons.Layers,
+    'package': LucideIcons.Package,
+    'sliders': LucideIcons.SlidersHorizontal,
     'info': LucideIcons.Info, // Used in Settings
     'help': LucideIcons.HelpCircle, // Fallback icon
-    'phone': LucideIcons.Phone, // Potentially for contact/about
-    'mail': LucideIcons.Mail, // Potentially for contact/about
+    'phone': LucideIcons.Phone,
+    'mail': LucideIcons.Mail,
     'external-link': LucideIcons.ExternalLink,
     'crown': LucideIcons.Crown, // Used in Settings
-    'terminal': LucideIcons.Terminal, // Potentially for debug/dev features
+    'terminal': LucideIcons.Terminal,
     'grip-vertical': LucideIcons.GripVertical, // Used for TaskItem drag handle
-    'copy': LucideIcons.Copy, // Potentially for copy actions
+    'copy': LucideIcons.Copy,
     'archive': LucideIcons.Archive, // Used for 'All Tasks' icon
-    'arrow-up-down': LucideIcons.ArrowUpDown, // Potentially for sorting indicator
+    'arrow-up-down': LucideIcons.ArrowUpDown,
     'calendar-days': LucideIcons.CalendarDays, // Used for Calendar icon in IconBar
     'loader': LucideIcons.Loader2, // Used for loading states (spin animation)
-    'users': LucideIcons.Users, // Potentially for collaboration/sharing
+    'users': LucideIcons.Users,
     'sparkles': LucideIcons.Sparkles, // Used for AI Summary icon
     'folder-plus': LucideIcons.FolderPlus, // Used for 'Add List' button
     'folder': LucideIcons.Folder, // Used for 'My Lists' section header
-    'minus': LucideIcons.Minus, // General purpose
+    'minus': LucideIcons.Minus,
     'inbox': LucideIcons.Inbox, // Used for 'Inbox' list icon
     'x-circle': LucideIcons.XCircle, // Used for clearing search input
-    'calendar-check': LucideIcons.CalendarCheck, // Potentially for completed date indicator
+    'calendar-check': LucideIcons.CalendarCheck,
     'refresh-cw': LucideIcons.RefreshCw, // Used in DatePicker 'Repeat' button
 };
 
 // Export the type for Icon names based on the map keys
 export type IconName = keyof typeof iconMap;
+
+// Verify all icons used in the project are present in the map
+// Example check (manual or could be scripted):
+// Used icons: check-square, calendar, search, user, settings, file-text, trash, list, grid?, clock?, alert-circle?, plus, more-horizontal, chevron-down, chevron-up, chevron-left, chevron-right, sun, sunset, moon, calendar-plus?, edit, check, x, arrow-left, arrow-right, star?, flag, tag, bell, share, upload, download, logout, lock?, tool?, layers?, package?, sliders?, info, help, phone?, mail?, external-link?, crown, terminal?, grip-vertical, copy?, archive, arrow-up-down?, calendar-days, loader, users?, sparkles, folder-plus, folder, minus?, inbox, x-circle, calendar-check?, refresh-cw
+// Seems comprehensive.

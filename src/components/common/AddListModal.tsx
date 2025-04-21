@@ -16,6 +16,7 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    // Performance: Memoize callbacks
     const handleClose = useCallback(() => setIsOpen(false), [setIsOpen]);
 
     // Reset state when modal opens/closes
@@ -23,10 +24,10 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
         if (isOpen) {
             setListName(''); // Clear name on open
             setError(null); // Clear error on open
-            // Focus input after a short delay to ensure it's rendered
+            // Focus input after a short delay to ensure it's rendered and transition is complete
             const timer = setTimeout(() => {
                 inputRef.current?.focus();
-            }, 100); // Adjust delay if needed
+            }, 50); // Short delay
             return () => clearTimeout(timer);
         }
     }, [isOpen]);
@@ -40,25 +41,36 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
             inputRef.current?.focus();
             return;
         }
-        if (allListNames.some(name => name.toLowerCase() === trimmedName.toLowerCase())) {
+        // Normalize comparison to lower case
+        const lowerTrimmedName = trimmedName.toLowerCase();
+        if (allListNames.some(name => name.toLowerCase() === lowerTrimmedName)) {
             setError(`List "${trimmedName}" already exists.`);
             inputRef.current?.select();
             return;
         }
         // Added more reserved names
         const reservedNames = ['inbox', 'trash', 'archive', 'all', 'today', 'next 7 days', 'completed', 'later', 'nodate', 'overdue'];
-        if (reservedNames.includes(trimmedName.toLowerCase())) {
+        if (reservedNames.includes(lowerTrimmedName)) {
             setError(`"${trimmedName}" is a reserved system name.`);
             inputRef.current?.select();
             return;
         }
 
         setError(null);
-        onAdd(trimmedName);
-        handleClose();
+        onAdd(trimmedName); // Call the provided onAdd function
+        handleClose(); // Close the modal
     }, [listName, allListNames, onAdd, handleClose]);
 
-    // Return null if not open (parent removed AnimatePresence)
+    // Clear error on typing
+    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setListName(e.target.value);
+        if (error) setError(null);
+    }, [error]);
+
+    // Prevent modal close on inner click
+    const handleDialogClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation(), []);
+
+    // Return null if not open (avoids rendering an invisible div)
     if (!isOpen) return null;
 
     return (
@@ -74,7 +86,7 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
                     "bg-glass-100 backdrop-blur-xl w-full max-w-sm rounded-xl shadow-strong overflow-hidden border border-black/10",
                     "flex flex-col" // Ensure flex column layout
                 )}
-                onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()} // Prevent closing when clicking inside
+                onClick={handleDialogClick} // Prevent closing when clicking inside
             >
                 {/* Header */}
                 <div className="px-4 py-3 border-b border-black/10 flex justify-between items-center flex-shrink-0 bg-glass-alt-100 backdrop-blur-lg">
@@ -100,10 +112,7 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
                             id="listNameInput"
                             type="text"
                             value={listName}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                setListName(e.target.value);
-                                if (error) setError(null); // Clear error on typing
-                            }}
+                            onChange={handleInputChange} // Use memoized handler
                             placeholder="e.g., Groceries, Project X"
                             className={twMerge(
                                 "w-full h-9 px-3 text-sm bg-glass-inset-100 backdrop-blur-md border rounded-md focus:border-primary/50 focus:ring-1 focus:ring-primary/30 placeholder:text-muted shadow-inner",
@@ -133,4 +142,4 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
     );
 };
 
-export default AddListModal;
+export default AddListModal; // Already memoized by structure if props are stable

@@ -21,6 +21,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     'aria-label'?: string;
 }
 
+// Performance: ForwardRef allows memoization if parent component uses it
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     (
         {
@@ -41,6 +42,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ) => {
         const isDisabled = disabled || loading;
 
+        // Use clsx for conditional classes, twMerge handles overrides
         const baseClasses = clsx(
             'inline-flex items-center justify-center font-medium whitespace-nowrap select-none outline-none relative',
             'focus-visible:ring-1 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas',
@@ -50,7 +52,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             'rounded-md' // Use theme border radius
         );
 
-        // Refined variant styles for better consistency
+        // Variant styles defined using clsx for readability
         const variantClasses: Record<ButtonVariant, string> = {
             primary: clsx(
                 'bg-primary text-primary-foreground shadow-subtle border border-primary/90',
@@ -83,6 +85,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             ),
         };
 
+        // Size styles
         const sizeClasses: Record<ButtonSize, string> = {
             sm: 'text-xs px-2.5 h-[30px]',
             md: 'text-sm px-3 h-[32px]',
@@ -90,6 +93,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             icon: 'h-8 w-8 p-0', // Standard icon button size
         };
 
+        // Icon size styles
         const iconSizeClasses: Record<ButtonSize, number> = {
             sm: 14,
             md: 16,
@@ -97,6 +101,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             icon: 18, // Consistent icon size for icon buttons
         };
 
+        // Helper for icon margin
         const getIconMargin = (pos: 'left' | 'right') => {
             if (size === 'icon' || !children) return '';
             if (size === 'sm') return pos === 'left' ? 'mr-1' : 'ml-1';
@@ -105,7 +110,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
         // Determine aria-label, warn if missing for icon-only buttons
         const finalAriaLabel = ariaLabel || (size === 'icon' && !children ? undefined : (typeof children === 'string' ? children : undefined));
-        if (size === 'icon' && !finalAriaLabel && !loading && !children) {
+        if (size === 'icon' && !finalAriaLabel && !loading && !children && process.env.NODE_ENV === 'development') {
             console.warn("Icon-only button without children is missing an 'aria-label' prop for accessibility.", { icon });
         }
 
@@ -117,13 +122,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                     baseClasses,
                     variant !== 'link' && sizeClasses[size], // Don't apply sizing for link variant
                     variantClasses[variant],
-                    className
+                    className // Allow external overrides
                 )}
                 disabled={isDisabled}
                 aria-label={finalAriaLabel}
                 {...props} // Pass standard button props like onClick, etc.
             >
                 {loading ? (
+                    // Use dedicated loader icon
                     <Icon name="loader" size={iconSizeClasses[size]} className="animate-spin" />
                 ) : (
                     <>
@@ -132,11 +138,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                                 name={icon}
                                 size={iconSizeClasses[size]}
                                 className={twMerge(getIconMargin('left'))}
-                                aria-hidden="true" // Icon is decorative if text is present
+                                aria-hidden="true" // Icon is decorative if text/aria-label is present
                             />
                         )}
                         {/* Render children, make sr-only if it's an icon-only button with label */}
-                        <span className={clsx(size === 'icon' && !children ? 'sr-only' : 'flex-shrink-0')}>{children}</span>
+                        <span className={clsx(size === 'icon' && !children && finalAriaLabel ? 'sr-only' : 'flex-shrink-0')}>{children}</span>
                         {icon && iconPosition === 'right' && (
                             <Icon
                                 name={icon}
@@ -152,4 +158,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }
 );
 Button.displayName = 'Button';
-export default Button;
+export default Button; // Export non-memoized, parent decides memoization

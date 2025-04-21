@@ -11,20 +11,22 @@ interface IconProps extends Omit<LucideIcons.LucideProps, 'ref'> {
     className?: string;
 }
 
-const Icon = React.forwardRef<SVGSVGElement, IconProps>(
+// Performance: Use React.memo as Icons are pure components based on props
+const IconComponent = React.memo(React.forwardRef<SVGSVGElement, IconProps>(
     ({ name, size = 16, className, strokeWidth = 1.75, ...props }, ref) => {
-        const IconComponent = iconMap[name];
+        const LucideIcon = iconMap[name];
 
         // Fallback for missing icons
-        if (!IconComponent) {
-            console.warn(`Icon "${name}" not found in iconMap. Rendering fallback (HelpCircle).`);
+        if (!LucideIcon) {
+            if (process.env.NODE_ENV === 'development') { // Only warn in development
+                console.warn(`Icon "${name}" not found in iconMap. Rendering fallback (HelpCircle).`);
+            }
             return (
                 <LucideIcons.HelpCircle
                     ref={ref}
                     size={size}
                     strokeWidth={strokeWidth}
-                    // Ensure strokeWidth scales with size unless specified otherwise
-                    absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3}
+                    absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3} // Maintain absolute stroke width logic
                     className={twMerge(
                         'inline-block flex-shrink-0 stroke-current text-red-500 animate-pulse', // Fallback styling
                         className
@@ -36,19 +38,19 @@ const Icon = React.forwardRef<SVGSVGElement, IconProps>(
 
         // Render the requested icon
         return (
-            <IconComponent
+            <LucideIcon
                 ref={ref}
                 size={size}
                 strokeWidth={strokeWidth}
                 absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3}
                 className={twMerge(
-                    'inline-block flex-shrink-0 stroke-current', // Base styling
-                    className // Allow external classes
+                    'inline-block flex-shrink-0 stroke-current', // Base styling: ensures icon doesn't grow/shrink unexpectedly
+                    className // Allow external classes to override or add styles
                 )}
-                {...props} // Pass other SVG attributes (like color, fill, etc.)
+                {...props} // Pass other SVG attributes (like color, fill, data attributes, etc.)
             />
         );
     }
-);
-Icon.displayName = 'Icon';
-export default Icon;
+));
+IconComponent.displayName = 'Icon';
+export default IconComponent;

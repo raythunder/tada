@@ -1,8 +1,8 @@
 // src/components/layout/Sidebar.tsx
-import React, {useCallback, useEffect, useState, useRef, useMemo} from 'react';
+import React, { useCallback, useEffect, useState, useRef, useMemo, memo } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Icon from '../common/Icon';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'; // Ensure useAtom is imported
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
     currentFilterAtom, isAddListModalOpenAtom, taskCountsAtom,
     userDefinedListsAtom, userListNamesAtom, userTagNamesAtom,
@@ -11,12 +11,12 @@ import {
 import { TaskFilter, Task } from '@/types';
 import { twMerge } from 'tailwind-merge';
 import Button from '../common/Button';
-import AddListModal from '../common/AddListModal';
+import AddListModal from '../common/AddListModal'; // Keep import for rendering
 import { IconName } from "@/components/common/IconMap";
 import Highlighter from "react-highlight-words";
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Debounce Hook
+// Debounce Hook (keep as is)
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
     useEffect(() => {
@@ -26,7 +26,7 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
-// Helper function
+// Helper function for snippet generation (keep as is)
 function generateContentSnippet(content: string, term: string, length: number = 35): string {
     if (!content || !term) return '';
     const lowerContent = content.toLowerCase();
@@ -59,31 +59,42 @@ function generateContentSnippet(content: string, term: string, length: number = 
 
 
 // Sidebar Navigation Item Component
+// Performance: Memoized SidebarItem
 const SidebarItem: React.FC<{
     to: string; filter: TaskFilter; icon: IconName; label: string; count?: number; isUserList?: boolean;
-}> = React.memo(({ to, filter, icon, label, count, isUserList = false }) => {
+}> = memo(({ to, filter, icon, label, count, isUserList = false }) => {
     const [currentActiveFilter, ] = useAtom(currentFilterAtom);
-    // Removed setSearchTerm, setSelectedTaskId from here - handled by RouteChangeHandler
     const navigate = useNavigate();
-    const isActive = currentActiveFilter === filter;
+    // Performance: Memoize isActive calculation
+    const isActive = useMemo(() => currentActiveFilter === filter, [currentActiveFilter, filter]);
 
+    // Performance: Memoize click handler
     const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
-        if (currentActiveFilter !== filter) {
-            // Only navigate, state changes handled by RouteChangeHandler
+        // Navigate only if the filter is not already active to prevent unnecessary state changes
+        if (!isActive) {
+            // Let RouteChangeHandler manage state updates (filter, selection, search)
             navigate(to);
         }
-    }, [filter, navigate, currentActiveFilter]);
+    }, [filter, navigate, isActive, to]); // Add `to` and `isActive` dependencies
+
+    // Performance: Memoize className calculation
+    const linkClassName = useMemo(() => twMerge(
+        'flex items-center justify-between px-2 py-1 h-7 rounded-md mb-0.5 text-sm group transition-colors duration-30 ease-apple cursor-pointer',
+        isActive ? 'bg-primary/20 text-primary font-medium backdrop-blur-sm' : 'text-gray-600 hover:bg-black/15 hover:text-gray-800 hover:backdrop-blur-sm',
+        'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100'
+    ), [isActive]);
+
+    const countClassName = useMemo(() => twMerge(
+        "text-[10px] font-mono px-1 py-0 rounded-full ml-1 tabular-nums flex-shrink-0 backdrop-blur-sm",
+        isActive ? 'text-primary bg-primary/25' : 'text-muted-foreground bg-black/10 group-hover:bg-black/15'
+    ), [isActive]);
 
     return (
         <Link
             to={to}
             onClick={handleClick}
-            className={twMerge(
-                'flex items-center justify-between px-2 py-1 h-7 rounded-md mb-0.5 text-sm group transition-colors duration-30 ease-apple cursor-pointer',
-                isActive ? 'bg-primary/20 text-primary font-medium backdrop-blur-sm' : 'text-gray-600 hover:bg-black/15 hover:text-gray-800 hover:backdrop-blur-sm',
-                'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100'
-            )}
+            className={linkClassName}
             aria-current={isActive ? 'page' : undefined}
         >
             <div className="flex items-center overflow-hidden whitespace-nowrap text-ellipsis flex-1 min-w-0 mr-1">
@@ -91,14 +102,12 @@ const SidebarItem: React.FC<{
                 <span className="truncate">{label}</span>
             </div>
             {(count !== undefined && count > 0) && (
-                <span
-                    className={twMerge( "text-[10px] font-mono px-1 py-0 rounded-full ml-1 tabular-nums flex-shrink-0 backdrop-blur-sm", isActive ? 'text-primary bg-primary/25' : 'text-muted-foreground bg-black/10 group-hover:bg-black/15' )}
-                    aria-label={`${count} items`}
-                >
+                <span className={countClassName} aria-label={`${count} items`}>
                     {count}
                 </span>
             )}
-            {isUserList && <div className="w-4 h-4 ml-1 flex-shrink-0"></div>} {/* Placeholder for potential future icon */}
+            {/* Keep placeholder for potential future use, does not impact performance */}
+            {isUserList && <div className="w-4 h-4 ml-1 flex-shrink-0"></div>}
         </Link>
     );
 });
@@ -106,24 +115,32 @@ SidebarItem.displayName = 'SidebarItem';
 
 
 // Collapsible Section Component
+// Performance: Memoized CollapsibleSection
 const CollapsibleSection: React.FC<{
     title: string; children: React.ReactNode; icon?: IconName; initiallyOpen?: boolean; action?: React.ReactNode;
-}> = React.memo(({ title, icon, children, initiallyOpen = true, action }) => {
+}> = memo(({ title, icon, children, initiallyOpen = true, action }) => {
     const [isOpen, setIsOpen] = useState(initiallyOpen);
-    const sectionId = `section-content-${title.replace(/\s+/g, '-')}`;
+    const sectionId = useMemo(() => `section-content-${title.replace(/\s+/g, '-')}`, [title]); // Memoize ID
+
+    const toggleOpen = useCallback(() => setIsOpen(prev => !prev), []);
+
+    const chevronClasses = useMemo(() => twMerge(
+        "transition-transform duration-200 ease-apple ml-auto opacity-60 group-hover:opacity-80",
+        isOpen ? "rotate-180" : "rotate-0"
+    ), [isOpen]);
 
     return (
         <div className="mt-2 pt-2 border-t border-black/5 first:mt-0 first:pt-0 first:border-t-0">
             <div className="flex items-center justify-between px-2 py-0.5 mb-0.5">
                 <button
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={toggleOpen}
                     className="flex items-center flex-1 min-w-0 h-6 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-gray-700 focus:outline-none group rounded"
                     aria-expanded={isOpen}
                     aria-controls={sectionId}
                 >
                     {icon && <Icon name={icon} size={12} className="mr-1 opacity-70" aria-hidden="true"/>}
                     <span className="mr-1">{title}</span>
-                    <Icon name={'chevron-down'} size={14} className={twMerge( "transition-transform duration-200 ease-apple ml-auto opacity-60 group-hover:opacity-80", isOpen ? "rotate-180" : "rotate-0" )} aria-hidden="true" />
+                    <Icon name={'chevron-down'} size={14} className={chevronClasses} aria-hidden="true" />
                 </button>
                 {action && <div className="-mr-1 ml-1 flex-shrink-0">{action}</div>}
             </div>
@@ -131,7 +148,7 @@ const CollapsibleSection: React.FC<{
                 {isOpen && (
                     <motion.div
                         id={sectionId}
-                        key="content"
+                        key="content" // Keep key for AnimatePresence
                         initial="collapsed"
                         animate="open"
                         exit="collapsed"
@@ -157,8 +174,7 @@ const Sidebar: React.FC = () => {
     const counts = useAtomValue(taskCountsAtom);
     const userLists = useAtomValue(userListNamesAtom);
     const userTags = useAtomValue(userTagNamesAtom);
-    const allTasks = useAtomValue(tasksAtom);
-    // const [currentFilterValue, setCurrentFilter] = useAtom(currentFilterAtom);
+    const allTasks = useAtomValue(tasksAtom); // Needed for search
     const [searchTerm, setSearchTerm] = useAtom(searchTermAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const setUserDefinedLists = useSetAtom(userDefinedListsAtom);
@@ -167,68 +183,105 @@ const Sidebar: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const debouncedSearchTerm = useDebounce(searchTerm, 250);
+    const debouncedSearchTerm = useDebounce(searchTerm, 250); // Debounce search input
 
-    const [searchResults, setSearchResults] = useState<Task[]>([]);
-    const isSearching = useMemo(() => debouncedSearchTerm.trim().length > 0, [debouncedSearchTerm]);
-
-    // Search effect
-    useEffect(() => {
-        if (isSearching) {
-            const lowerCaseTerm = debouncedSearchTerm.toLowerCase();
-            const words = lowerCaseTerm.split(' ').filter(w => w.length > 0);
-            const results = allTasks.filter(task =>
-                task.list !== 'Trash' &&
-                words.every(word =>
-                    task.title.toLowerCase().includes(word) ||
-                    (task.content && task.content.toLowerCase().includes(word)) ||
-                    (task.tags && task.tags.some(tag => tag.toLowerCase().includes(word)))
-                )
-            ).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.createdAt - b.createdAt);
-            setSearchResults(results);
-        } else {
-            setSearchResults([]);
+    // Performance: Memoize search results calculation
+    const searchResults = useMemo(() => {
+        const term = debouncedSearchTerm.trim();
+        if (term.length === 0) {
+            return [];
         }
-    }, [debouncedSearchTerm, allTasks, isSearching]);
+        // console.log("Recalculating search results for:", term); // Performance check
+        const lowerCaseTerm = term.toLowerCase();
+        const words = lowerCaseTerm.split(' ').filter(w => w.length > 0);
+        // Filter *all* tasks, regardless of current view filter, excluding Trash
+        const results = allTasks.filter(task =>
+            task.list !== 'Trash' &&
+            words.every(word =>
+                task.title.toLowerCase().includes(word) ||
+                (task.content && task.content.toLowerCase().includes(word)) ||
+                (task.tags && task.tags.some(tag => tag.toLowerCase().includes(word)))
+            )
+        )
+            // Sort results: prioritize non-completed, then by order, then by creation date
+            .sort((a, b) => {
+                if (a.completed !== b.completed) return a.completed ? 1 : -1; // Non-completed first
+                return (a.order ?? 0) - (b.order ?? 0) || (b.createdAt - a.createdAt); // Then order, then newest created
+            });
+        return results;
+    }, [debouncedSearchTerm, allTasks]);
+
+    // Performance: Memoize if searching state
+    const isSearching = useMemo(() => debouncedSearchTerm.trim().length > 0, [debouncedSearchTerm]);
 
     // Add list handlers
     const handleAddNewListClick = useCallback(() => { setIsModalOpen(true); }, [setIsModalOpen]);
+
+    // Performance: Memoize add list handler
     const handleListAdded = useCallback((newListName: string) => {
         const trimmedName = newListName.trim();
-        if (!trimmedName || trimmedName === 'Inbox') return;
+        if (!trimmedName) return; // Basic validation
+
+        // Update userDefinedLists atom (guaranteed to be sorted)
         setUserDefinedLists((prevLists = []) => {
-            const uniqueLists = new Set([...prevLists.filter(l => l !== 'Inbox'), trimmedName]);
-            return [...uniqueLists].sort((a, b) => a.localeCompare(b));
+            // Prevent duplicates and ensure sorting
+            const newListSet = new Set(prevLists);
+            newListSet.add(trimmedName);
+            return Array.from(newListSet).sort((a, b) => a.localeCompare(b));
         });
-        // Navigation triggers RouteChangeHandler, which sets filter/clears state
+
+        // Navigate to the new list. RouteChangeHandler will update filter/state.
         navigate(`/list/${encodeURIComponent(trimmedName)}`);
+        // Modal is closed by AddListModal itself
     }, [setUserDefinedLists, navigate]);
 
     // Search input handlers
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => { setSearchTerm(e.target.value); };
+    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+    }, [setSearchTerm]);
+
     const handleClearSearch = useCallback(() => {
         setSearchTerm('');
-        // searchResults will clear via useEffect reacting to debouncedSearchTerm
+        // searchResults will clear via useMemo reacting to debouncedSearchTerm
         searchInputRef.current?.focus();
     }, [setSearchTerm]);
 
     // Handle clicking a search result
+    // Performance: Memoize search result click handler
     const handleSearchResultClick = useCallback((task: Task) => {
-        setSelectedTaskId(task.id);
-        // const targetFilter: TaskFilter = `list-${task.list}`;
+        setSelectedTaskId(task.id); // Select the task
+
+        // Determine the correct path for the task's list
         const targetPath = `/list/${encodeURIComponent(task.list)}`;
 
-        // Navigate if necessary. RouteChangeHandler will handle filter state.
-        // Only navigate if we are not already on the correct list page.
+        // Navigate to the task's list view *if not already there*.
+        // This allows the TaskList to display the correct context.
+        // RouteChangeHandler will sync the filter state based on the new path.
         if (location.pathname !== targetPath) {
             navigate(targetPath);
+            // Search term is NOT cleared here, allowing users to click other results.
+            // It will be cleared by RouteChangeHandler if the navigation happens.
+        } else {
+            // If already on the correct list page, no navigation needed.
+            // Filter is already correct. Search term remains.
         }
-        // No need to clear search here, user might want to click another result.
-        // If navigation occurs, RouteChangeHandler might clear search based on its logic.
     }, [setSelectedTaskId, navigate, location.pathname]);
 
+    // Memoize lists/tags to display
+    const myListsToDisplay = useMemo(() => userLists.filter(list => list !== 'Inbox'), [userLists]);
+    const tagsToDisplay = useMemo(() => userTags, [userTags]); // userTagsAtom is already memoized
 
-    const myListsToDisplay = userLists.filter(list => list !== 'Inbox');
+    const searchInputClassName = useMemo(() => twMerge(
+        "w-full h-7 pl-8 pr-7 text-sm bg-glass-inset-100 backdrop-blur-md border border-black/10 rounded-md focus:border-primary/30 focus:ring-1 focus:ring-primary/20 placeholder:text-muted text-gray-800 shadow-inner focus:bg-glass-inset-200 transition-colors duration-30 ease-apple"
+    ), []);
+
+    const highlighterProps = useMemo(() => ({
+        highlightClassName: "bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs",
+        searchWords: debouncedSearchTerm.split(' ').filter(Boolean),
+        autoEscape: true,
+    }), [debouncedSearchTerm]);
+
+    const searchResultButtonClassName = "flex items-start w-full px-2 py-1.5 text-left rounded-md hover:bg-black/15 hover:backdrop-blur-sm text-sm group transition-colors duration-100 ease-apple focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100";
 
     return (
         <>
@@ -237,15 +290,27 @@ const Sidebar: React.FC = () => {
                 <div className="px-2.5 mb-2 flex-shrink-0">
                     <div className="relative">
                         <label htmlFor="sidebar-search" className="sr-only">Search Tasks</label>
+                        {/* Performance: Icon is memoized */}
                         <Icon name="search" size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none opacity-70 z-10"/>
                         <input
-                            ref={searchInputRef} id="sidebar-search" type="search" placeholder="Search" value={searchTerm} onChange={handleSearchChange}
-                            className={twMerge( "w-full h-7 pl-8 pr-7 text-sm bg-glass-inset-100 backdrop-blur-md border border-black/10 rounded-md focus:border-primary/30 focus:ring-1 focus:ring-primary/20 placeholder:text-muted text-gray-800 shadow-inner focus:bg-glass-inset-200 transition-colors duration-30 ease-apple" )}
+                            ref={searchInputRef}
+                            id="sidebar-search"
+                            type="search"
+                            placeholder="Search"
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            className={searchInputClassName}
                             aria-label="Search tasks"
                         />
                         <AnimatePresence>
                             {searchTerm && (
-                                <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.7, opacity: 0 }} transition={{ duration: 0.1 }} className="absolute right-1 top-1/2 transform -translate-y-1/2 z-10">
+                                <motion.div
+                                    key="clear-search-btn"
+                                    initial={{ scale: 0.7, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0.7, opacity: 0 }}
+                                    transition={{ duration: 0.1 }}
+                                    className="absolute right-1 top-1/2 transform -translate-y-1/2 z-10">
                                     <Button variant="ghost" size="icon" icon="x-circle" onClick={handleClearSearch} className="w-5 h-5 text-muted-foreground opacity-60 hover:opacity-100 hover:bg-black/10" aria-label="Clear search"/>
                                 </motion.div>
                             )}
@@ -255,30 +320,33 @@ const Sidebar: React.FC = () => {
 
                 {/* Scrollable Filters/Search Results Area */}
                 <div className="flex-1 overflow-y-auto styled-scrollbar">
-                    {/* Use mode="wait" to ensure one view exits before the next enters */}
+                    {/* Use mode="wait" for smoother transition between search/filter views */}
                     <AnimatePresence mode="wait">
                         {isSearching ? (
                             // Search Results View
-                            <motion.div key="search-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1, ease: 'linear' }} className="px-1.5">
+                            <motion.div
+                                key="search-results" // Key for AnimatePresence
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.1, ease: 'linear' }}
+                                className="px-1.5 pb-2" // Add padding bottom
+                            >
                                 {searchResults.length > 0 ? (
                                     <>
                                         <p className="text-xs font-medium text-muted px-1 py-1">{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</p>
                                         {searchResults.map(task => (
-                                            <button key={task.id} onClick={() => handleSearchResultClick(task)} className="flex items-start w-full px-2 py-1.5 text-left rounded-md hover:bg-black/15 hover:backdrop-blur-sm text-sm group transition-colors duration-100 ease-apple focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-glass-alt-100" aria-label={`Search result: ${task.title || 'Untitled Task'}`}>
+                                            <button key={task.id} onClick={() => handleSearchResultClick(task)} className={searchResultButtonClassName} aria-label={`Search result: ${task.title || 'Untitled Task'}`}>
                                                 <Icon name={task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list')} size={15} className="mr-2 mt-[2px] flex-shrink-0 text-muted opacity-70" aria-hidden="true"/>
                                                 <div className="flex-1 overflow-hidden">
                                                     <Highlighter
-                                                        highlightClassName="bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs"
-                                                        searchWords={debouncedSearchTerm.split(' ').filter(Boolean)}
-                                                        autoEscape={true}
+                                                        {...highlighterProps}
                                                         textToHighlight={task.title || 'Untitled Task'}
                                                         className={twMerge("block truncate text-gray-800", task.completed && "line-through text-muted")}
                                                     />
                                                     {task.content && generateContentSnippet(task.content, debouncedSearchTerm) && (
                                                         <Highlighter
-                                                            highlightClassName="bg-yellow-300/70 rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs"
-                                                            searchWords={debouncedSearchTerm.split(' ').filter(Boolean)}
-                                                            autoEscape={true}
+                                                            {...highlighterProps}
                                                             textToHighlight={generateContentSnippet(task.content, debouncedSearchTerm)}
                                                             className="block truncate text-xs text-muted mt-0.5"
                                                         />
@@ -291,17 +359,36 @@ const Sidebar: React.FC = () => {
                             </motion.div>
                         ) : (
                             // Standard Filter Navigation View
-                            <motion.div key="filters" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.1, ease: 'linear' }} className="px-1.5">
+                            <motion.div
+                                key="filters" // Key for AnimatePresence
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.1, ease: 'linear' }}
+                                className="px-1.5 pb-2" // Add padding bottom
+                            >
+                                {/* Performance: SidebarItem is memoized, counts come from memoized atom */}
                                 <nav className="mb-1">
                                     <SidebarItem to="/all" filter="all" icon="archive" label="All Tasks" count={counts.all} />
                                     <SidebarItem to="/today" filter="today" icon="sun" label="Today" count={counts.today} />
                                     <SidebarItem to="/next7days" filter="next7days" icon="calendar" label="Next 7 Days" count={counts.next7days} />
                                     <SidebarItem to="/list/Inbox" filter="list-Inbox" icon="inbox" label="Inbox" count={counts.lists['Inbox']} />
                                 </nav>
-                                <CollapsibleSection title="My Lists" icon="folder" action={ <Button variant="ghost" size="icon" icon="folder-plus" className="w-6 h-6 text-muted-foreground hover:text-primary hover:bg-black/15" onClick={handleAddNewListClick} aria-label="Add New List"/> }>
-                                    {myListsToDisplay.length === 0 ? ( <p className="text-xs text-muted px-2 py-1 italic">No custom lists yet.</p> ) : ( myListsToDisplay.map(listName => ( <SidebarItem key={listName} to={`/list/${encodeURIComponent(listName)}`} filter={`list-${listName}`} icon="list" label={listName} count={counts.lists[listName]} isUserList={true}/> )) )}
+                                <CollapsibleSection
+                                    title="My Lists"
+                                    icon="folder"
+                                    action={ <Button variant="ghost" size="icon" icon="folder-plus" className="w-6 h-6 text-muted-foreground hover:text-primary hover:bg-black/15" onClick={handleAddNewListClick} aria-label="Add New List"/> }
+                                >
+                                    {myListsToDisplay.length === 0
+                                        ? ( <p className="text-xs text-muted px-2 py-1 italic">No custom lists yet.</p> )
+                                        : ( myListsToDisplay.map(listName => ( <SidebarItem key={listName} to={`/list/${encodeURIComponent(listName)}`} filter={`list-${listName}`} icon="list" label={listName} count={counts.lists[listName]} isUserList={true}/> )) )
+                                    }
                                 </CollapsibleSection>
-                                {userTags.length > 0 && ( <CollapsibleSection title="Tags" icon="tag" initiallyOpen={false}> {userTags.map(tagName => ( <SidebarItem key={tagName} to={`/tag/${encodeURIComponent(tagName)}`} filter={`tag-${tagName}`} icon="tag" label={`#${tagName}`} count={counts.tags[tagName]}/> ))} </CollapsibleSection> )}
+                                {tagsToDisplay.length > 0 && (
+                                    <CollapsibleSection title="Tags" icon="tag" initiallyOpen={false}>
+                                        {tagsToDisplay.map(tagName => ( <SidebarItem key={tagName} to={`/tag/${encodeURIComponent(tagName)}`} filter={`tag-${tagName}`} icon="tag" label={`#${tagName}`} count={counts.tags[tagName]}/> ))}
+                                    </CollapsibleSection>
+                                )}
                                 <CollapsibleSection title="System" initiallyOpen={false}>
                                     <SidebarItem to="/completed" filter="completed" icon="check-square" label="Completed" count={counts.completed} />
                                     <SidebarItem to="/trash" filter="trash" icon="trash" label="Trash" count={counts.trash} />
@@ -311,7 +398,8 @@ const Sidebar: React.FC = () => {
                     </AnimatePresence>
                 </div>
             </aside>
-            {/* Add List Modal */}
+            {/* Add List Modal - Rendered here to ensure it's within the Sidebar's context if needed,
+                but visually overlays due to fixed positioning and z-index */}
             <AnimatePresence>
                 {isModalOpen && <AddListModal onAdd={handleListAdded} />}
             </AnimatePresence>
@@ -319,5 +407,4 @@ const Sidebar: React.FC = () => {
     );
 };
 
-
-export default Sidebar;
+export default Sidebar; // Default export is fine, not typically memoized directly

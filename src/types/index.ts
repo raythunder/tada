@@ -11,6 +11,7 @@ export interface Task {
     id: string;
     title: string;
     completed: boolean;
+    completedAt?: number | null; // Timestamp when completed (optional)
     dueDate?: number | null; // Store as timestamp (milliseconds since epoch) or null
     list: string; // List name (e.g., 'Inbox', 'Work', 'Trash')
     content?: string; // Optional Markdown content for notes
@@ -47,4 +48,4 @@ export type TaskGroupCategory =
     | 'today'
     | 'next7days'
     | 'later' // Due date is beyond 7 days
-    | 'nodate'; // No due date assigned
+    | 'nodate'; // No due date assigned or task is completed/trashed

@@ -23,25 +23,29 @@ interface DraggableTaskProps {
     style?: React.CSSProperties; // For DragOverlay
 }
 
+// Performance: Memoized Draggable Task Item
 const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({ task, onClick, style: overlayStyle }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: `caltask-${task.id}`, // Unique prefix for calendar tasks
         data: { task, type: 'calendar-task' },
     });
 
-    const style = {
+    // Memoize style calculation
+    const style = useMemo(() => ({
         ...overlayStyle, // Apply overlay styles if provided
         transform: CSS.Translate.toString(transform),
-        // Smooth transition for transform only
+        // Smooth transition for transform only (removed for overlay)
         transition: overlayStyle ? undefined : transform ? 'transform 150ms ease-apple' : undefined,
         opacity: isDragging ? 0.7 : 1,
         zIndex: isDragging ? 1000 : 1,
-    };
+    }), [overlayStyle, transform, isDragging]);
 
+    // Memoize date parsing and overdue calculation
     const parsedDueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
     const overdue = useMemo(() => parsedDueDate != null && isValid(parsedDueDate) && isBefore(startOfDay(parsedDueDate), startOfDay(new Date())) && !task.completed, [parsedDueDate, task.completed]);
 
-    const baseClasses = twMerge(
+    // Memoize class calculation
+    const baseClasses = useMemo(() => twMerge(
         "w-full text-left px-1.5 py-0.5 rounded-[5px] truncate text-[11px] transition-colors duration-30 ease-apple cursor-grab relative mb-0.5", // Keep color transition
         task.completed
             ? 'bg-glass-alt/50 text-muted-foreground line-through italic opacity-60 pointer-events-none backdrop-blur-xs'
@@ -51,7 +55,7 @@ const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({ task, 
         overdue && !task.completed && 'text-red-600 bg-red-500/20 backdrop-blur-sm hover:bg-red-500/30 before:bg-red-600',
         isDragging && !overlayStyle && "shadow-medium bg-glass/30 backdrop-blur-sm ring-1 ring-primary/30 opacity-40",
         overlayStyle && "shadow-strong ring-1 ring-primary/30 bg-glass-100 backdrop-blur-lg"
-    );
+    ), [task.completed, task.priority, overdue, isDragging, overlayStyle]);
 
     return (
         <button
@@ -77,21 +81,23 @@ interface DroppableDayCellContentProps {
     isOver: boolean;
 }
 
+// Performance: Memoized Day Cell Content
 const DroppableDayCellContent: React.FC<DroppableDayCellContentProps> = React.memo(({ children, className, isOver }) => {
+    const cellClasses = useMemo(() => twMerge(
+        'h-full w-full transition-colors duration-30 ease-apple', // Keep color transition
+        className,
+        isOver && 'bg-primary/20 backdrop-blur-sm ring-1 ring-inset ring-primary/40'
+    ), [className, isOver]);
+
     return (
-        <div
-            className={twMerge(
-                'h-full w-full transition-colors duration-30 ease-apple', // Keep color transition
-                className,
-                isOver && 'bg-primary/20 backdrop-blur-sm ring-1 ring-inset ring-primary/40'
-            )}
-        >
+        <div className={cellClasses}>
             {children}
         </div>
     );
 });
 DroppableDayCellContent.displayName = 'DroppableDayCellContent';
 
+// Performance: Memoized Day Cell
 const DroppableDayCell: React.FC<{ day: Date; children: React.ReactNode; className?: string }> = React.memo(({ day, children, className }) => {
     const { isOver, setNodeRef } = useDroppable({
         id: `day-${format(day, 'yyyy-MM-dd')}`,
@@ -116,19 +122,23 @@ const CalendarView: React.FC = () => {
     const [currentMonthDate, setCurrentMonthDate] = useState(startOfDay(new Date()));
     const [draggingTaskId, setDraggingTaskId] = useState<UniqueIdentifier | null>(null);
 
+    // Performance: Memoize derived task data
     const draggingTask = useMemo(() => {
         if (!draggingTaskId) return null;
         const id = draggingTaskId.toString().replace('caltask-', '');
         return tasks.find(t => t.id === id) ?? null;
     }, [draggingTaskId, tasks]);
 
+    // Performance: Memoize date calculations
     const firstDayCurrentMonth = useMemo(() => startOfMonth(currentMonthDate), [currentMonthDate]);
     const lastDayCurrentMonth = useMemo(() => endOfMonth(currentMonthDate), [currentMonthDate]);
     const startDate = useMemo(() => startOfWeek(firstDayCurrentMonth, { locale: enUS }), [firstDayCurrentMonth]);
     const endDate = useMemo(() => endOfWeek(lastDayCurrentMonth, { locale: enUS }), [lastDayCurrentMonth]);
     const daysInGrid = useMemo(() => eachDayOfInterval({ start: startDate, end: endDate }), [startDate, endDate]);
 
+    // Performance: Memoize task grouping and sorting
     const tasksByDueDate = useMemo(() => {
+        // console.log("Recalculating tasksByDueDate"); // Performance check
         const grouped: Record<string, Task[]> = {};
         tasks.forEach(task => {
             if (task.dueDate && task.list !== 'Trash') {
@@ -145,15 +155,15 @@ const CalendarView: React.FC = () => {
             dayTasks.sort((a, b) => {
                 const priorityA = a.priority ?? 5;
                 const priorityB = b.priority ?? 5;
-                if (priorityA !== priorityB) {
-                    return priorityA - priorityB;
-                }
-                return b.createdAt - a.createdAt; // Newest first if same priority
+                if (priorityA !== priorityB) return priorityA - priorityB; // Lower priority number first
+                // If priority is same, sort by creation date (newest first)
+                return b.createdAt - a.createdAt;
             });
         });
         return grouped;
     }, [tasks]);
 
+    // Performance: Memoize callbacks
     const handleTaskClick = useCallback((taskId: string) => {
         setSelectedTaskId(taskId);
     }, [setSelectedTaskId]);
@@ -194,7 +204,7 @@ const CalendarView: React.FC = () => {
                         prevTasks.map(task => {
                             if (task.id === taskId) {
                                 let newTimestamp = newDueDateStart.getTime();
-                                // Preserve original time if it exists
+                                // Preserve original time if it exists and is valid
                                 const currentTaskDateTime = safeParseDate(task.dueDate);
                                 if (currentTaskDateTime && isValid(currentTaskDateTime)) {
                                     const hours = currentTaskDateTime.getHours();
@@ -218,6 +228,7 @@ const CalendarView: React.FC = () => {
 
     const weekDays = useMemo(() => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], []);
 
+    // Performance: Memoize the rendering function for each day cell
     const renderCalendarDay = useCallback((day: Date, index: number) => {
         const dateKey = format(day, 'yyyy-MM-dd');
         const dayTasks = tasksByDueDate[dateKey] || [];
@@ -276,7 +287,9 @@ const CalendarView: React.FC = () => {
                 )}
             </DroppableDayCell>
         );
-    }, [tasksByDueDate, currentMonthDate, handleTaskClick]);
+    }, [tasksByDueDate, currentMonthDate, handleTaskClick]); // Dependencies for memoization
+
+    const isTodayButtonDisabled = useMemo(() => isSameMonth(currentMonthDate, new Date()), [currentMonthDate]);
 
     return (
         <DndContext
@@ -295,7 +308,7 @@ const CalendarView: React.FC = () => {
                             variant="glass"
                             size="sm"
                             className="!h-[30px] px-2.5 backdrop-blur-lg"
-                            disabled={isSameMonth(currentMonthDate, new Date())}
+                            disabled={isTodayButtonDisabled} // Use memoized value
                         >
                             Today
                         </Button>
