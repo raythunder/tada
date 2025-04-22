@@ -1,4 +1,5 @@
 // src/components/common/CustomDatePickerPopover.tsx
+// No changes needed based on the requirements. Retained original code.
 import React, {useState, useMemo, useCallback} from 'react';
 import {twMerge} from 'tailwind-merge';
 import {Tooltip} from 'react-tooltip';
@@ -16,7 +17,7 @@ interface CustomDatePickerPopoverProps {
     onSelect: (date: Date | undefined) => void; // Callback with Date or undefined
     close: () => void; // Function to close the popover
     // Requirement 2: Add optional trigger ref for positioning
-    triggerElement?: HTMLElement | null;
+    triggerElement?: HTMLElement | null; // Keep prop, might be useful for context
 }
 
 // Performance: Use React.memo for the popover content
@@ -33,7 +34,6 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
 
     // Memoize calendar data generation
     const { calendarDays } = useMemo(() => {
-    // const { monthStart, monthEnd, calendarStart, calendarEnd, calendarDays } = useMemo(() => {
         const mStart = startOfMonth(viewDate);
         const mEnd = endOfMonth(viewDate);
         const cStart = startOfWeek(mStart);
@@ -70,15 +70,12 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
         const newDate = isCurrentlySelected ? undefined : dateStart; // Toggle selection
 
         setSelectedDate(newDate);
-        // Don't automatically close on selection to allow time/reminder setting
-        // onSelect(newDate); // Defer onSelect call to OK button or quick actions
-    }, [selectedDate]); // Removed onSelect dependency here
+        // Don't automatically close on selection
+    }, [selectedDate]);
 
     // Clear date handler
     const handleClearDate = useCallback(() => {
         setSelectedDate(undefined);
-        // onSelect(undefined); // Defer onSelect call
-        // close(); // Keep open maybe? Or close? Let's close on clear.
         onSelect(undefined);
         close();
     }, [onSelect, close]);
@@ -197,11 +194,6 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                 </div>
             </div>
 
-            {/* Additional Options Placeholder */}
-            {/* <div className="space-y-1 border-t border-black/10 pt-3 mt-3">
-                 Add Time/Reminder/Repeat buttons here if needed later
-            </div> */}
-
             {/* Action Buttons */}
             <div className="flex space-x-2 mt-4 border-t border-black/10 pt-3">
                 <Button
@@ -246,4 +238,4 @@ const CustomDatePickerPopover: React.FC<CustomDatePickerPopoverProps> = (props) 
 };
 
 
-export default CustomDatePickerPopover; // Export the animated wrapper
+export default CustomDatePickerPopover;

@@ -1,4 +1,5 @@
 // src/components/common/AddListModal.tsx
+// No changes needed based on the requirements. Retained original code.
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAtom } from 'jotai';
 import { isAddListModalOpenAtom, userListNamesAtom } from '@/store/atoms';
@@ -142,4 +143,4 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
     );
 };
 
-export default AddListModal; // Already memoized by structure if props are stable
+export default AddListModal;

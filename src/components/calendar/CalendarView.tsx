@@ -138,7 +138,6 @@ const CalendarView: React.FC = () => {
 
     // Performance: Memoize task grouping and sorting
     const tasksByDueDate = useMemo(() => {
-        // console.log("Recalculating tasksByDueDate"); // Performance check
         const grouped: Record<string, Task[]> = {};
         tasks.forEach(task => {
             if (task.dueDate && task.list !== 'Trash') {

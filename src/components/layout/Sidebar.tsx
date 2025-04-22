@@ -1,12 +1,13 @@
 // src/components/layout/Sidebar.tsx
 import React, { useCallback, useEffect, useState, useRef, useMemo, memo } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // Removed useLocation as it's handled by RouteChangeHandler/currentFilterAtom
 import Icon from '../common/Icon';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
     currentFilterAtom, isAddListModalOpenAtom, taskCountsAtom,
     userDefinedListsAtom, userListNamesAtom, userTagNamesAtom,
-    searchTermAtom, tasksAtom, selectedTaskIdAtom
+    searchTermAtom, selectedTaskIdAtom,
+    rawSearchResultsAtom // Import the new atom for search results
 } from '@/store/atoms';
 import { TaskFilter, Task } from '@/types';
 import { twMerge } from 'tailwind-merge';
@@ -44,6 +45,7 @@ function generateContentSnippet(content: string, term: string, length: number = 
     }
 
     if (firstMatchIndex === -1) {
+        // If term not found in content, return beginning of content
         return content.substring(0, length) + (content.length > length ? '...' : '');
     }
 
@@ -59,24 +61,20 @@ function generateContentSnippet(content: string, term: string, length: number = 
 
 
 // Sidebar Navigation Item Component
-// Performance: Memoized SidebarItem
 const SidebarItem: React.FC<{
     to: string; filter: TaskFilter; icon: IconName; label: string; count?: number; isUserList?: boolean;
 }> = memo(({ to, filter, icon, label, count, isUserList = false }) => {
     const [currentActiveFilter, ] = useAtom(currentFilterAtom);
     const navigate = useNavigate();
-    // Performance: Memoize isActive calculation
     const isActive = useMemo(() => currentActiveFilter === filter, [currentActiveFilter, filter]);
 
     // Performance: Memoize click handler
     const handleClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
-        // Navigate only if the filter is not already active to prevent unnecessary state changes
-        if (!isActive) {
-            // Let RouteChangeHandler manage state updates (filter, selection, search)
-            navigate(to);
-        }
-    }, [filter, navigate, isActive, to]); // Add `to` and `isActive` dependencies
+        // Navigate to trigger filter change via RouteChangeHandler
+        navigate(to);
+        // RouteChangeHandler will handle resetting selection/search if filter changes
+    }, [filter, navigate, to]); // Removed isActive dependency
 
     // Performance: Memoize className calculation
     const linkClassName = useMemo(() => twMerge(
@@ -115,7 +113,6 @@ SidebarItem.displayName = 'SidebarItem';
 
 
 // Collapsible Section Component
-// Performance: Memoized CollapsibleSection
 const CollapsibleSection: React.FC<{
     title: string; children: React.ReactNode; icon?: IconName; initiallyOpen?: boolean; action?: React.ReactNode;
 }> = memo(({ title, icon, children, initiallyOpen = true, action }) => {
@@ -174,42 +171,15 @@ const Sidebar: React.FC = () => {
     const counts = useAtomValue(taskCountsAtom);
     const userLists = useAtomValue(userListNamesAtom);
     const userTags = useAtomValue(userTagNamesAtom);
-    const allTasks = useAtomValue(tasksAtom); // Needed for search
+    const searchResults = useAtomValue(rawSearchResultsAtom); // Use the raw search results atom
     const [searchTerm, setSearchTerm] = useAtom(searchTermAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const setUserDefinedLists = useSetAtom(userDefinedListsAtom);
     const [isModalOpen, setIsModalOpen] = useAtom(isAddListModalOpenAtom);
 
     const navigate = useNavigate();
-    const location = useLocation();
     const searchInputRef = useRef<HTMLInputElement>(null);
     const debouncedSearchTerm = useDebounce(searchTerm, 250); // Debounce search input
-
-    // Performance: Memoize search results calculation
-    const searchResults = useMemo(() => {
-        const term = debouncedSearchTerm.trim();
-        if (term.length === 0) {
-            return [];
-        }
-        // console.log("Recalculating search results for:", term); // Performance check
-        const lowerCaseTerm = term.toLowerCase();
-        const words = lowerCaseTerm.split(' ').filter(w => w.length > 0);
-        // Filter *all* tasks, regardless of current view filter, excluding Trash
-        const results = allTasks.filter(task =>
-            task.list !== 'Trash' &&
-            words.every(word =>
-                task.title.toLowerCase().includes(word) ||
-                (task.content && task.content.toLowerCase().includes(word)) ||
-                (task.tags && task.tags.some(tag => tag.toLowerCase().includes(word)))
-            )
-        )
-            // Sort results: prioritize non-completed, then by order, then by creation date
-            .sort((a, b) => {
-                if (a.completed !== b.completed) return a.completed ? 1 : -1; // Non-completed first
-                return (a.order ?? 0) - (b.order ?? 0) || (b.createdAt - a.createdAt); // Then order, then newest created
-            });
-        return results;
-    }, [debouncedSearchTerm, allTasks]);
 
     // Performance: Memoize if searching state
     const isSearching = useMemo(() => debouncedSearchTerm.trim().length > 0, [debouncedSearchTerm]);
@@ -242,30 +212,17 @@ const Sidebar: React.FC = () => {
 
     const handleClearSearch = useCallback(() => {
         setSearchTerm('');
-        // searchResults will clear via useMemo reacting to debouncedSearchTerm
+        // searchResults will clear automatically via rawSearchResultsAtom
         searchInputRef.current?.focus();
     }, [setSearchTerm]);
 
     // Handle clicking a search result
-    // Performance: Memoize search result click handler
+    // Req 3 Fix: Only select the task ID. Do not navigate or clear search.
     const handleSearchResultClick = useCallback((task: Task) => {
         setSelectedTaskId(task.id); // Select the task
-
-        // Determine the correct path for the task's list
-        const targetPath = `/list/${encodeURIComponent(task.list)}`;
-
-        // Navigate to the task's list view *if not already there*.
-        // This allows the TaskList to display the correct context.
-        // RouteChangeHandler will sync the filter state based on the new path.
-        if (location.pathname !== targetPath) {
-            navigate(targetPath);
-            // Search term is NOT cleared here, allowing users to click other results.
-            // It will be cleared by RouteChangeHandler if the navigation happens.
-        } else {
-            // If already on the correct list page, no navigation needed.
-            // Filter is already correct. Search term remains.
-        }
-    }, [setSelectedTaskId, navigate, location.pathname]);
+        // No navigation needed, TaskList now displays rawSearchResults when searching
+        // Search term remains unchanged
+    }, [setSelectedTaskId]);
 
     // Memoize lists/tags to display
     const myListsToDisplay = useMemo(() => userLists.filter(list => list !== 'Inbox'), [userLists]);
@@ -288,14 +245,13 @@ const Sidebar: React.FC = () => {
             <aside className="w-56 bg-glass-alt-100 backdrop-blur-xl border-r border-black/10 h-full flex flex-col shrink-0 z-10 pt-3 pb-2 shadow-strong">
                 {/* Search Input Area */}
                 <div className="px-2.5 mb-2 flex-shrink-0">
-                    <div className="relative">
+                    <div className="relative flex items-center"> {/* Use flex to help center */}
                         <label htmlFor="sidebar-search" className="sr-only">Search Tasks</label>
-                        {/* Performance: Icon is memoized */}
-                        <Icon name="search" size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none opacity-70 z-10"/>
+                        <Icon name="search" size={15} className="absolute left-2.5 text-muted pointer-events-none opacity-70 z-10"/>
                         <input
                             ref={searchInputRef}
                             id="sidebar-search"
-                            type="search"
+                            type="search" // Use type="search" for native clear button potential (though we override)
                             placeholder="Search"
                             value={searchTerm}
                             onChange={handleSearchChange}
@@ -304,14 +260,25 @@ const Sidebar: React.FC = () => {
                         />
                         <AnimatePresence>
                             {searchTerm && (
+                                // Req 4 Fix: Apply flex centering to the motion div
                                 <motion.div
                                     key="clear-search-btn"
                                     initial={{ scale: 0.7, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     exit={{ scale: 0.7, opacity: 0 }}
                                     transition={{ duration: 0.1 }}
-                                    className="absolute right-1 top-1/2 transform -translate-y-1/2 z-10">
-                                    <Button variant="ghost" size="icon" icon="x-circle" onClick={handleClearSearch} className="w-5 h-5 text-muted-foreground opacity-60 hover:opacity-100 hover:bg-black/10" aria-label="Clear search"/>
+                                    // Position absolutely, use flex to center the button vertically
+                                    className="absolute right-1 h-full flex items-center z-10"
+                                >
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        icon="x-circle"
+                                        onClick={handleClearSearch}
+                                        // Adjust size slightly for better visual fit if needed
+                                        className="w-5 h-5 text-muted-foreground opacity-60 hover:opacity-100 hover:bg-black/10"
+                                        aria-label="Clear search"
+                                    />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -323,7 +290,7 @@ const Sidebar: React.FC = () => {
                     {/* Use mode="wait" for smoother transition between search/filter views */}
                     <AnimatePresence mode="wait">
                         {isSearching ? (
-                            // Search Results View
+                            // Search Results View (using rawSearchResults atom now)
                             <motion.div
                                 key="search-results" // Key for AnimatePresence
                                 initial={{ opacity: 0 }}
@@ -335,15 +302,22 @@ const Sidebar: React.FC = () => {
                                 {searchResults.length > 0 ? (
                                     <>
                                         <p className="text-xs font-medium text-muted px-1 py-1">{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</p>
-                                        {searchResults.map(task => (
+                                        {searchResults.map((task: any) => (
                                             <button key={task.id} onClick={() => handleSearchResultClick(task)} className={searchResultButtonClassName} aria-label={`Search result: ${task.title || 'Untitled Task'}`}>
+                                                {/* Icon based on list type */}
                                                 <Icon name={task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list')} size={15} className="mr-2 mt-[2px] flex-shrink-0 text-muted opacity-70" aria-hidden="true"/>
                                                 <div className="flex-1 overflow-hidden">
                                                     <Highlighter
                                                         {...highlighterProps}
                                                         textToHighlight={task.title || 'Untitled Task'}
-                                                        className={twMerge("block truncate text-gray-800", task.completed && "line-through text-muted")}
+                                                        className={twMerge(
+                                                            "block truncate text-gray-800",
+                                                            // Apply styling based on task status
+                                                            task.completed && task.list !== 'Trash' && "line-through text-muted",
+                                                            task.list === 'Trash' && "italic text-muted"
+                                                        )}
                                                     />
+                                                    {/* Show snippet highlight only if content exists and term is found in content */}
                                                     {task.content && generateContentSnippet(task.content, debouncedSearchTerm) && (
                                                         <Highlighter
                                                             {...highlighterProps}
@@ -398,8 +372,7 @@ const Sidebar: React.FC = () => {
                     </AnimatePresence>
                 </div>
             </aside>
-            {/* Add List Modal - Rendered here to ensure it's within the Sidebar's context if needed,
-                but visually overlays due to fixed positioning and z-index */}
+            {/* Add List Modal */}
             <AnimatePresence>
                 {isModalOpen && <AddListModal onAdd={handleListAdded} />}
             </AnimatePresence>
@@ -407,4 +380,4 @@ const Sidebar: React.FC = () => {
     );
 };
 
-export default Sidebar; // Default export is fine, not typically memoized directly
+export default Sidebar;

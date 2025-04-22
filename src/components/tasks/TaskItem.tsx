@@ -20,7 +20,7 @@ interface TaskItemProps {
     style?: React.CSSProperties; // Style passed by DragOverlay
 }
 
-// Helper function for snippet generation (keep as is)
+// Helper function for snippet generation (remains the same)
 function generateContentSnippet(content: string, term: string, length: number = 35): string {
     if (!content || !term) return '';
     const lowerContent = content.toLowerCase();
@@ -51,18 +51,17 @@ function generateContentSnippet(content: string, term: string, length: number = 
     return snippet;
 }
 
-// Performance: Memoize TaskItem as it can render frequently in lists
+// Performance: Memoize TaskItem
 const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay = false, style: overlayStyle }) => {
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
-    // Performance: Memoize selection check
     const isSelected = useMemo(() => selectedTaskId === task.id, [selectedTaskId, task.id]);
 
-    // Performance: Memoize derived states
+    // Memoize derived states
     const isTrashItem = useMemo(() => task.list === 'Trash', [task.list]);
     const isCompleted = useMemo(() => task.completed && !isTrashItem, [task.completed, isTrashItem]);
-    const isSortable = useMemo(() => !isCompleted && !isTrashItem, [isCompleted, isTrashItem]); // Derive from memoized values
+    const isSortable = useMemo(() => !isCompleted && !isTrashItem, [isCompleted, isTrashItem]);
 
     // dnd-kit sortable hook
     const {
@@ -78,7 +77,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
         data: { task, type: 'task-item', groupCategory: groupCategory ?? task.groupCategory },
     });
 
-    // Performance: Memoize style calculation
+    // Memoize style calculation
     const style = useMemo(() => ({
         ...overlayStyle,
         transform: CSS.Transform.toString(transform),
@@ -96,44 +95,40 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
             boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
             zIndex: 1000, // Ensure overlay is on top
         }),
-        // Apply z-index only when dragging or overlay
         zIndex: isDragging || isOverlay ? 10 : 1,
     }), [overlayStyle, transform, dndTransition, isDragging, isOverlay]);
 
-    // Performance: Memoize click handler
+    // Memoize click handler
     const handleTaskClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        // Prevent selection if clicking on interactive elements within the item
         const target = e.target as HTMLElement;
         if (target.closest('button, input, a, .task-item-actions button')) return;
-        setSelectedTaskId(id => (id === task.id ? null : task.id)); // Toggle selection
+        setSelectedTaskId(id => (id === task.id ? null : task.id));
     }, [setSelectedTaskId, task.id]);
 
-    // Performance: Memoize checkbox handler
+    // Memoize checkbox handler
     const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        e.stopPropagation(); // Prevent task selection click
+        e.stopPropagation();
         const isChecked = e.target.checked;
         setTasks(prevTasks =>
             prevTasks.map(t =>
                 t.id === task.id ? {
                     ...t,
                     completed: isChecked,
-                    completedAt: isChecked ? Date.now() : null,
                     updatedAt: Date.now()
                 } : t
             )
         );
-        // If the task being completed is the selected one, deselect it
         if (isChecked && isSelected) {
             setSelectedTaskId(null);
         }
-    }, [setTasks, task.id, isSelected, setSelectedTaskId]); // isSelected is dependency now
+    }, [setTasks, task.id, isSelected, setSelectedTaskId]);
 
-    // Performance: Memoize date and overdue calculation
+    // Memoize date and overdue calculation
     const dueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
     const isValidDueDate = useMemo(() => dueDate && isValid(dueDate), [dueDate]);
     const overdue = useMemo(() => isValidDueDate && !isCompleted && !isTrashItem && isOverdue(dueDate!), [isValidDueDate, isCompleted, isTrashItem, dueDate]);
 
-    // Performance: Memoize search term processing
+    // Memoize search term processing
     const searchWords = useMemo(() => searchTerm ? searchTerm.trim().toLowerCase().split(' ').filter(Boolean) : [], [searchTerm]);
     const highlighterProps = useMemo(() => ({
         highlightClassName: "bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs",
@@ -141,31 +136,32 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
         autoEscape: true,
     }), [searchWords]);
 
-    // Performance: Memoize check for showing content highlight
+    // Memoize check for showing content highlight
     const showContentHighlight = useMemo(() => {
         if (searchWords.length === 0 || !task.content?.trim()) return false;
         const lowerContent = task.content.toLowerCase();
         const lowerTitle = task.title.toLowerCase();
-        // Show if any search word is in content BUT not all words are in the title
         return searchWords.some(word => lowerContent.includes(word)) &&
             !searchWords.every(word => lowerTitle.includes(word));
     }, [searchWords, task.content, task.title]);
 
+    // Fix 2: Remove the unused hasVisibleMetadata variable
+    // const hasVisibleMetadata = useMemo(() => {
+    //     return isValidDueDate || (task.list && task.list !== 'Inbox') || (task.tags && task.tags.length > 0) || showContentHighlight;
+    // }, [isValidDueDate, task.list, task.tags, showContentHighlight]);
 
-    // Performance: Memoize class calculations
+    // Class calculations
     const baseClasses = useMemo(() => twMerge(
-        'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]', // Layout
+        'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]', // Layout, ensures min height
         isOverlay
-            ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong' // Overlay specific
-            : isSelected && !isDragging // Selected state (not while dragging original)
+            ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong'
+            : isSelected && !isDragging
                 ? 'bg-primary/20 backdrop-blur-sm'
-                : isTrashItem // Trash state
-                    ? 'bg-glass-alt/30 backdrop-blur-xs opacity-50 cursor-pointer hover:bg-black/10'
-                    : isCompleted // Completed state
+                : isTrashItem
+                    ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10'
+                    : isCompleted
                         ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10'
-                        // Default interactive states
                         : 'bg-transparent hover:bg-black/10 hover:backdrop-blur-sm',
-        // Cursor based on state
         isDragging || isOverlay ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-pointer'),
     ), [isOverlay, isSelected, isDragging, isTrashItem, isCompleted, isSortable]);
 
@@ -188,32 +184,29 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
     const dragHandleClasses = useMemo(() => twMerge(
         "text-muted cursor-grab p-1 -ml-1 opacity-0 group-hover:opacity-50 group-focus-within:opacity-50 focus-visible:opacity-80",
         "transition-opacity duration-30 ease-apple outline-none rounded focus-visible:ring-1 focus-visible:ring-primary/50",
-        isDragging && "opacity-50 cursor-grabbing" // Style handle during drag
+        isDragging && "opacity-50 cursor-grabbing"
     ), [isDragging]);
 
-    const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : 'list', [task.list]);
+    const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list'), [task.list]);
 
     const handleMoreActionsClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
-        // Select the task if not already selected, to show details/context for actions
         if (!isSelected) {
             setSelectedTaskId(task.id);
         }
-        // Future: Could open a context menu here instead of just selecting
-        console.log('More actions clicked for task:', task.id);
     }, [task.id, isSelected, setSelectedTaskId]);
 
     return (
         <div
             ref={setNodeRef}
-            style={style} // Apply combined styles
+            style={style}
             className={baseClasses}
             onClick={handleTaskClick}
             role="button"
             tabIndex={0}
             onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
                 if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault(); // Prevent space bar scrolling
+                    e.preventDefault();
                     handleTaskClick(e as unknown as React.MouseEvent<HTMLDivElement>);
                 }
             }}
@@ -224,17 +217,15 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
             <div className="flex-shrink-0 h-full flex items-center mr-2 self-stretch">
                 {isSortable ? (
                     <button
-                        {...attributes} // DND attributes
-                        {...listeners} // DND listeners
-                        onClick={(e) => e.stopPropagation()} // Prevent task selection
+                        {...attributes} {...listeners}
+                        onClick={(e) => e.stopPropagation()}
                         className={dragHandleClasses}
                         aria-label="Drag task to reorder"
-                        tabIndex={-1} // Not focusable via keyboard directly
+                        tabIndex={-1}
                     >
                         <Icon name="grip-vertical" size={15} strokeWidth={2}/>
                     </button>
                 ) : (
-                    // Keep space consistent for non-draggable items
                     <div className="w-[27px]" aria-hidden="true"></div>
                 )}
             </div>
@@ -246,10 +237,10 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
                     id={`task-checkbox-${task.id}`}
                     checked={task.completed}
                     onChange={handleCheckboxChange}
-                    onClick={(e) => e.stopPropagation()} // Prevent task selection
+                    onClick={(e) => e.stopPropagation()}
                     className={checkboxClasses}
                     aria-labelledby={`task-title-${task.id}`}
-                    disabled={isTrashItem} // Disable checkbox in trash
+                    disabled={isTrashItem}
                 />
                 <label htmlFor={`task-checkbox-${task.id}`} className="sr-only">
                     Complete task {task.title || 'Untitled'}
@@ -257,16 +248,16 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
             </div>
 
             {/* Task Info */}
-            <div className="flex-1 min-w-0 pt-[1px]">
-                {/* Title with Highlighter */}
+            <div className="flex-1 min-w-0 pt-[1px] pb-[1px]">
+                {/* Title */}
                 <Highlighter
                     {...highlighterProps}
                     textToHighlight={task.title || 'Untitled Task'}
                     id={`task-title-${task.id}`}
                     className={titleClasses}
                 />
-                {/* Metadata row */}
-                <div className="flex items-center flex-wrap text-[11px] text-muted-foreground space-x-2 mt-1 leading-tight gap-y-0.5">
+                {/* Metadata row (always rendered with min-height for alignment) */}
+                <div className="flex items-center flex-wrap text-[11px] text-muted-foreground space-x-2 mt-1 leading-tight gap-y-0.5 min-h-[17px]">
                     {/* Priority Indicator */}
                     {!!task.priority && task.priority <= 2 && !isCompleted && !isTrashItem && (
                         <span className={clsx("flex items-center", {
@@ -277,29 +268,38 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
                         </span>
                     )}
                     {/* Due Date */}
-                    {isValidDueDate && !isCompleted && !isTrashItem && (
+                    {isValidDueDate && (
                         <span
-                            className={clsx('flex items-center whitespace-nowrap', overdue && 'text-red-600 font-medium')}
-                            title={formatDate(dueDate!)}> {/* Use non-null assertion as checked by isValidDueDate */}
+                            className={clsx('flex items-center whitespace-nowrap',
+                                overdue && !isCompleted && !isTrashItem && 'text-red-600 font-medium',
+                                (isCompleted || isTrashItem) && 'line-through opacity-70'
+                            )}
+                            title={formatDate(dueDate!)}>
                             <Icon name="calendar" size={11} className="mr-0.5 opacity-70"/>
                             {formatRelativeDate(dueDate!)}
                         </span>
                     )}
-                    {/* List Name (if not Inbox) */}
-                    {task.list && task.list !== 'Inbox' && !isTrashItem && !isCompleted && (
+                    {/* List Name */}
+                    {task.list && task.list !== 'Inbox' && (
                         <span
-                            className="flex items-center whitespace-nowrap bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[80px] truncate backdrop-blur-sm"
+                            className={clsx(
+                                "flex items-center whitespace-nowrap bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[80px] truncate backdrop-blur-sm",
+                                (isCompleted || isTrashItem) && 'line-through opacity-70'
+                            )}
                             title={task.list}>
                             <Icon name={listIcon} size={10} className="mr-0.5 opacity-70 flex-shrink-0"/>
                             <span className="truncate">{task.list}</span>
                         </span>
                     )}
                     {/* Tags */}
-                    {task.tags && task.tags.length > 0 && !isCompleted && !isTrashItem && (
-                        <span className="flex items-center space-x-1 flex-wrap gap-y-0.5">
+                    {task.tags && task.tags.length > 0 && (
+                        <span className={clsx("flex items-center space-x-1 flex-wrap gap-y-0.5", (isCompleted || isTrashItem) && 'opacity-70')}>
                             {task.tags.slice(0, 2).map(tag => (
                                 <span key={tag}
-                                      className="bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[70px] truncate backdrop-blur-sm"
+                                      className={clsx(
+                                          "bg-black/10 text-muted-foreground px-1 py-0 rounded-[4px] text-[10px] max-w-[70px] truncate backdrop-blur-sm",
+                                          (isCompleted || isTrashItem) && 'line-through'
+                                      )}
                                       title={tag}>
                                      #{tag}
                                  </span>
@@ -313,14 +313,16 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
                         <Highlighter
                             {...highlighterProps}
                             textToHighlight={generateContentSnippet(task.content!, searchTerm)}
-                            className="block truncate text-[11px] text-muted italic w-full mt-0.5"
+                            className={clsx(
+                                "block truncate text-[11px] text-muted italic w-full mt-0.5",
+                                (isCompleted || isTrashItem) && 'line-through'
+                            )}
                         />
                     )}
                 </div>
             </div>
 
             {/* More Actions Button */}
-            {/* Show button for sortable items OR items in trash (for restore/delete permanently actions) */}
             {(isSortable || isTrashItem) && !isOverlay && (
                 <div
                     className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple">
@@ -329,9 +331,9 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
                         size="icon"
                         icon="more-horizontal"
                         className="h-6 w-6 text-muted-foreground hover:bg-black/15"
-                        onClick={handleMoreActionsClick} // Use memoized handler
+                        onClick={handleMoreActionsClick}
                         aria-label={`More actions for ${task.title || 'task'}`}
-                        tabIndex={0} // Make it keyboard focusable
+                        tabIndex={0}
                     />
                 </div>
             )}

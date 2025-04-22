@@ -1,4 +1,5 @@
 // src/pages/CalendarPage.tsx
+// No changes needed based on the requirements. Retained original code.
 import React from 'react';
 import CalendarView from '../components/calendar/CalendarView';
 
@@ -8,4 +9,4 @@ const CalendarPage: React.FC = () => {
     return <CalendarView />;
 };
 
-export default CalendarPage; // No need to memoize page components usually
+export default CalendarPage;

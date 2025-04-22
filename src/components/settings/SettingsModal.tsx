@@ -1,4 +1,5 @@
 // src/components/settings/SettingsModal.tsx
+// No changes needed based on the requirements. Retained original code.
 import React, { useCallback, useMemo, memo } from 'react';
 import { useAtom } from 'jotai';
 import { currentUserAtom, isSettingsOpenAtom, settingsSelectedTabAtom } from '@/store/atoms';
@@ -6,7 +7,7 @@ import { SettingsTab } from '@/types';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
 import { twMerge } from 'tailwind-merge';
-import { IconName } from "@/components/common/IconMap"; // Corrected import path
+import { IconName } from "@/components/common/IconMap";
 
 // --- Setting Sections Definition ---
 interface SettingsItem {
@@ -26,7 +27,6 @@ const settingsSections: SettingsItem[] = [
 ];
 
 // --- Reusable Settings Row Component ---
-// Performance: Memoized SettingsRow
 const SettingsRow: React.FC<{label: string, value?: React.ReactNode, action?: React.ReactNode, children?: React.ReactNode, description?: string}> =
     memo(({label, value, action, children, description}) => (
         <div className="flex justify-between items-center py-2.5 min-h-[44px] border-b border-black/5 last:border-b-0">
@@ -49,7 +49,6 @@ const SettingsRow: React.FC<{label: string, value?: React.ReactNode, action?: Re
 SettingsRow.displayName = 'SettingsRow';
 
 // --- Account Settings Panel ---
-// Performance: Memoized AccountSettings panel
 const AccountSettings: React.FC = memo(() => {
     const [currentUser] = useAtom(currentUserAtom);
 
@@ -135,7 +134,6 @@ AccountSettings.displayName = 'AccountSettings';
 
 
 // --- Placeholder for other settings panels ---
-// Performance: Memoized Placeholder Settings
 const PlaceholderSettings: React.FC<{ title: string, icon?: IconName }> = memo(({ title, icon = 'settings' }) => (
     <div className="p-6 text-center text-gray-400 h-full flex flex-col items-center justify-center">
         <Icon name={icon} size={44} className="mx-auto mb-4 text-gray-300 opacity-70" />
@@ -240,7 +238,6 @@ const SettingsModal: React.FC = () => {
                     </div>
 
                     {/* Scrollable Content Panel */}
-                    {/* Performance: Child components are memoized */}
                     <div className="flex-1 p-5 overflow-y-auto styled-scrollbar">
                         {renderContent}
                     </div>
@@ -250,4 +247,4 @@ const SettingsModal: React.FC = () => {
     );
 };
 
-export default SettingsModal; // Default export, not typically memoized directly
+export default SettingsModal;

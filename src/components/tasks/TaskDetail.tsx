@@ -1,7 +1,7 @@
 // src/components/tasks/TaskDetail.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {getTaskGroupCategory, selectedTaskAtom, selectedTaskIdAtom, tasksAtom, userListNamesAtom} from '@/store/atoms'; // Import getTaskGroupCategory helper
+import {getTaskGroupCategory, selectedTaskAtom, selectedTaskIdAtom, tasksAtom, userListNamesAtom} from '@/store/atoms';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
 import CodeMirrorEditor, {CodeMirrorEditorRef} from '../common/CodeMirrorEditor';
@@ -18,6 +18,7 @@ function useClickAway(ref: React.RefObject<HTMLElement>, handler: (event: MouseE
     useEffect(() => {
         const listener = (event: MouseEvent | TouchEvent) => {
             const el = ref.current;
+            // Ignore clicks inside the element, the date picker, or the dropdown content
             if (!el || el.contains(event.target as Node) || (event.target as Element).closest('.date-picker-popover, .dropdown-content')) {
                 return;
             }
@@ -69,7 +70,7 @@ const Dropdown: React.FC<DropdownProps> = memo(({
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
-            handleTriggerClick(e as any);
+            handleTriggerClick(e as unknown as React.MouseEvent<HTMLDivElement>);
         } else if (e.key === 'Escape') {
             close();
         }
@@ -120,7 +121,6 @@ const TaskDetail: React.FC = () => {
     const latestTitleRef = useRef(localTitle);
     const latestContentRef = useRef(localContent);
     const latestTagsRef = useRef(localTags);
-    // No ref needed for dueDate as it's updated directly via updateTask
 
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const hasUnsavedChangesRef = useRef(false);
@@ -129,62 +129,53 @@ const TaskDetail: React.FC = () => {
         isMountedRef.current = true;
         return () => {
             isMountedRef.current = false;
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
         };
     }, []);
 
 
     // --- Sync Local State AND Latest Refs from Atom ---
-    // This effect now also updates the `latest*Ref` values when the task changes.
     useEffect(() => {
         if (selectedTask) {
             const isTitleFocused = titleInputRef.current === document.activeElement;
             const isTagsFocused = tagsInputRef.current === document.activeElement;
             const isContentFocused = editorRef.current?.getView()?.hasFocus ?? false;
 
-            // Update local state AND latest refs if not focused
-            if (!isTitleFocused) {
-                // Only update if different to prevent feedback loop
-                if (selectedTask.title !== latestTitleRef.current) {
-                    setLocalTitle(selectedTask.title);
-                    latestTitleRef.current = selectedTask.title;
-                }
-            } else {
-                // If focused, ensure ref matches current state (which reflects user input)
+            if (!isTitleFocused && selectedTask.title !== latestTitleRef.current) {
+                setLocalTitle(selectedTask.title);
+                latestTitleRef.current = selectedTask.title;
+            } else if (isTitleFocused) {
                 latestTitleRef.current = localTitle;
             }
 
             const taskContent = selectedTask.content || '';
-            if (!isContentFocused) {
-                if (taskContent !== latestContentRef.current) {
-                    setLocalContent(taskContent);
-                    latestContentRef.current = taskContent;
-                }
-            } else {
+            if (!isContentFocused && taskContent !== latestContentRef.current) {
+                setLocalContent(taskContent);
+                latestContentRef.current = taskContent;
+            } else if (isContentFocused) {
                 latestContentRef.current = localContent;
             }
 
-            // Update dueDate state (ref not strictly needed here)
             const taskDueDate = safeParseDate(selectedTask.dueDate);
-            const taskDueTime = taskDueDate && isValid(taskDueDate) ? taskDueDate.getTime() : undefined;
+            const validTaskDueDate = taskDueDate && isValid(taskDueDate) ? taskDueDate : undefined;
+            const taskDueTime = validTaskDueDate?.getTime();
             const currentLocalTime = localDueDate?.getTime();
             if (taskDueTime !== currentLocalTime) {
-                setLocalDueDate(taskDueDate && isValid(taskDueDate) ? taskDueDate : undefined);
+                setLocalDueDate(validTaskDueDate);
             }
 
             const taskTagsString = (selectedTask.tags ?? []).join(', ');
-            if (!isTagsFocused) {
-                if (taskTagsString !== latestTagsRef.current) {
-                    setLocalTags(taskTagsString);
-                    latestTagsRef.current = taskTagsString;
-                }
-            } else {
+            if (!isTagsFocused && taskTagsString !== latestTagsRef.current) {
+                setLocalTags(taskTagsString);
+                latestTagsRef.current = taskTagsString;
+            } else if (isTagsFocused) {
                 latestTagsRef.current = localTags;
             }
 
-            // Reset unsaved changes flag on task change
             hasUnsavedChangesRef.current = false;
 
-            // Auto-focus (keep as is)
             if (selectedTask.title === '' && !isTitleFocused) {
                 const timer = setTimeout(() => {
                     if (isMountedRef.current) titleInputRef.current?.focus();
@@ -192,14 +183,10 @@ const TaskDetail: React.FC = () => {
                 return () => clearTimeout(timer);
             }
         } else {
-            // Reset local state and refs if no task selected
-            setLocalTitle('');
-            latestTitleRef.current = '';
-            setLocalContent('');
-            latestContentRef.current = '';
+            setLocalTitle(''); latestTitleRef.current = '';
+            setLocalContent(''); latestContentRef.current = '';
             setLocalDueDate(undefined);
-            setLocalTags('');
-            latestTagsRef.current = '';
+            setLocalTags(''); latestTagsRef.current = '';
             hasUnsavedChangesRef.current = false;
         }
 
@@ -209,53 +196,44 @@ const TaskDetail: React.FC = () => {
                 saveTimeoutRef.current = null;
             }
         };
-        // Dependency only on task ID to trigger full sync
-    }, [selectedTask?.id]);
+    }, [selectedTask?.id, selectedTask?.title, selectedTask?.content, selectedTask?.dueDate, selectedTask?.tags, localTitle, localContent, localDueDate, localTags]);
 
 
-    // --- Debounced Save Function (Reads from Refs) ---
+    // --- Debounced Save Function ---
     const triggerSave = useCallback(() => {
         if (!selectedTask || !isMountedRef.current) return;
 
-        hasUnsavedChangesRef.current = true; // Mark pending changes
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); // Clear existing timeout
-
-        // No need to capture state here anymore, we read refs inside setTimeout
+        hasUnsavedChangesRef.current = true;
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
         saveTimeoutRef.current = setTimeout(() => {
             if (!hasUnsavedChangesRef.current || !selectedTask || !isMountedRef.current) return;
 
-            // *** Read the LATEST values directly from refs inside the timeout ***
             const currentTitle = latestTitleRef.current;
             const currentContent = latestContentRef.current;
-            // Due date uses local state as it's not updated via debounced text input
             const currentDueDate = localDueDate;
             const currentTags = latestTagsRef.current;
 
-            // Process the *latest* values
-            const processedTitle = currentTitle.trim() || "Untitled Task";
+            const processedTitle = currentTitle.trim();
             const processedDueDate = currentDueDate && isValid(currentDueDate) ? currentDueDate.getTime() : null;
             const processedTags = currentTags.split(',').map(t => t.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
 
-            // Compare latest processed values against the original task state
-            const originalTaskState = selectedTask; // Use task state from closure when debounce was set
+            const originalTaskState = selectedTask;
             const changesToSave: Partial<Task> = {};
             let needsCategoryRecalc = false;
 
             if (processedTitle !== originalTaskState.title) changesToSave.title = processedTitle;
-            // Compare content from ref
             if (currentContent !== (originalTaskState.content || '')) changesToSave.content = currentContent;
-            // Compare processed due date from local state
-            if (processedDueDate !== (originalTaskState.dueDate ?? null)) {
+
+            const originalDueTime = originalTaskState.dueDate ?? null;
+            if (processedDueDate !== originalDueTime) {
                 changesToSave.dueDate = processedDueDate;
                 needsCategoryRecalc = true;
             }
-            // Compare processed tags from ref
             const originalTagsSorted = (originalTaskState.tags ?? []).slice().sort();
             const processedTagsSorted = processedTags.slice().sort();
             if (JSON.stringify(processedTagsSorted) !== JSON.stringify(originalTagsSorted)) changesToSave.tags = processedTags;
 
-            // Only proceed if there are effective changes
             if (Object.keys(changesToSave).length === 0) {
                 hasUnsavedChangesRef.current = false;
                 saveTimeoutRef.current = null;
@@ -263,12 +241,13 @@ const TaskDetail: React.FC = () => {
             }
             changesToSave.updatedAt = Date.now();
 
-            // console.log("Saving via Debounce (from refs):", changesToSave); // Debug log
             setTasks((prevTasks) =>
                 prevTasks.map((t) => {
                     if (t.id === originalTaskState.id) {
                         const updatedTask = {...t, ...changesToSave};
-                        if (needsCategoryRecalc) updatedTask.groupCategory = getTaskGroupCategory(updatedTask);
+                        if (needsCategoryRecalc || updatedTask.completed !== t.completed || updatedTask.list !== t.list) {
+                            updatedTask.groupCategory = getTaskGroupCategory(updatedTask);
+                        }
                         return updatedTask;
                     }
                     return t;
@@ -276,89 +255,133 @@ const TaskDetail: React.FC = () => {
             );
             hasUnsavedChangesRef.current = false;
             saveTimeoutRef.current = null;
-        }, 500); // 500ms debounce
+        }, 600);
 
-        // Dependencies: selectedTask and setTasks are needed for the closure.
-        // Local state vars are NOT needed as deps because we read from refs.
-    }, [selectedTask, setTasks, localDueDate]); // localDueDate is needed as it's read directly
+    }, [selectedTask, setTasks, localDueDate]);
 
 
-    // --- Direct Update Function (Keep previous logic) ---
-    const updateTask = useCallback((updates: Partial<Task>) => {
+    // --- Direct Update Function ---
+    const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt'>>) => {
         if (!selectedTask || !isMountedRef.current) return;
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = null;
         }
         hasUnsavedChangesRef.current = false;
-        const needsCategoryRecalc = ('dueDate' in updates && updates.dueDate !== selectedTask.dueDate) || ('completed' in updates && updates.completed !== selectedTask.completed) || ('list' in updates && updates.list !== selectedTask.list);
-        // console.log("Saving via Direct Update:", updates); // Debug log
+
         setTasks(prevTasks => prevTasks.map(t => {
             if (t.id === selectedTask.id) {
-                const updatedTask = {...t, ...updates, updatedAt: Date.now()};
-                if (needsCategoryRecalc) updatedTask.groupCategory = getTaskGroupCategory(updatedTask);
-                return updatedTask;
+                const updatedTaskBase = {...t, ...updates, updatedAt: Date.now()};
+                const updatedTaskWithCategory = {
+                    ...updatedTaskBase,
+                    groupCategory: getTaskGroupCategory(updatedTaskBase),
+                    completedAt: updatedTaskBase.completed ? (updatedTaskBase.completedAt ?? updatedTaskBase.updatedAt) : null
+                };
+                return updatedTaskWithCategory;
             }
             return t;
         }));
     }, [selectedTask, setTasks]);
 
 
-    // --- Event Handlers (Use triggerSave/updateTask correctly) ---
+    // --- Event Handlers ---
     const handleClose = useCallback(() => {
-        if (hasUnsavedChangesRef.current) {
-            triggerSave();
+        if (hasUnsavedChangesRef.current && saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+            const saveNow = () => {
+                if (!selectedTask || !isMountedRef.current) return;
+                const currentTitle = latestTitleRef.current;
+                const currentContent = latestContentRef.current;
+                const currentDueDate = localDueDate;
+                const currentTags = latestTagsRef.current;
+                const processedTitle = currentTitle.trim();
+                const processedDueDate = currentDueDate && isValid(currentDueDate) ? currentDueDate.getTime() : null;
+                const processedTags = currentTags.split(',').map(t => t.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+                const originalTaskState = selectedTask;
+                const changesToSave: Partial<Task> = {};
+                let needsCategoryRecalc = false;
+                if (processedTitle !== originalTaskState.title) changesToSave.title = processedTitle;
+                if (currentContent !== (originalTaskState.content || '')) changesToSave.content = currentContent;
+                const originalDueTime = originalTaskState.dueDate ?? null;
+                if (processedDueDate !== originalDueTime) { changesToSave.dueDate = processedDueDate; needsCategoryRecalc = true; }
+                const originalTagsSorted = (originalTaskState.tags ?? []).slice().sort();
+                const processedTagsSorted = processedTags.slice().sort();
+                if (JSON.stringify(processedTagsSorted) !== JSON.stringify(originalTagsSorted)) changesToSave.tags = processedTags;
+
+                if (Object.keys(changesToSave).length > 0) {
+                    changesToSave.updatedAt = Date.now();
+                    setTasks((prevTasks) => prevTasks.map((t) => {
+                        if (t.id === originalTaskState.id) {
+                            const updatedTask = {...t, ...changesToSave};
+                            if (needsCategoryRecalc || updatedTask.completed !== t.completed || updatedTask.list !== t.list) {
+                                updatedTask.groupCategory = getTaskGroupCategory(updatedTask);
+                            }
+                            return updatedTask;
+                        }
+                        return t;
+                    }));
+                }
+            };
+            saveNow();
+            hasUnsavedChangesRef.current = false;
         }
         setSelectedTaskId(null);
-    }, [setSelectedTaskId, triggerSave]);
+    }, [setSelectedTaskId, selectedTask, localDueDate, setTasks]);
+
     const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.value;
-        latestTitleRef.current = newValue; // Update ref immediately
-        setLocalTitle(newValue);         // Update state for controlled input
-        triggerSave();                  // Trigger debounce
+        latestTitleRef.current = newValue;
+        setLocalTitle(newValue);
+        triggerSave();
     }, [triggerSave]);
 
     const handleContentChange = useCallback((newValue: string) => {
-        latestContentRef.current = newValue; // Update ref immediately
-        setLocalContent(newValue);        // Update state for controlled input
-        triggerSave();                 // Trigger debounce
+        latestContentRef.current = newValue;
+        setLocalContent(newValue);
+        triggerSave();
     }, [triggerSave]);
 
     const handleTagInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.value;
-        latestTagsRef.current = newValue; // Update ref immediately
-        setLocalTags(newValue);          // Update state for controlled input
-        triggerSave();                  // Trigger debounce
+        latestTagsRef.current = newValue;
+        setLocalTags(newValue);
+        triggerSave();
     }, [triggerSave]);
+
     const handleDatePickerSelect = useCallback((date: Date | undefined) => {
         const newDate = date && isValid(date) ? startOfDay(date) : undefined;
         setLocalDueDate(newDate);
         updateTask({dueDate: newDate ? newDate.getTime() : null});
     }, [updateTask]);
+
     const handleListChange = useCallback((newList: string, closeDropdown?: () => void) => {
         updateTask({list: newList});
         closeDropdown?.();
     }, [updateTask]);
+
     const handlePriorityChange = useCallback((newPriority: number | null, closeDropdown?: () => void) => {
         updateTask({priority: newPriority});
         closeDropdown?.();
     }, [updateTask]);
+
     const handleToggleComplete = useCallback(() => {
         if (!selectedTask || selectedTask.list === 'Trash') return;
         const newCompletedStatus = !selectedTask.completed;
-        updateTask({completed: newCompletedStatus, completedAt: newCompletedStatus ? Date.now() : null});
+        updateTask({completed: newCompletedStatus});
     }, [selectedTask, updateTask]);
+
     const handleDelete = useCallback(() => {
         if (!selectedTask) return;
-        updateTask({list: 'Trash', completed: false, completedAt: null});
+        updateTask({list: 'Trash', completed: false});
         setSelectedTaskId(null);
     }, [selectedTask, updateTask, setSelectedTaskId]);
+
     const handleRestore = useCallback(() => {
         if (!selectedTask || selectedTask.list !== 'Trash') return;
         updateTask({list: 'Inbox'});
     }, [selectedTask, updateTask]);
 
-    // --- Keyboard Handlers (Keep previous logic) ---
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -367,12 +390,13 @@ const TaskDetail: React.FC = () => {
             e.preventDefault();
             if (localTitle !== selectedTask.title) {
                 setLocalTitle(selectedTask.title);
+                latestTitleRef.current = selectedTask.title;
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                hasUnsavedChangesRef.current = false;
             }
             titleInputRef.current?.blur();
         }
     }, [selectedTask, localTitle]);
+
     const handleTagInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -382,30 +406,28 @@ const TaskDetail: React.FC = () => {
             const originalTagsString = (selectedTask.tags ?? []).join(', ');
             if (localTags !== originalTagsString) {
                 setLocalTags(originalTagsString);
+                latestTagsRef.current = originalTagsString;
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                hasUnsavedChangesRef.current = false;
             }
             (e.target as HTMLInputElement).blur();
         }
     }, [selectedTask, localTags]);
 
 
-    // --- Memos for Display Logic (Keep as is) ---
+    // --- Memos for Display Logic ---
     const priorityMap: Record<number, { label: string; iconColor: string }> = useMemo(() => ({
-        1: {
-            label: 'High',
-            iconColor: 'text-red-500'
-        },
-        2: {label: 'Medium', iconColor: 'text-orange-500'},
-        3: {label: 'Low', iconColor: 'text-blue-500'},
-        4: {label: 'Lowest', iconColor: 'text-gray-500'},
+        1: { label: 'High', iconColor: 'text-red-500' },
+        2: { label: 'Medium', iconColor: 'text-orange-500' },
+        3: { label: 'Low', iconColor: 'text-blue-500' },
+        4: { label: 'Lowest', iconColor: 'text-gray-500' },
     }), []);
     const isTrash = useMemo(() => selectedTask?.list === 'Trash', [selectedTask?.list]);
-    const isCompleted = useMemo(() => selectedTask?.completed && !isTrash, [selectedTask?.completed, isTrash]);
+    const displayDueDateForPicker = useMemo(() => localDueDate, [localDueDate]);
+    const displayDueDateForRender = useMemo(() => localDueDate ?? safeParseDate(selectedTask?.dueDate), [localDueDate, selectedTask?.dueDate]);
     const overdue = useMemo(() => {
-        const dateToCheck = localDueDate ?? safeParseDate(selectedTask?.dueDate);
-        return dateToCheck && isValid(dateToCheck) && !selectedTask?.completed && !isTrash && isOverdue(dateToCheck);
-    }, [localDueDate, selectedTask?.dueDate, selectedTask?.completed, isTrash]);
+        return displayDueDateForRender && isValid(displayDueDateForRender) && !selectedTask?.completed && !isTrash && isOverdue(displayDueDateForRender);
+    }, [displayDueDateForRender, selectedTask?.completed, isTrash]);
+    const isCompleted = useMemo(() => selectedTask?.completed && !isTrash, [selectedTask?.completed, isTrash]);
     const displayPriority = selectedTask?.priority;
     const displayList = selectedTask?.list;
     const displayCreatedAt = useMemo(() => selectedTask ? formatDateTime(selectedTask.createdAt) : '', [selectedTask?.createdAt]);
@@ -414,11 +436,12 @@ const TaskDetail: React.FC = () => {
 
     if (!selectedTask) return null;
 
-    // --- Render (Add ref to tags input) ---
+    // --- Render ---
     return (
         <div
+            key={selectedTask.id}
             className={twMerge("border-l border-black/10 w-[420px] shrink-0 h-full flex flex-col shadow-xl z-20", "bg-glass-100 backdrop-blur-xl")}
-            key={selectedTask.id}>
+        >
             {/* Header */}
             <div
                 className="px-3 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 h-11 bg-glass-alt-100 backdrop-blur-lg">
@@ -456,12 +479,12 @@ const TaskDetail: React.FC = () => {
                     {/* Due Date Row */}
                     <MetaRow icon="calendar" label="Due Date" disabled={isTrash}>
                         <Dropdown trigger={<Button variant="ghost" size="sm"
-                                                   className={twMerge("text-xs h-7 px-1.5 w-full text-left justify-start font-normal truncate hover:bg-black/10 backdrop-blur-sm", localDueDate ? 'text-gray-700' : 'text-muted-foreground', overdue && 'text-red-600 font-medium', isTrash && 'text-muted line-through !bg-transparent hover:!bg-transparent')}
-                                                   disabled={isTrash}> {localDueDate && isValid(localDueDate) ? formatRelativeDate(localDueDate) : 'Set date'} </Button>}
+                                                   className={twMerge("text-xs h-7 px-1.5 w-full text-left justify-start font-normal truncate hover:bg-black/10 backdrop-blur-sm", displayDueDateForRender ? 'text-gray-700' : 'text-muted-foreground', overdue && 'text-red-600 font-medium', isTrash && 'text-muted line-through !bg-transparent hover:!bg-transparent')}
+                                                   disabled={isTrash}> {displayDueDateForRender && isValid(displayDueDateForRender) ? formatRelativeDate(displayDueDateForRender) : 'Set date'} </Button>}
                                   contentClassName="date-picker-popover p-0 border-0 shadow-none bg-transparent"
                                   placement="bottom-end">
                             {(props) => (
-                                <CustomDatePickerPopover initialDate={localDueDate} onSelect={handleDatePickerSelect}
+                                <CustomDatePickerPopover initialDate={displayDueDateForPicker} onSelect={handleDatePickerSelect}
                                                          close={props.close}/>)}
                         </Dropdown>
                     </MetaRow>
@@ -469,13 +492,16 @@ const TaskDetail: React.FC = () => {
                     <MetaRow icon="list" label="List" disabled={isTrash}>
                         <Dropdown trigger={<Button variant="ghost" size="sm"
                                                    className="text-xs h-7 px-1.5 w-full text-left justify-start text-gray-700 font-normal disabled:text-muted disabled:line-through truncate hover:bg-black/10 backdrop-blur-sm disabled:hover:!bg-transparent"
-                                                   disabled={isTrash || displayList === 'Trash'}> {displayList} </Button>}
+                                                   disabled={false}> {displayList} </Button>}
                                   contentClassName="max-h-48 overflow-y-auto styled-scrollbar py-1">
-                            {(props) => (<> {userLists.filter(l => l !== 'Trash').map(list => (
-                                <button key={list} onClick={() => handleListChange(list, props.close)}
-                                        className={twMerge("block w-full text-left px-2.5 py-1 text-sm hover:bg-black/15 transition-colors duration-100 ease-apple focus:outline-none focus-visible:bg-black/10", displayList === list && "bg-primary/20 text-primary font-medium")}
-                                        role="menuitemradio"
-                                        aria-checked={displayList === list}> {list} </button>))} </>)}
+                            {(props) => (<>
+                                {userLists.filter(l => l !== 'Trash').map(list => (
+                                    <button key={list} onClick={() => handleListChange(list, props.close)}
+                                            className={twMerge("block w-full text-left px-2.5 py-1 text-sm hover:bg-black/15 transition-colors duration-100 ease-apple focus:outline-none focus-visible:bg-black/10", displayList === list && "bg-primary/20 text-primary font-medium")}
+                                            role="menuitemradio"
+                                            aria-checked={displayList === list}> {list} </button>
+                                ))}
+                            </>)}
                         </Dropdown>
                     </MetaRow>
                     {/* Priority Row */}
@@ -496,7 +522,7 @@ const TaskDetail: React.FC = () => {
                     {/* Tags Row */}
                     <MetaRow icon="tag" label="Tags" disabled={isTrash}>
                         <input
-                            ref={tagsInputRef} // Assign ref here
+                            ref={tagsInputRef}
                             type="text"
                             value={localTags}
                             onChange={handleTagInputChange}
@@ -528,7 +554,11 @@ const TaskDetail: React.FC = () => {
 
 // --- Metadata Row Component (Memoized) ---
 const MetaRow: React.FC<{ icon: IconName; label: string; children: React.ReactNode, disabled?: boolean }> = memo(({ icon, label, children, disabled = false }) => {
-    const rowClassName = useMemo(() => twMerge("flex items-center justify-between group min-h-[34px] px-1 rounded", !disabled && "hover:bg-black/5 transition-colors duration-100 ease-apple", disabled && "opacity-60 pointer-events-none"), [disabled]);
+    const rowClassName = useMemo(() => twMerge(
+        "flex items-center justify-between group min-h-[34px] px-1 rounded",
+        disabled && "opacity-60 pointer-events-none",
+        !disabled && "hover:bg-black/5 transition-colors duration-100 ease-apple"
+    ), [disabled]);
     return ( <div className={rowClassName}> <span className="text-muted-foreground flex items-center text-xs font-medium w-24 flex-shrink-0"> <Icon name={icon} size={14} className="mr-1.5 opacity-70" />{label} </span> <div className="flex-1 text-right min-w-0"> {children} </div> </div> );
 });
 MetaRow.displayName = 'MetaRow';

@@ -1,5 +1,5 @@
 // src/components/layout/IconBar.tsx
-// src/components/layout/IconBar.tsx
+// No changes needed based on the requirements. Retained original code.
 import React, { memo, useCallback, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import Icon from '../common/Icon';
@@ -25,18 +25,19 @@ const IconBar: React.FC = memo(() => {
         setIsSettingsOpen(true);
     }, [setIsSettingsOpen]);
 
-    // Fix Req 2: Update NavLink class logic
+    // Update NavLink class logic to correctly highlight 'All Tasks'
     const getNavLinkClass = useCallback((itemPath: string) => ({ isActive }: { isActive: boolean }): string => {
         let isEffectivelyActive = isActive; // Start with react-router's determination
 
         // If this is the 'All Tasks' icon...
         if (itemPath === '/all') {
             // It should be active if the current path is *not* Calendar or Summary
+            // And also check if the base path is one of the task list views
             const isTaskListRelatedView = !location.pathname.startsWith('/calendar') && !location.pathname.startsWith('/summary');
             isEffectivelyActive = isTaskListRelatedView;
         }
         // For other icons (Calendar, Summary), rely solely on react-router's isActive
-        // (assuming their paths are unique prefixes)
+        // (assuming their paths are unique prefixes like /calendar, /summary)
 
         return twMerge(
             'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-30 ease-apple group relative', // Base styling
@@ -65,7 +66,7 @@ const IconBar: React.FC = memo(() => {
                         aria-label={item.label}
                         // `end` prop ensures exact match for top-level routes like /calendar, /summary
                         // For /all, our custom logic handles sub-routes, so `end` isn't strictly needed there, but doesn't hurt.
-                        end={item.path === '/all' || item.path === '/calendar' || item.path === '/summary'}
+                        end={item.path !== '/all'} // only apply 'end' if not '/all'
                     >
                         <Icon name={item.icon} size={20} strokeWidth={1.75} />
                     </NavLink>

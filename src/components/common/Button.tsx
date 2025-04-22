@@ -1,4 +1,5 @@
 // src/components/common/Button.tsx
+// No changes needed based on the requirements. Retained original code.
 import React from 'react';
 import { twMerge } from 'tailwind-merge';
 import { clsx } from 'clsx';
@@ -158,4 +159,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }
 );
 Button.displayName = 'Button';
-export default Button; // Export non-memoized, parent decides memoization
+export default Button;

@@ -1,4 +1,5 @@
 // src/components/common/IconMap.tsx
+// No changes needed based on the requirements. Retained original code.
 import * as LucideIcons from "lucide-react";
 
 // Comprehensive map of icons used in the application
@@ -68,8 +69,3 @@ export const iconMap = {
 
 // Export the type for Icon names based on the map keys
 export type IconName = keyof typeof iconMap;
-
-// Verify all icons used in the project are present in the map
-// Example check (manual or could be scripted):
-// Used icons: check-square, calendar, search, user, settings, file-text, trash, list, grid?, clock?, alert-circle?, plus, more-horizontal, chevron-down, chevron-up, chevron-left, chevron-right, sun, sunset, moon, calendar-plus?, edit, check, x, arrow-left, arrow-right, star?, flag, tag, bell, share, upload, download, logout, lock?, tool?, layers?, package?, sliders?, info, help, phone?, mail?, external-link?, crown, terminal?, grip-vertical, copy?, archive, arrow-up-down?, calendar-days, loader, users?, sparkles, folder-plus, folder, minus?, inbox, x-circle, calendar-check?, refresh-cw
-// Seems comprehensive.

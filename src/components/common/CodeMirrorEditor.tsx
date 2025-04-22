@@ -64,7 +64,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
         const onBlurRef = useRef(onBlur);
 
         // Refs to store previous prop values for comparison to optimize reconfigurations
-        const prevValueRef = useRef(value);
+        // const prevValueRef = useRef(value); // Not needed if external value update is handled correctly
         const prevReadOnlyRef = useRef(readOnly);
         const prevPlaceholderRef = useRef(placeholder);
 
@@ -124,7 +124,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             viewRef.current = view;
 
             // Store initial props in refs *after* setup for comparison in later effects
-            prevValueRef.current = value;
+            // prevValueRef.current = value; // Not needed
             prevReadOnlyRef.current = readOnly;
             prevPlaceholderRef.current = placeholder;
 
@@ -141,15 +141,12 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             const view = viewRef.current;
             // Only update if the view exists and the prop value is different from the editor's current state
             if (view && value !== view.state.doc.toString()) {
-                // console.log("External value change detected, updating editor.");
                 // Use a transaction to replace the entire document content
                 view.dispatch({
                     changes: { from: 0, to: view.state.doc.length, insert: value || '' },
                     // Annotate the transaction to mark it as an external change
                     annotations: externalChangeEvent.of(true)
                 });
-                // Update the ref storing the previous value
-                prevValueRef.current = value;
             }
         }, [value]); // Dependency: Run only when the 'value' prop changes
 
@@ -158,11 +155,10 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             const view = viewRef.current;
             if (!view) return;
 
-            const effects: StateEffect<any>[] = [];
+            const effects: StateEffect<unknown>[] = []; // Use unknown for StateEffect type
 
             // Compare current readOnly prop with previous value
             if (readOnly !== prevReadOnlyRef.current) {
-                // console.log("ReadOnly prop changed, reconfiguring:", readOnly);
                 // Reconfigure the readOnly state extension
                 effects.push(StateEffect.reconfigure.of(EditorState.readOnly.of(readOnly)));
                 prevReadOnlyRef.current = readOnly; // Update previous value ref
@@ -170,7 +166,6 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
 
             // Compare current placeholder prop with previous value
             if (placeholder !== prevPlaceholderRef.current) {
-                // console.log("Placeholder prop changed, reconfiguring:", placeholder);
                 // Reconfigure the placeholder view extension
                 effects.push(StateEffect.reconfigure.of(placeholder ? [viewPlaceholder(placeholder)] : []));
                 prevPlaceholderRef.current = placeholder; // Update previous value ref

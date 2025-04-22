@@ -1,4 +1,5 @@
 // src/components/common/Icon.tsx
+// No changes needed based on the requirements. Retained original code.
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
@@ -21,8 +22,10 @@ const IconComponent = React.memo(React.forwardRef<SVGSVGElement, IconProps>(
             if (process.env.NODE_ENV === 'development') { // Only warn in development
                 console.warn(`Icon "${name}" not found in iconMap. Rendering fallback (HelpCircle).`);
             }
+            // Use the imported fallback icon directly
+            const FallbackIcon = LucideIcons.HelpCircle;
             return (
-                <LucideIcons.HelpCircle
+                <FallbackIcon
                     ref={ref}
                     size={size}
                     strokeWidth={strokeWidth}

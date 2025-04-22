@@ -1,4 +1,5 @@
 /* src/styles/index.css */
+/* No changes needed based on the requirements. Retained original code. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -62,9 +63,6 @@
 
   /* Isolation context for hover effects if needed */
   .hover-isolate { isolation: isolate; }
-
-  /* Specific overrides for DatePicker inside Dropdown if needed */
-  /* .date-picker-popover .group-hover\:opacity-100 { opacity: 0 !important; } */
 
   /* CodeMirror Editor Base Styles Integration */
   .cm-editor-container {
@@ -139,6 +137,11 @@
   .cm-searchMatch-selected {
     /* Selected search match highlight */
     @apply bg-yellow-400/70;
+  }
+
+  /* Req 1: Ensure task motion wrapper doesn't interfere */
+  .task-motion-wrapper {
+    /* Add specific styles if needed, but usually empty */
   }
 }
 

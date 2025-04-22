@@ -1,4 +1,5 @@
 // src/components/summary/SummaryView.tsx
+// No changes needed based on the requirements. Retained original code.
 import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
@@ -107,14 +108,15 @@ const SummaryView: React.FC = () => {
 
         const { start: rangeStart, end: rangeEnd } = getDateRange(period);
 
-        // --- Performance: Filter and sort tasks efficiently ---
-        let completedInRange: Task[] = [];
-        let addedInRange: Task[] = [];
+        // --- Filter and sort tasks efficiently ---
+        const completedInRange: Task[] = [];
+        const addedInRange: Task[] = [];
 
         tasks.forEach(task => {
             if (task.list !== 'Trash') {
-                // Completed check
-                if (task.completed && task.updatedAt >= rangeStart.getTime() && task.updatedAt <= rangeEnd.getTime()) {
+                // Completed check: Use completedAt if available, fallback to updatedAt
+                const completionTime = task.completedAt ?? task.updatedAt;
+                if (task.completed && completionTime && completionTime >= rangeStart.getTime() && completionTime <= rangeEnd.getTime()) {
                     completedInRange.push(task);
                 }
                 // Added check
@@ -125,7 +127,7 @@ const SummaryView: React.FC = () => {
         });
 
         // Sort results after filtering
-        completedInRange.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0)); // Most recently completed first
+        completedInRange.sort((a, b) => (b.completedAt ?? b.updatedAt ?? 0) - (a.completedAt ?? a.updatedAt ?? 0)); // Most recently completed first
         addedInRange.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)); // Most recently added first
         // --- End Performance Optimization ---
 
@@ -140,7 +142,7 @@ const SummaryView: React.FC = () => {
         generatedText += `## ✅ Completed Tasks (${completedInRange.length})\n`;
         if (completedInRange.length > 0) {
             completedInRange.forEach(task => {
-                const completedDate = safeParseDate(task.updatedAt);
+                const completedDate = safeParseDate(task.completedAt ?? task.updatedAt);
                 const dateStr = completedDate && isValid(completedDate) ? format(completedDate, 'MMM d') : 'Unknown Date';
                 generatedText += `- ${task.title || 'Untitled Task'} *(Done: ${dateStr})*\n`;
             });

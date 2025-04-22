@@ -3,8 +3,10 @@ import { atom } from 'jotai';
 import { atomWithStorage, RESET } from 'jotai/utils';
 import { User, Task, TaskFilter, TaskGroupCategory, SettingsTab } from '@/types';
 import {
-    isToday, isWithinNext7Days, isOverdue, startOfDay, safeParseDate,
-    isValid, addDays, isBefore, isSameDay, endOfDay, isAfter
+    isToday as isTodayCheck, // Renamed local import
+    isWithinNext7Days, isOverdue as isOverdueCheck, // Renamed local import
+    startOfDay, safeParseDate,
+    isValid, addDays, isBefore, isSameDay, endOfDay, isAfter, subDays
 } from '@/utils/dateUtils';
 import { selectAtom } from 'jotai/utils';
 
@@ -18,15 +20,13 @@ export const currentUserAtom = atom<User | null>({
 });
 
 // Helper function to determine task group category
-// Moved outside atom definition for clarity and potential reuse
 export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): TaskGroupCategory => {
-    // Grouping logic primarily applies to non-completed, non-trashed tasks.
     if (task.completed || task.list === 'Trash') {
-        return 'nodate'; // Assign a default category; they won't show in main groups anyway
+        return 'nodate'; // They don't appear in grouped view, assign default
     }
     if (task.dueDate != null) {
         const dueDateObj = safeParseDate(task.dueDate);
-        if (!dueDateObj || !isValid(dueDateObj)) return 'nodate'; // Invalid date is treated as no date
+        if (!dueDateObj || !isValid(dueDateObj)) return 'nodate';
 
         const today = startOfDay(new Date());
         const taskDay = startOfDay(dueDateObj);
@@ -34,88 +34,100 @@ export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): 
         if (isBefore(taskDay, today)) return 'overdue';
         if (isSameDay(taskDay, today)) return 'today';
 
-        const sevenDaysFromTodayEnd = endOfDay(addDays(today, 6)); // End of the 7th day from today
+        const sevenDaysFromTodayEnd = endOfDay(addDays(today, 6));
         if (!isBefore(taskDay, addDays(today, 1)) && !isAfter(taskDay, sevenDaysFromTodayEnd)) {
             return 'next7days';
         }
 
-        return 'later'; // If none of the above, it's later
+        return 'later';
     }
-    // No due date
     return 'nodate';
 };
 
-// Sample Data (Adjusted slightly for clarity)
-const initialTasksData: Omit<Task, 'groupCategory' | 'completedAt'>[] = [
+// Sample Data (Use Date objects for clarity, convert to timestamp in initialization)
+const initialTasksDataRaw = [
     // Overdue
-    { id: '11', title: '体检预约', completed: false, dueDate: startOfDay(new Date(Date.now() - 86400000 * 2)).getTime(), list: 'Personal', content: 'Call the clinic.', order: 7, createdAt: Date.now() - 86400000 * 4, updatedAt: Date.now() - 86400000 * 3, priority: 1 },
+    { id: '11', title: '体检预约', completed: false, dueDate: subDays(startOfDay(new Date()), 2), list: 'Personal', content: 'Call the clinic.', order: 7, createdAt: subDays(new Date(), 4).getTime(), updatedAt: subDays(new Date(), 4).getTime(), priority: 1 },
     // Today
-    { id: '1', title: '施工组织设计评审表', completed: false, dueDate: startOfDay(new Date()).getTime(), list: 'Work', content: 'Review the construction plan details.', order: 0, createdAt: Date.now() - 86400000 * 3, updatedAt: Date.now() - 3600000, priority: 1, tags: ['review', 'urgent'] },
-    { id: '8', title: '准备明天会议材料', completed: false, dueDate: startOfDay(new Date()).getTime(), list: 'Work', content: 'Finalize slides.', order: 1, createdAt: Date.now() - 86400000, updatedAt: Date.now() - 100000, priority: 1 },
+    { id: '1', title: '施工组织设计评审表', completed: false, dueDate: startOfDay(new Date()), list: 'Work', content: 'Review the construction plan details.', order: 0, createdAt: subDays(new Date(), 3).getTime(), updatedAt: subDays(new Date(), 3).getTime(), priority: 1, tags: ['review', 'urgent'] },
+    { id: '8', title: '准备明天会议材料', completed: false, dueDate: startOfDay(new Date()), list: 'Work', content: 'Finalize slides.', order: 1, createdAt: subDays(new Date(), 1).getTime(), updatedAt: subDays(new Date(), 1).getTime(), priority: 1 },
     // Next 7 Days
-    { id: '2', title: '开发框架讲解', completed: false, dueDate: startOfDay(new Date(Date.now() + 86400000 * 1)).getTime(), list: 'Work', content: 'Prepare slides for the team meeting.', order: 2, createdAt: Date.now() - 86400000, updatedAt: Date.now(), priority: 2 },
-    { id: '3', title: 'RESTful讲解', completed: false, dueDate: startOfDay(new Date(Date.now() + 86400000 * 3)).getTime(), list: 'Work', content: '', order: 3, createdAt: Date.now() - 86400000, updatedAt: Date.now(), tags: ['presentation'] },
+    { id: '2', title: '开发框架讲解', completed: false, dueDate: addDays(startOfDay(new Date()), 1), list: 'Work', content: 'Prepare slides for the team meeting.', order: 2, createdAt: subDays(new Date(), 1).getTime(), updatedAt: subDays(new Date(), 1).getTime(), priority: 2 },
+    { id: '3', title: 'RESTful讲解', completed: false, dueDate: addDays(startOfDay(new Date()), 3), list: 'Work', content: '', order: 3, createdAt: subDays(new Date(), 1).getTime(), updatedAt: subDays(new Date(), 1).getTime(), tags: ['presentation'] },
     // Later
-    { id: '9', title: '下周项目规划', completed: false, dueDate: startOfDay(new Date(Date.now() + 86400000 * 10)).getTime(), list: 'Planning', content: 'Define milestones for Q4.', order: 6, createdAt: Date.now() - 86400000, updatedAt: Date.now() - 50000 },
+    { id: '9', title: '下周项目规划', completed: false, dueDate: addDays(startOfDay(new Date()), 10), list: 'Planning', content: 'Define milestones for Q4.', order: 6, createdAt: subDays(new Date(), 1).getTime(), updatedAt: subDays(new Date(), 1).getTime() },
     // No Date
-    { id: '4', title: '欢迎加入Tada', completed: false, dueDate: null, list: 'Inbox', content: 'Explore features:\n- **Tasks**\n- Calendar\n- Summary', order: 4, createdAt: Date.now() - 86400000 * 5, updatedAt: Date.now() - 86400000 * 5 },
-    { id: '10', title: '研究 CodeMirror Themes', completed: false, dueDate: null, list: 'Dev', content: 'Find a good light/dark theme.', order: 5, createdAt: Date.now() - 86400000 * 2, updatedAt: Date.now() - 86400000 * 1 },
-    // Completed
-    { id: '5', title: '我能用Tada做什么?', completed: true, dueDate: null, list: 'Inbox', content: 'Organize life, track projects, collaborate.', order: 8, createdAt: Date.now() - 86400000 * 4, updatedAt: Date.now() - 86400000 * 3 },
-    { id: '7', title: 'Swagger2讲解 (Completed)', completed: true, dueDate: new Date(2024, 6, 14).getTime(), list: 'Work', content: 'Focus on API documentation standards.', order: 10, createdAt: new Date(2024, 6, 14).getTime(), updatedAt: new Date(2024, 6, 14).getTime() },
+    { id: '4', title: '欢迎加入Tada', completed: false, dueDate: null, list: 'Inbox', content: 'Explore features:\n- **Tasks**\n- Calendar\n- Summary', order: 4, createdAt: subDays(new Date(), 5).getTime(), updatedAt: subDays(new Date(), 5).getTime() },
+    { id: '10', title: '研究 CodeMirror Themes', completed: false, dueDate: null, list: 'Dev', content: 'Find a good light/dark theme.', order: 5, createdAt: subDays(new Date(), 2).getTime(), updatedAt: subDays(new Date(), 2).getTime() },
+    // Completed (Completed Today)
+    { id: '5', title: '我能用Tada做什么?', completed: true, dueDate: null, list: 'Inbox', content: 'Organize life, track projects, collaborate.', order: 8, createdAt: subDays(new Date(), 4).getTime(), completedAt: new Date().getTime(), updatedAt: subDays(new Date(), 4).getTime() },
+    // Completed (Completed Past)
+    { id: '7', title: 'Swagger2讲解 (Completed)', completed: true, dueDate: new Date(2024, 5, 14).getTime(), list: 'Work', content: 'Focus on API documentation standards.', order: 10, createdAt: new Date(2024, 5, 10).getTime(), updatedAt: new Date(2024, 5, 10).getTime(), completedAt: new Date(2024, 5, 14, 15, 0, 0).getTime() },
     // Trash
-    { id: '6', title: '研究一下patch (Trashed)', completed: false, dueDate: new Date(2024, 6, 13).getTime(), list: 'Trash', content: '', order: 9, createdAt: new Date(2024, 6, 13).getTime(), updatedAt: new Date(2024, 6, 15).getTime() },
+    { id: '6', title: '研究一下patch (Trashed)', completed: false, dueDate: new Date(2024, 5, 13).getTime(), list: 'Trash', content: '', order: 9, createdAt: new Date(2024, 5, 10).getTime(), updatedAt: new Date(2024, 5, 10).getTime() },
 ];
 
-// Initialize tasks with calculated groupCategory and ensure sorted order
-const initialTasks: Task[] = initialTasksData
-    .map(task => ({
-        ...task,
-        groupCategory: getTaskGroupCategory(task), // Calculate initial category
-        completedAt: task.completed ? task.updatedAt : null, // Add completedAt based on initial state
-    }))
+
+// Initialize tasks with calculated groupCategory, completedAt, and converted timestamps
+const initialTasks: Task[] = initialTasksDataRaw
+    .map(taskRaw => {
+        const now = Date.now();
+        const dueDateTimestamp = taskRaw.dueDate instanceof Date && isValid(taskRaw.dueDate) ? taskRaw.dueDate.getTime() : (taskRaw.dueDate === null ? null : undefined);
+        if (dueDateTimestamp === undefined && taskRaw.dueDate !== null) {
+            console.warn(`Invalid dueDate encountered for task "${taskRaw.title}". Setting to null.`);
+        }
+
+        const taskPartial = {
+            ...taskRaw,
+            dueDate: dueDateTimestamp === undefined ? null : dueDateTimestamp,
+            completedAt: taskRaw.completed ? (taskRaw.completedAt ?? now) : null, // Ensure completedAt is set if completed
+            updatedAt: taskRaw.updatedAt ?? now, // Ensure updatedAt exists
+        };
+        return {
+            ...taskPartial,
+            groupCategory: getTaskGroupCategory(taskPartial), // Calculate initial category
+        };
+    })
     // Ensure final initial array is sorted by order, then creation date as fallback
     .sort((a, b) => (a.order - b.order) || (a.createdAt - b.createdAt));
 
 
 // Atom for storing the raw task list with persistence
-const baseTasksAtom = atomWithStorage<Task[]>('tasks_v3', initialTasks, undefined, { getOnInit: true });
+const baseTasksAtom = atomWithStorage<Task[]>('tasks_v4_recalc', initialTasks, undefined, { getOnInit: true });
 
 // Main tasks atom with refined setter logic
 export const tasksAtom = atom(
-    (get) => get(baseTasksAtom), // Read: return the stored tasks
+    (get) => get(baseTasksAtom),
     (get, set, update: Task[] | ((prev: Task[]) => Task[]) | typeof RESET) => {
         if (update === RESET) {
-            set(baseTasksAtom, initialTasks); // Reset to initial state
+            set(baseTasksAtom, initialTasks);
             return;
         }
 
-        const previousTasks = get(baseTasksAtom); // Get previous state for comparison if needed
+        const previousTasks = get(baseTasksAtom);
         const nextTasksRaw = typeof update === 'function' ? update(previousTasks) : update;
 
-        // --- Refined Update Logic ---
-        // This setter primarily applies the changes from `nextTasksRaw`.
-        // It avoids re-sorting the entire list unless the update function itself handles sorting (like arrayMove).
-        // It ensures categories and completedAt are consistent for the potentially updated tasks.
+        // --- Always recalculate category and completedAt on write ---
+        // This ensures consistency whenever tasks are updated (add, edit, dnd, complete)
         const nextTasksProcessed = nextTasksRaw.map(task => {
-            const originalTask = previousTasks.find(pt => pt.id === task.id);
-            // Determine if category needs update based on changes relevant to grouping
-            const needsCategoryUpdate = !task.groupCategory || !originalTask ||
-                originalTask.dueDate !== task.dueDate ||
-                originalTask.completed !== task.completed ||
-                originalTask.list !== task.list;
+            // Always recalculate category on write
+            const newCategory = getTaskGroupCategory(task);
+            // Ensure completedAt is consistent
+            const newCompletedAt = task.completed ? (task.completedAt ?? task.updatedAt) : null;
 
-            return {
-                ...task,
-                // Recalculate category *only if necessary* for this task
-                groupCategory: needsCategoryUpdate ? getTaskGroupCategory(task) : task.groupCategory,
-                // Ensure completedAt is consistent
-                completedAt: task.completed ? (task.completedAt ?? task.updatedAt) : null,
-            };
+            // Return a new object only if category or completedAt actually changed
+            if (newCategory !== task.groupCategory || newCompletedAt !== task.completedAt) {
+                return {
+                    ...task,
+                    groupCategory: newCategory,
+                    completedAt: newCompletedAt,
+                };
+            }
+            return task; // Return original object if no change in derived fields
         });
 
         // Write the processed list back to storage.
-        // Sorting should be handled specifically by operations like drag-and-drop or adding tasks.
+        // Preserve order from the update, don't re-sort here.
         set(baseTasksAtom, nextTasksProcessed);
     }
 );
@@ -129,39 +141,34 @@ export const selectedTaskIdAtom = atom<string | null>(null);
 export const isSettingsOpenAtom = atom<boolean>(false);
 export const settingsSelectedTabAtom = atom<SettingsTab>('account');
 export const isAddListModalOpenAtom = atom<boolean>(false);
-export const currentFilterAtom = atom<TaskFilter>('all');
+export const currentFilterAtom = atom<TaskFilter>('all'); // Represents the active filter selected in the Sidebar
 export const searchTermAtom = atom<string>('');
 
 // --- Derived Atoms (Optimized) ---
 
-// Selected Task Atom (Optimized with selectAtom)
+// Selected Task Atom
 export const selectedTaskAtom = selectAtom(
     atom(get => ({ tasks: get(tasksAtom), selectedId: get(selectedTaskIdAtom) })),
-    ({ tasks, selectedId }) => {
-        if (!selectedId) return null;
-        return tasks.find(task => task.id === selectedId) ?? null;
-    },
-    (a, b) => a === b // Shallow equality check (reference)
+    ({ tasks, selectedId }) => selectedId ? tasks.find(task => task.id === selectedId) ?? null : null,
+    (a, b) => a === b // Reference equality check
 );
 
-
-// User List Names Atom (Optimized with selectAtom)
+// User List Names Atom
 export const userListNamesAtom = selectAtom(
     atom(get => ({ tasks: get(tasksAtom), userLists: get(userDefinedListsAtom) })),
-    (data) => {
+    ({ tasks, userLists }) => {
         const listsFromTasks = new Set<string>();
-        data.tasks.forEach(task => { if (task.list && task.list !== 'Trash') listsFromTasks.add(task.list) });
-        const combinedLists = new Set(['Inbox', ...data.userLists, ...Array.from(listsFromTasks)]);
+        tasks.forEach(task => { if (task.list && task.list !== 'Trash') listsFromTasks.add(task.list) });
+        const combinedLists = new Set(['Inbox', ...userLists, ...Array.from(listsFromTasks)]);
         return Array.from(combinedLists).sort((a, b) => {
             if (a === 'Inbox') return -1; if (b === 'Inbox') return 1;
             return a.localeCompare(b);
         });
     },
-    (a, b) => JSON.stringify(a) === JSON.stringify(b) // Deep check for array
+    (a, b) => JSON.stringify(a) === JSON.stringify(b) // Deep check for array change
 );
 
-
-// User Tag Names Atom (Optimized with selectAtom)
+// User Tag Names Atom
 export const userTagNamesAtom = selectAtom(
     tasksAtom,
     (tasks) => {
@@ -169,78 +176,8 @@ export const userTagNamesAtom = selectAtom(
         tasks.filter(t => t.list !== 'Trash').forEach(task => { task.tags?.forEach(tag => tags.add(tag)) });
         return Array.from(tags).sort((a, b) => a.localeCompare(b));
     },
-    (a, b) => JSON.stringify(a) === JSON.stringify(b) // Deep check for array
+    (a, b) => JSON.stringify(a) === JSON.stringify(b) // Deep check for array change
 );
-
-
-// Filtered Tasks Atom (Basis for display, pre-search)
-export const filteredTasksAtom = atom<Task[]>((get) => {
-    const tasks = get(tasksAtom);
-    const filter = get(currentFilterAtom);
-    let filtered: Task[];
-
-    const activeTasks = tasks.filter(task => task.list !== 'Trash');
-    const trashedTasks = tasks.filter(task => task.list === 'Trash');
-
-    switch (filter) {
-        case 'all':
-            // Filter out completed, order is inherited from tasksAtom
-            filtered = activeTasks.filter(task => !task.completed);
-            break;
-        case 'today':
-            filtered = activeTasks.filter(task => !task.completed && task.dueDate != null && isToday(task.dueDate));
-            break;
-        case 'next7days':
-            filtered = activeTasks.filter(task => {
-                if (task.completed || task.dueDate == null) return false;
-                const date = safeParseDate(task.dueDate);
-                return date && isValid(date) && !isOverdue(date) && isWithinNext7Days(date);
-            });
-            break;
-        case 'completed':
-            // Sort completed tasks by completion time (desc)
-            filtered = activeTasks.filter(task => task.completed).sort((a, b) => (b.completedAt ?? b.updatedAt ?? 0) - (a.completedAt ?? a.updatedAt ?? 0));
-            break;
-        case 'trash':
-            // Sort trash by update time (desc)
-            filtered = trashedTasks.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-            break;
-        default:
-            if (filter.startsWith('list-')) {
-                const listName = filter.substring(5);
-                filtered = activeTasks.filter(task => !task.completed && task.list === listName);
-            } else if (filter.startsWith('tag-')) {
-                const tagName = filter.substring(4);
-                filtered = activeTasks.filter(task => !task.completed && task.tags?.includes(tagName));
-            } else {
-                console.warn(`Unrecognized filter: ${filter}. Falling back to 'all'.`);
-                filtered = activeTasks.filter(task => !task.completed);
-            }
-            break;
-    }
-    // The order for non-completed/trash views is inherited from tasksAtom (sorted by 'order')
-    return filtered;
-});
-
-
-// Search Filtered Tasks Atom (Applies search on top of filteredTasksAtom)
-export const searchFilteredTasksAtom = atom<Task[]>((get) => {
-    const baseFilteredTasks = get(filteredTasksAtom);
-    const search = get(searchTermAtom).trim().toLowerCase();
-
-    if (!search) return baseFilteredTasks;
-
-    const searchWords = search.split(' ').filter(Boolean);
-
-    return baseFilteredTasks.filter(task =>
-        searchWords.every(word =>
-            task.title.toLowerCase().includes(word) ||
-            (task.content && task.content.toLowerCase().includes(word)) ||
-            (task.tags && task.tags.some(tag => tag.toLowerCase().includes(word)))
-        )
-    );
-    // Sorting order is inherited from filteredTasksAtom
-});
 
 
 // Task Counts Atom (Optimized with selectAtom)
@@ -254,28 +191,35 @@ export const taskCountsAtom = selectAtom(
         const activeTasks = tasks.filter(task => task.list !== 'Trash');
         const counts = {
             all: 0, today: 0, next7days: 0,
-            completed: activeTasks.filter(t => t.completed).length,
-            trash: tasks.length - activeTasks.length,
+            completed: 0, // Initialize completed count
+            trash: tasks.filter(task => task.list === 'Trash').length, // Count trash items
             lists: Object.fromEntries(allUserListNames.map(name => [name, 0])),
             tags: Object.fromEntries(allUserTagNames.map(name => [name, 0])),
         };
-        activeTasks.filter(t => !t.completed).forEach(task => {
-            counts.all++;
-            if (task.dueDate != null) {
-                const date = safeParseDate(task.dueDate);
-                if (date && isValid(date)) {
-                    if (isToday(date)) counts.today++;
-                    if (!isOverdue(date) && isWithinNext7Days(date)) counts.next7days++;
+
+        activeTasks.forEach(task => {
+            if (task.completed) {
+                counts.completed++;
+            } else {
+                // Count only non-completed tasks for other categories
+                counts.all++;
+                if (task.dueDate != null) {
+                    const date = safeParseDate(task.dueDate);
+                    if (date && isValid(date)) {
+                        // Use the imported checks correctly
+                        if (isTodayCheck(date)) counts.today++;
+                        if (!isOverdueCheck(date) && isWithinNext7Days(date)) counts.next7days++;
+                    }
                 }
-            }
-            if (task.list && Object.prototype.hasOwnProperty.call(counts.lists, task.list)) {
-                counts.lists[task.list]++;
-            }
-            task.tags?.forEach(tag => {
-                if (Object.prototype.hasOwnProperty.call(counts.tags, tag)) {
-                    counts.tags[tag]++;
+                if (task.list && Object.prototype.hasOwnProperty.call(counts.lists, task.list)) {
+                    counts.lists[task.list]++;
                 }
-            });
+                task.tags?.forEach(tag => {
+                    if (Object.prototype.hasOwnProperty.call(counts.tags, tag)) {
+                        counts.tags[tag]++;
+                    }
+                });
+            }
         });
         return counts;
     },
@@ -283,21 +227,49 @@ export const taskCountsAtom = selectAtom(
 );
 
 
-// Grouped Tasks for 'All' view Atom (Optimized)
+// Grouped Tasks for 'All' view Atom (Only non-completed, non-trash tasks)
 export const groupedAllTasksAtom = atom((get): Record<TaskGroupCategory, Task[]> => {
-    const tasksToGroup = get(tasksAtom).filter(task => task.list !== 'Trash' && !task.completed);
+    // Filter tasks *before* grouping
+    const tasksToGroup = get(tasksAtom)
+        .filter(task => task.list !== 'Trash' && !task.completed)
+        .sort((a, b) => (a.order - b.order) || (a.createdAt - b.createdAt)); // Ensure sorted by order
+
     const groups: Record<TaskGroupCategory, Task[]> = { overdue: [], today: [], next7days: [], later: [], nodate: [] };
 
-    // Group tasks using the category already present on the task object
     tasksToGroup.forEach(task => {
-        const category = task.groupCategory; // Category is maintained by tasksAtom setter/updates
+        const category = task.groupCategory; // Use pre-calculated category
         if (groups[category]) {
             groups[category].push(task);
         } else {
+            // This case should ideally not happen if groupCategory is always valid
             console.warn(`Task ${task.id} in groupedAllTasksAtom has unexpected category: ${category}. Placing in 'nodate'.`);
             groups.nodate.push(task);
         }
     });
-    // Order is inherited from tasksAtom (sorted by 'order')
     return groups;
+});
+
+
+// Req 3 Fix: Atom for Raw Search Results (filters ALL tasks)
+export const rawSearchResultsAtom = atom<Task[]>((get) => {
+    const search = get(searchTermAtom).trim().toLowerCase();
+    if (!search) return []; // Return empty array if no search term
+
+    const tasks = get(tasksAtom); // Get ALL tasks (including completed and trash)
+    const searchWords = search.split(' ').filter(Boolean);
+
+    return tasks.filter(task => // Filter ALL tasks
+        searchWords.every(word =>
+            task.title.toLowerCase().includes(word) ||
+            (task.content && task.content.toLowerCase().includes(word)) ||
+            (task.tags && task.tags.some(tag => tag.toLowerCase().includes(word)))
+        )
+    ).sort((a, b) => { // Sort results: non-completed/non-trash first, then order, then creation date
+        const aIsActive = a.list !== 'Trash' && !a.completed;
+        const bIsActive = b.list !== 'Trash' && !b.completed;
+        if (aIsActive !== bIsActive) return aIsActive ? -1 : 1; // Active items first
+
+        // If both active or both inactive, sort by order then date
+        return (a.order ?? 0) - (b.order ?? 0) || (a.createdAt - b.createdAt);
+    });
 });

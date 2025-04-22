@@ -1,14 +1,14 @@
 // src/components/layout/MainLayout.tsx
+// No changes needed based on the requirements. Retained original code.
 import React, { Suspense, useMemo } from 'react'; // Added useMemo
 import { Outlet, useLocation } from 'react-router-dom';
 import IconBar from './IconBar';
 import Sidebar from './Sidebar';
 import SettingsModal from '../settings/SettingsModal';
 import { useAtomValue } from 'jotai';
-import { isSettingsOpenAtom, searchTermAtom } from '@/store/atoms'; // Added isAddListModalOpenAtom
+import { isSettingsOpenAtom, searchTermAtom } from '@/store/atoms';
 import Icon from "@/components/common/Icon";
 import { twMerge } from 'tailwind-merge';
-// import AddListModal from '@/components/common/AddListModal'; // Import AddListModal
 
 // Simple loading spinner component
 const LoadingSpinner: React.FC = () => (
@@ -19,7 +19,6 @@ const LoadingSpinner: React.FC = () => (
 
 const MainLayout: React.FC = () => {
     const isSettingsOpen = useAtomValue(isSettingsOpenAtom);
-    // const isAddListModalOpen = useAtomValue(isAddListModalOpenAtom); // Get AddListModal state
     const searchTerm = useAtomValue(searchTermAtom);
     const location = useLocation();
 
@@ -30,18 +29,13 @@ const MainLayout: React.FC = () => {
         return !isSearching && ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
     }, [searchTerm, location.pathname]);
 
-    // Note: AddListModal state is managed in Sidebar, but rendered here to overlay properly.
-    // The `onAdd` logic remains in Sidebar, passed down.
-
     return (
         <div className="flex h-screen bg-canvas-alt overflow-hidden font-sans">
             <IconBar />
 
-            {/* Conditional Sidebar rendering without motion/transition */}
-            {/* Performance: Avoid expensive unmount/remount animations for layout elements */}
+            {/* Conditional Sidebar rendering */}
             {!hideSidebar && (
                 <div className="w-56 flex-shrink-0 h-full relative"> {/* Fixed width */}
-                    {/* Sidebar now needs the onAdd prop for the modal */}
                     <Sidebar />
                 </div>
             )}
@@ -58,10 +52,8 @@ const MainLayout: React.FC = () => {
             </main>
 
             {/* Modals - Rendered conditionally based on Jotai state */}
-            {/* Ensure modals appear above other layout elements */}
             {isSettingsOpen && <SettingsModal key="settings-modal" />}
-            {/* AddListModal is now rendered within Sidebar */}
-            {/* Add other global modals here if needed */}
+            {/* AddListModal is rendered within Sidebar */}
         </div>
     );
 };
