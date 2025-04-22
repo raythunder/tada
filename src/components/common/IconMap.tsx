@@ -1,5 +1,4 @@
 // src/components/common/IconMap.tsx
-// No changes needed based on the requirements. Retained original code.
 import * as LucideIcons from "lucide-react";
 
 // Comprehensive map of icons used in the application

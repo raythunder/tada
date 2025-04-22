@@ -1,5 +1,4 @@
 // src/components/common/Icon.tsx
-// No changes needed based on the requirements. Retained original code.
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import { twMerge } from 'tailwind-merge';

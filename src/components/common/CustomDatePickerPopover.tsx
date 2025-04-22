@@ -1,5 +1,4 @@
 // src/components/common/CustomDatePickerPopover.tsx
-// No changes needed based on the requirements. Retained original code.
 import React, {useState, useMemo, useCallback} from 'react';
 import {twMerge} from 'tailwind-merge';
 import {Tooltip} from 'react-tooltip';
@@ -16,7 +15,6 @@ interface CustomDatePickerPopoverProps {
     initialDate: Date | undefined; // Expect Date or undefined
     onSelect: (date: Date | undefined) => void; // Callback with Date or undefined
     close: () => void; // Function to close the popover
-    // Requirement 2: Add optional trigger ref for positioning
     triggerElement?: HTMLElement | null; // Keep prop, might be useful for context
 }
 

@@ -249,8 +249,6 @@ export const groupedAllTasksAtom = atom((get): Record<TaskGroupCategory, Task[]>
     return groups;
 });
 
-
-// Req 3 Fix: Atom for Raw Search Results (filters ALL tasks)
 export const rawSearchResultsAtom = atom<Task[]>((get) => {
     const search = get(searchTermAtom).trim().toLowerCase();
     if (!search) return []; // Return empty array if no search term

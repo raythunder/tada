@@ -1,153 +1,211 @@
 /* src/styles/index.css */
-/* No changes needed based on the requirements. Retained original code. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  html {
-    scroll-behavior: smooth;
-    /* Base font size for consistent rem units */
-    font-size: 16px;
-  }
-  body {
-    @apply bg-canvas-alt font-sans text-gray-900 antialiased;
-    /* Apple system font stack */
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: hsl(220, 40%, 98%); /* Match canvas-alt */
-  }
-  *:focus-visible {
-    /* Consistent focus ring */
-    @apply outline-none ring-1 ring-primary/70 ring-offset-1 ring-offset-canvas;
-  }
-  button:focus {
-    /* Remove default browser outline on buttons when focus-visible is handled */
-    outline: none;
-  }
-  /* CSS Variables for theming */
-  :root {
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    --primary-h: 208; /* Hue for primary color (Blue) */
-    --primary-s: 100%; /* Saturation */
-    --primary-l: 50%; /* Lightness */
-    --canvas: hsl(0, 0%, 100%); /* White */
-    --canvas-alt: hsl(220, 40%, 98%); /* Very light grey-blue */
-  }
+    html {
+        scroll-behavior: smooth;
+        /* Base font size for consistent rem units */
+        font-size: 16px;
+    }
+
+    body {
+        @apply bg-canvas-alt font-sans text-gray-900 antialiased;
+        /* Apple system font stack */
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: hsl(220, 40%, 98%); /* Match canvas-alt */
+    }
+
+    *:focus-visible {
+        /* Consistent focus ring */
+        @apply outline-none ring-1 ring-primary/70 ring-offset-1 ring-offset-canvas;
+    }
+
+    button:focus {
+        /* Remove default browser outline on buttons when focus-visible is handled */
+        outline: none;
+    }
+
+    /* CSS Variables for theming */
+    :root {
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --primary-h: 208; /* Hue for primary color (Blue) */
+        --primary-s: 100%; /* Saturation */
+        --primary-l: 50%; /* Lightness */
+        --canvas: hsl(0, 0%, 100%); /* White */
+        --canvas-alt: hsl(220, 40%, 98%); /* Very light grey-blue */
+    }
 }
 
 @layer components {
-  /* Custom Scrollbar Styling (Subtle, macOS-like) */
-  .styled-scrollbar {
-    scrollbar-width: thin; /* "thin" keyword for Firefox */
-    scrollbar-color: hsla(0, 0%, 0%, 0.3) transparent; /* Thumb color and track color */
-  }
-  /* Webkit browsers (Chrome, Safari, Edge) */
-  .styled-scrollbar::-webkit-scrollbar {
-    width: 8px; /* Width of vertical scrollbar */
-    height: 8px; /* Height of horizontal scrollbar */
-  }
-  .styled-scrollbar::-webkit-scrollbar-track {
-    background-color: transparent; /* Make track invisible */
-  }
-  .styled-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-black/20 rounded-full border-[2.5px] border-solid border-transparent; /* Slightly transparent black thumb with padding */
-    background-clip: padding-box; /* Ensures border creates padding effect */
-    transition: background-color 0.15s ease-out; /* Smooth hover effect */
-  }
-  /* Hover effects for scrollbar thumb */
-  .styled-scrollbar:hover::-webkit-scrollbar-thumb { @apply bg-black/30; }
-  .styled-scrollbar::-webkit-scrollbar-thumb:hover { @apply bg-black/35; }
-  .styled-scrollbar::-webkit-scrollbar-thumb:active { @apply bg-black/40; }
-
-  /* Isolation context for hover effects if needed */
-  .hover-isolate { isolation: isolate; }
-
-  /* CodeMirror Editor Base Styles Integration */
-  .cm-editor-container {
-    /* Container specific styles if needed */
-  }
-  .cm-editor {
-    /* Editor view itself */
-    @apply text-sm h-full bg-transparent;
-    &.cm-focused {
-      outline: none; /* Remove default CM outline */
+    /* Custom Scrollbar Styling (Subtle, macOS-like) */
+    .styled-scrollbar {
+        scrollbar-width: thin; /* "thin" keyword for Firefox */
+        scrollbar-color: hsla(0, 0%, 0%, 0.3) transparent; /* Thumb color and track color */
     }
-  }
-  .cm-scroller {
-    /* Scrollable area */
-    @apply h-full styled-scrollbar bg-transparent overflow-auto;
-    font-family: var(--font-mono);
-    line-height: 1.65; /* Consistent line height */
-  }
-  .cm-gutters {
-    /* Line numbers area */
-    @apply bg-glass-alt-100/80 backdrop-blur-lg border-r border-black/10 text-muted-foreground text-xs opacity-90 pr-2 pl-2; /* Adjusted padding */
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  .cm-activeLineGutter {
-    /* Active line number background */
-    @apply bg-primary/15; /* Subtle highlight */
-  }
-  .cm-content {
-    /* Editable content area */
-    @apply p-3.5 bg-transparent; /* Match padding elsewhere */
-    caret-color: hsl(var(--primary-h), var(--primary-s), var(--primary-l)); /* Primary color caret */
-  }
-  .cm-line {
-    /* Individual lines */
-    @apply leading-relaxed px-1;
-  }
-  .cm-placeholder {
-    /* Placeholder text style */
-    @apply text-muted-foreground italic opacity-70 pointer-events-none absolute;
-    top: 14px; /* Align with content padding */
-    left: 14px; /* Align with content padding */
-    padding-left: 4px; /* Match .cm-line padding */
-  }
-  .cm-selectionBackground, ::selection {
-    /* Text selection background */
-    @apply bg-primary/30; /* Use primary color with alpha */
-  }
-  .cm-activeLine {
-    /* Active line background */
-    background-color: hsla(var(--primary-h), var(--primary-s), 95%, 0.75); /* Light primary highlight */
-  }
-  .cm-foldMarker {
-    /* Fold marker style */
-    color: hsl(210, 10%, 65%);
-    margin-left: 2px;
-    padding: 0 2px;
-    cursor: pointer;
-    &:hover {
-      color: hsl(210, 10%, 45%);
-    }
-  }
-  .cm-foldGutter .cm-gutterElement {
-    padding-left: 4px !important; /* Ensure padding */
-    text-align: center;
-    cursor: pointer;
-  }
-  .cm-searchMatch {
-    /* Search match highlight */
-    @apply bg-yellow-300/50 outline-none rounded-[2px];
-  }
-  .cm-searchMatch-selected {
-    /* Selected search match highlight */
-    @apply bg-yellow-400/70;
-  }
 
-  /* Req 1: Ensure task motion wrapper doesn't interfere */
-  .task-motion-wrapper {
-    /* Add specific styles if needed, but usually empty */
-  }
+    /* Webkit browsers (Chrome, Safari, Edge) */
+    .styled-scrollbar::-webkit-scrollbar {
+        width: 8px; /* Width of vertical scrollbar */
+        height: 8px; /* Height of horizontal scrollbar */
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-track {
+        background-color: transparent; /* Make track invisible */
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-thumb {
+        @apply bg-black/20 rounded-full border-[2.5px] border-solid border-transparent;
+        /* Slightly transparent black thumb with padding */
+        background-clip: padding-box; /* Ensures border creates padding effect */
+        transition: background-color 0.15s ease-out; /* Smooth hover effect */
+    }
+
+    /* Hover effects for scrollbar thumb */
+    .styled-scrollbar:hover::-webkit-scrollbar-thumb {
+        @apply bg-black/30;
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-thumb:hover {
+        @apply bg-black/35;
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-thumb:active {
+        @apply bg-black/40;
+    }
+
+    /* Isolation context for hover effects if needed */
+    .hover-isolate {
+        isolation: isolate;
+    }
+
+    /* CodeMirror Editor Base Styles Integration */
+    .cm-editor-container {
+        /* Container specific styles if needed */
+    }
+
+    .cm-editor {
+        /* Editor view itself */
+        @apply text-sm h-full bg-transparent;
+
+        &.cm-focused {
+            outline: none; /* Remove default CM outline */
+        }
+    }
+
+    .cm-scroller {
+        /* Scrollable area */
+        @apply h-full styled-scrollbar bg-transparent overflow-auto;
+        font-family: var(--font-mono);
+        line-height: 1.65; /* Consistent line height */
+    }
+
+    .cm-gutters {
+        /* Line numbers area */
+        @apply bg-glass-alt-100/80 backdrop-blur-lg border-r border-black/10 text-muted-foreground text-xs opacity-90 pr-2 pl-2;
+        /* Adjusted padding */
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .cm-activeLineGutter {
+        /* Active line number background */
+        @apply bg-primary/15;
+        /* Subtle highlight */
+    }
+
+    .cm-content {
+        /* Editable content area */
+        @apply p-3.5 bg-transparent;
+        /* Match padding elsewhere */
+        caret-color: hsl(var(--primary-h), var(--primary-s), var(--primary-l)); /* Primary color caret */
+    }
+
+    .cm-line {
+        /* Individual lines */
+        @apply leading-relaxed px-1;
+    }
+
+    .cm-placeholder {
+        /* Placeholder text style */
+        @apply text-muted-foreground italic opacity-70 pointer-events-none absolute;
+        top: 14px; /* Align with content padding */
+        left: 14px; /* Align with content padding */
+        padding-left: 4px; /* Match .cm-line padding */
+    }
+
+    .cm-selectionBackground, ::selection {
+        /* Text selection background */
+        @apply bg-primary/30;
+        /* Use primary color with alpha */
+    }
+
+    .cm-activeLine {
+        /* Active line background */
+        background-color: hsla(var(--primary-h), var(--primary-s), 95%, 0.75); /* Light primary highlight */
+    }
+
+    .cm-foldMarker {
+        /* Fold marker style */
+        color: hsl(210, 10%, 65%);
+        margin-left: 2px;
+        padding: 0 2px;
+        cursor: pointer;
+
+        &:hover {
+            color: hsl(210, 10%, 45%);
+        }
+    }
+
+    .cm-foldGutter .cm-gutterElement {
+        padding-left: 4px !important; /* Ensure padding */
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .cm-searchMatch {
+        /* Search match highlight */
+        @apply bg-yellow-300/50 outline-none rounded-[2px];
+    }
+
+    .cm-searchMatch-selected {
+        /* Selected search match highlight */
+        @apply bg-yellow-400/70;
+    }
+
+    .task-motion-wrapper {
+        /* Add specific styles if needed, but usually empty */
+    }
+
+    /* --- FIX: Hide browser's default clear button for search inputs --- */
+    input[type="search"]::-webkit-search-decoration,
+    input[type="search"]::-webkit-search-cancel-button,
+    input[type="search"]::-webkit-search-results-button,
+    input[type="search"]::-webkit-search-results-decoration {
+        -webkit-appearance: none; /* Older way */
+        display: none; /* Standard way */
+    }
+
+    /* Optional: Add similar rules for other browsers if needed, e.g., Edge/IE */
+    input[type="search"]::-ms-clear {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    input[type="search"]::-ms-reveal {
+        display: none;
+        width: 0;
+        height: 0;
+    }
 }
 
 @layer utilities {
-  /* Utility for content visibility optimization if needed */
-  .content-auto {
-    content-visibility: auto;
-  }
+    /* Utility for content visibility optimization if needed */
+    .content-auto {
+        content-visibility: auto;
+    }
 }

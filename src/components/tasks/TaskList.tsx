@@ -92,7 +92,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         let grouped = false;
 
         if (searching) {
-            // Req 3 Fix: If searching, always show a flat list from rawSearchResultsAtom
             displayData = rawSearchResults;
             grouped = false;
         } else if (currentFilterGlobal === 'all') {
@@ -363,7 +362,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
     // Render task group function
     const renderTaskGroup = useCallback((groupTasks: Task[], groupKey: TaskGroupCategory | 'flat-list' | string) => (
-        // Req 1: Use AnimatePresence and motion.div for animations
         <AnimatePresence initial={false} key={`group-anim-${groupKey}`}>
             {groupTasks.map((task) => (
                 <motion.div
@@ -458,7 +456,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                         </div>
                     ) : (
                         // Task List Content (Handles Grouped or Flat)
-                        // Req 1: Container div does NOT have a key that changes, allowing inner AnimatePresence to work
                         <div>
                             <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
                                 {isGroupedView ? (

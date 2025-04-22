@@ -1,5 +1,4 @@
 // src/components/layout/MainLayout.tsx
-// No changes needed based on the requirements. Retained original code.
 import React, { Suspense, useMemo } from 'react'; // Added useMemo
 import { Outlet, useLocation } from 'react-router-dom';
 import IconBar from './IconBar';

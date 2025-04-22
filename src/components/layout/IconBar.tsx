@@ -1,5 +1,4 @@
 // src/components/layout/IconBar.tsx
-// No changes needed based on the requirements. Retained original code.
 import React, { memo, useCallback, useMemo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import Icon from '../common/Icon';

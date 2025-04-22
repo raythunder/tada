@@ -1,6 +1,6 @@
 // src/components/layout/Sidebar.tsx
 import React, { useCallback, useEffect, useState, useRef, useMemo, memo } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; // Removed useLocation as it's handled by RouteChangeHandler/currentFilterAtom
+import { useNavigate, Link } from 'react-router-dom';
 import Icon from '../common/Icon';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
@@ -217,7 +217,6 @@ const Sidebar: React.FC = () => {
     }, [setSearchTerm]);
 
     // Handle clicking a search result
-    // Req 3 Fix: Only select the task ID. Do not navigate or clear search.
     const handleSearchResultClick = useCallback((task: Task) => {
         setSelectedTaskId(task.id); // Select the task
         // No navigation needed, TaskList now displays rawSearchResults when searching
@@ -260,7 +259,6 @@ const Sidebar: React.FC = () => {
                         />
                         <AnimatePresence>
                             {searchTerm && (
-                                // Req 4 Fix: Apply flex centering to the motion div
                                 <motion.div
                                     key="clear-search-btn"
                                     initial={{ scale: 0.7, opacity: 0 }}

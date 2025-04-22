@@ -1,5 +1,4 @@
 // src/components/settings/SettingsModal.tsx
-// No changes needed based on the requirements. Retained original code.
 import React, { useCallback, useMemo, memo } from 'react';
 import { useAtom } from 'jotai';
 import { currentUserAtom, isSettingsOpenAtom, settingsSelectedTabAtom } from '@/store/atoms';

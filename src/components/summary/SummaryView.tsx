@@ -1,5 +1,4 @@
 // src/components/summary/SummaryView.tsx
-// No changes needed based on the requirements. Retained original code.
 import React, { useCallback, useState, useMemo, useRef, useEffect } from 'react';
 import Icon from '../common/Icon';
 import Button from '../common/Button';

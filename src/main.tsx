@@ -1,5 +1,4 @@
 // src/main.tsx
-// No changes needed based on the requirements. Retained original code.
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';

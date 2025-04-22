@@ -15,7 +15,6 @@ import {startOfDay} from "@/utils/dateUtils.ts";
 const RouteChangeHandler: React.FC = () => {
     const [currentFilterInternal, setCurrentFilter] = useAtom(currentFilterAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
-    // const setSearchTerm = useSetAtom(searchTermAtom); // Req 3: Don't reset search term here
     const location = useLocation();
     const params = useParams();
 
@@ -42,8 +41,6 @@ const RouteChangeHandler: React.FC = () => {
             setCurrentFilter(newFilter);
             // Reset selection when the main filter context changes manually
             setSelectedTaskId(null);
-            // Req 3: Do NOT reset search term automatically on navigation
-            // setSearchTerm('');
         }
     }, [location.pathname, params.listName, params.tagName, currentFilterInternal, setCurrentFilter, setSelectedTaskId]); // Removed setSearchTerm
 
@@ -71,7 +68,6 @@ const TagPageWrapper: React.FC = () => {
     return <MainPage title={`#${decodedTagName}`} filter={filter} />;
 };
 
-// Check Daily Task Refresh Component (Handles Requirement 5 from original prompt)
 const DailyTaskRefresh: React.FC = () => {
     const setTasks = useSetAtom(tasksAtom);
     // Store only the date part (YYYY-MM-DD) for comparison

@@ -1,5 +1,4 @@
 // src/pages/MainPage.tsx
-// No changes needed based on the requirements. Retained original code.
 import React, { useMemo } from 'react';
 import TaskList from '../components/tasks/TaskList';
 import TaskDetail from '../components/tasks/TaskDetail';

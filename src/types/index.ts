@@ -1,5 +1,4 @@
 // src/types/index.ts
-// No changes needed based on the requirements. Retained original code.
 export interface User {
     id: string;
     name: string;

@@ -1,5 +1,4 @@
 // tailwind.config.ts
-// No changes needed based on the requirements. Retained original code.
 import type { Config } from 'tailwindcss';
 
 export default {
