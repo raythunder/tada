@@ -1,5 +1,7 @@
 // src/components/tasks/TaskItem.tsx
-import React, { useCallback, useMemo, memo, useState, useRef } from 'react';
+import React, {useCallback, useMemo, memo, useState, useRef, useEffect} from 'react';
+// *** Add ReactDOM import for createPortal ***
+import ReactDOM from 'react-dom';
 import { Task, TaskGroupCategory } from '@/types';
 import { formatDate, formatRelativeDate, isOverdue, safeParseDate, isValid, startOfDay } from '@/utils/dateUtils';
 import { useAtom, useSetAtom, useAtomValue } from 'jotai';
@@ -16,7 +18,6 @@ import Dropdown, { DropdownRenderProps } from "@/components/common/Dropdown";
 import MenuItem from "@/components/common/MenuItem";
 import CustomDatePickerPopover from "@/components/common/CustomDatePickerPopover";
 import { usePopper } from "react-popper";
-import { AnimatePresence } from 'framer-motion';
 
 interface TaskItemProps {
     task: Task;
@@ -42,18 +43,36 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
 
     const isSelected = useMemo(() => selectedTaskId === task.id, [selectedTaskId, task.id]);
 
-    // --- State Management for Popovers ---
+    // State for Date Picker Popover (triggered by reschedule button OR dropdown item)
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [datePickerReferenceElement, setDatePickerReferenceElement] = useState<HTMLButtonElement | null>(null);
     const [datePickerPopperElement, setDatePickerPopperElement] = useState<HTMLDivElement | null>(null);
+
+    // State for More Actions Dropdown
     const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
     const moreActionsButtonRef = useRef<HTMLDivElement>(null); // Ref for the dropdown trigger div
 
     // Popper setup for Date Picker
-    const { styles: datePickerStyles, attributes: datePickerAttributes } = usePopper(datePickerReferenceElement, datePickerPopperElement, {
-        placement: 'bottom-start',
-        modifiers: [{ name: 'offset', options: { offset: [0, 8] } }, { name: 'preventOverflow', options: { padding: 8 } } ],
-    });
+    const { styles: datePickerStyles, attributes: datePickerAttributes, update: updateDatePickerPopper } = usePopper(
+        datePickerReferenceElement,
+        datePickerPopperElement, {
+            // Use fixed positioning strategy since the popover might be in a portal
+            strategy: 'fixed',
+            placement: 'bottom-start',
+            modifiers: [
+                { name: 'offset', options: { offset: [0, 8] } },
+                { name: 'preventOverflow', options: { padding: 8 } },
+                { name: 'flip', options: { fallbackPlacements: ['top-start', 'bottom-end', 'top-end'] } }
+            ],
+        });
+
+    // Update popper position when it opens
+    useEffect(() => {
+        if (isDatePickerOpen && updateDatePickerPopper) {
+            updateDatePickerPopper();
+        }
+    }, [isDatePickerOpen, updateDatePickerPopper]);
+
 
     // Memoize derived states
     const isTrashItem = useMemo(() => task.list === 'Trash', [task.list]);
@@ -71,15 +90,22 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
         transition: isDragging ? (dndTransition || 'transform 50ms ease-apple') : (overlayStyle ? undefined : 'background-color 0.2s ease-apple, border-color 0.2s ease-apple'),
         ...(isDragging && !isOverlay && { opacity: 0.3, cursor: 'grabbing', backgroundColor: 'hsla(210, 40%, 98%, 0.5)', backdropFilter: 'blur(2px)', boxShadow: 'none', border: '1px dashed hsla(0, 0%, 0%, 0.1)'}),
         ...(isOverlay && { cursor: 'grabbing', boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)', zIndex: 1000 }),
-        zIndex: isDragging || isOverlay ? 100 : 1, // Base z-index
-    }), [overlayStyle, transform, dndTransition, isDragging, isOverlay]);
+        zIndex: isDragging || isOverlay ? 100 : (isSelected ? 2 : 1), // Slightly elevate selected items
+    }), [overlayStyle, transform, dndTransition, isDragging, isOverlay, isSelected]); // Added isSelected
 
     // Task Click
     const handleTaskClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
-        if (target.closest('button, input, a, .task-item-actions, .task-item-reschedule, .ignore-click-away')) return;
+        // Updated to check against the dropdown trigger ref and date picker ref
+        if (target.closest('button, input, a') ||
+            moreActionsButtonRef.current?.contains(target) ||
+            datePickerReferenceElement?.contains(target) ||
+            target.closest('.ignore-click-away') // Keep general ignore class check
+        ) {
+            return;
+        }
         setSelectedTaskId(id => (id === task.id ? null : task.id));
-    }, [setSelectedTaskId, task.id]);
+    }, [setSelectedTaskId, task.id, datePickerReferenceElement]); // Add datePickerReferenceElement
 
     // Direct Update Function
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt'>>) => {
@@ -92,15 +118,19 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
         if (isChecked && isSelected) { setSelectedTaskId(null); }
     }, [updateTask, isSelected, setSelectedTaskId]);
 
+
     // --- Date Picker Handlers ---
     const openDatePicker = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
-        setDatePickerReferenceElement(event.currentTarget);
+        setDatePickerReferenceElement(event.currentTarget); // Set the trigger
         setIsDatePickerOpen(true);
-        setIsMoreActionsOpen(false); // Ensure actions menu is closed
+        setIsMoreActionsOpen(false); // Ensure actions menu is closed if opening date picker directly
     }, []);
 
-    const closeDatePicker = useCallback(() => { setIsDatePickerOpen(false); setDatePickerReferenceElement(null); }, []);
+    const closeDatePicker = useCallback(() => {
+        setIsDatePickerOpen(false);
+        setDatePickerReferenceElement(null); // Clear reference on close
+    }, []);
 
     const handleDateSelect = useCallback((date: Date | undefined) => {
         const newDueDate = date && isValid(date) ? startOfDay(date).getTime() : null;
@@ -109,27 +139,19 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
     }, [updateTask, closeDatePicker]);
 
 
-    // --- More Actions Handlers ---
-    const handleMoreActionsToggle = useCallback((event?: React.MouseEvent<HTMLDivElement>) => {
-        event?.stopPropagation();
-        setIsMoreActionsOpen(prev => !prev);
-        setIsDatePickerOpen(false); // Close date picker if actions menu is toggled
-    }, []);
-
-    // FIX 2: Function to close the date picker when the actions dropdown closes
+    // Close date picker IF it was triggered from within the actions dropdown when the dropdown closes
     const handleActionsDropdownClose = useCallback(() => {
-        // If the date picker reference is the "Set Due Date" button inside the dropdown, close it
         if (datePickerReferenceElement && moreActionsButtonRef.current?.contains(datePickerReferenceElement)) {
             closeDatePicker();
         }
-    }, [datePickerReferenceElement, closeDatePicker]); // Depend on ref element and closer
+    }, [datePickerReferenceElement, closeDatePicker]);
 
-    const handleSetDueDateClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Handler specifically for clicking the "Set Due Date..." button inside the dropdown
+    const handleSetDueDateClickFromDropdown = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
-        setDatePickerReferenceElement(e.currentTarget); // Anchor to the button itself
+        setDatePickerReferenceElement(e.currentTarget); // Anchor to the button inside the dropdown
         setIsDatePickerOpen(true);
-        // Don't close the main dropdown here, let click-away or selection handle it
-        // closeDropdown();
+        // Don't close the main dropdown here explicitly, the user might click elsewhere in it
     };
 
     const handlePriorityChange = useCallback((newPriority: number | null, closeDropdown?: () => void) => { updateTask({ priority: newPriority }); closeDropdown?.(); }, [updateTask]);
@@ -191,9 +213,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
                             <span className={clsx('whitespace-nowrap', overdue && 'text-red-600 font-medium', (isCompleted || isTrashItem) && 'line-through opacity-70')} title={formatDate(dueDate!)}>
                                 <Icon name="calendar" size={11} className="mr-0.5 opacity-70"/> {formatRelativeDate(dueDate!)}
                             </span>
-                            {/* Overdue Reschedule Button */}
+                            {/* Overdue Reschedule Button - Triggers Date Picker */}
                             {overdue && !isOverlay && !isCompleted && !isTrashItem && (
-                                <button className="ml-1 p-0.5 rounded hover:bg-red-500/15 focus-visible:ring-1 focus-visible:ring-red-400 outline-none" onClick={openDatePicker} aria-label="Reschedule task" title="Reschedule">
+                                <button
+                                    className="ml-1 p-0.5 rounded hover:bg-red-500/15 focus-visible:ring-1 focus-visible:ring-red-400 outline-none ignore-click-away" /* Add ignore */
+                                    onClick={openDatePicker} // Use the specific handler for direct open
+                                    aria-label="Reschedule task" title="Reschedule"
+                                >
                                     <Icon name="calendar-plus" size={12} className="text-red-500 opacity-70 group-hover/task-item-reschedule:opacity-100" />
                                 </button>
                             )}
@@ -210,26 +236,35 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
 
             {/* More Actions Button & Dropdown */}
             {!isOverlay && !isCompleted && !isTrashItem && (
-                // Assign ref to the container div for click-away check
-                <div ref={moreActionsButtonRef}
-                     className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple"
-                     onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+                <div
+                    ref={moreActionsButtonRef} // Keep ref on the container
+                    className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple"
+                    // Prevent clicks on the button container itself from propagating to the TaskItem click handler
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                >
                     <Dropdown
+                        // <<< Use Portal for the actions dropdown >>>
+                        usePortal={true}
                         isOpen={isMoreActionsOpen} onOpenChange={setIsMoreActionsOpen}
-                        onClose={handleActionsDropdownClose} // FIX 2: Call handler when dropdown closes
+                        onClose={handleActionsDropdownClose}
                         wrapperClassName="inline-block" placement="bottom-end"
-                        contentClassName="py-1 w-48 ignore-click-away"
-                        zIndex={50} // FIX 1: Increased z-index
+                        contentClassName="py-1 w-48 ignore-click-away" // Keep ignore-click-away on content
+                        zIndex={55} // Needs to be above TaskItem hover but potentially below date picker
                         trigger={
                             <Button variant="ghost" size="icon" icon="more-horizontal" className="h-6 w-6 text-muted-foreground hover:bg-black/15"
-                                    onClick={(e) => handleMoreActionsToggle(e as unknown as React.MouseEvent<HTMLDivElement>)} // Cast type for handler
+                                // Click is handled by the Dropdown component wrapper now
                                     aria-label={`More actions for ${task.title || 'task'}`}
                                     aria-haspopup="true" aria-expanded={isMoreActionsOpen} tabIndex={0} />
                         }>
                         {({ close: closeDropdown }: DropdownRenderProps) => (
                             <div className="space-y-0.5">
-                                {/* Set Due Date Button */}
-                                <button onClick={(e) => handleSetDueDateClick(e)} className="w-full">
+                                {/* Set Due Date Button - Triggers Date Picker */}
+                                <button
+                                    onClick={handleSetDueDateClickFromDropdown} // Specific handler
+                                    className="w-full ignore-click-away" /* Add ignore */
+                                >
                                     <MenuItem icon="calendar-plus"> Set Due Date... </MenuItem>
                                 </button>
                                 <hr className="my-1 border-black/10" />
@@ -252,17 +287,21 @@ const TaskItem: React.FC<TaskItemProps> = memo(({ task, groupCategory, isOverlay
                 </div>
             )}
 
-            {/* Date Picker Popover (Rendered via Popper state) */}
-            <AnimatePresence>
-                {isDatePickerOpen && datePickerReferenceElement && (
-                    <div ref={setDatePickerPopperElement} style={{ ...datePickerStyles.popper, zIndex: 60 }} // FIX 1: Ensure highest z-index
-                         {...datePickerAttributes.popper} className="ignore-click-away">
+            {/* Date Picker Popover - Rendered using state, positioned by Popper */}
+            {/* <<< Use Portal for the date picker >>> */}
+            {/* Wrap the rendering logic, not the state check */}
+            {isDatePickerOpen && datePickerReferenceElement && ReactDOM.createPortal(
+                (
+                    <div ref={setDatePickerPopperElement} style={{ ...datePickerStyles.popper, zIndex: 60 }} // Popper applies position, ensure high zIndex
+                         {...datePickerAttributes.popper} className="ignore-click-away"> {/* Keep ignore */}
                         <CustomDatePickerPopover
+                            // Don't pass usePortal here, the wrapper handles it
                             initialDate={dueDate ?? undefined} onSelect={handleDateSelect}
                             close={closeDatePicker} triggerElement={datePickerReferenceElement} />
                     </div>
-                )}
-            </AnimatePresence>
+                ), document.body // Target portal destination
+            )}
+
         </div>
     );
 });
