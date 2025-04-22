@@ -176,8 +176,10 @@
         @apply bg-yellow-400/70;
     }
 
+    /* Wrapper for TaskItem used by framer-motion */
     .task-motion-wrapper {
-        /* Add specific styles if needed, but usually empty */
+        /* Ensures layout animation works correctly */
+        position: relative;
     }
 
     /* --- FIX: Hide browser's default clear button for search inputs --- */

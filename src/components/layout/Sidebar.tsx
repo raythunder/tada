@@ -74,7 +74,7 @@ const SidebarItem: React.FC<{
         // Navigate to trigger filter change via RouteChangeHandler
         navigate(to);
         // RouteChangeHandler will handle resetting selection/search if filter changes
-    }, [filter, navigate, to]); // Removed isActive dependency
+    }, [filter, navigate, to]); // Removed filter dependency as RouteChangeHandler uses URL
 
     // Performance: Memoize className calculation
     const linkClassName = useMemo(() => twMerge(
@@ -300,7 +300,7 @@ const Sidebar: React.FC = () => {
                                 {searchResults.length > 0 ? (
                                     <>
                                         <p className="text-xs font-medium text-muted px-1 py-1">{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</p>
-                                        {searchResults.map((task: any) => (
+                                        {searchResults.map((task: Task) => ( // Explicitly type task as Task
                                             <button key={task.id} onClick={() => handleSearchResultClick(task)} className={searchResultButtonClassName} aria-label={`Search result: ${task.title || 'Untitled Task'}`}>
                                                 {/* Icon based on list type */}
                                                 <Icon name={task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list')} size={15} className="mr-2 mt-[2px] flex-shrink-0 text-muted opacity-70" aria-hidden="true"/>
@@ -377,5 +377,5 @@ const Sidebar: React.FC = () => {
         </>
     );
 };
-
+Sidebar.displayName = 'Sidebar'; // Add display name
 export default Sidebar;

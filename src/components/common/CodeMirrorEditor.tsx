@@ -64,7 +64,6 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
         const onBlurRef = useRef(onBlur);
 
         // Refs to store previous prop values for comparison to optimize reconfigurations
-        // const prevValueRef = useRef(value); // Not needed if external value update is handled correctly
         const prevReadOnlyRef = useRef(readOnly);
         const prevPlaceholderRef = useRef(placeholder);
 
@@ -124,7 +123,6 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             viewRef.current = view;
 
             // Store initial props in refs *after* setup for comparison in later effects
-            // prevValueRef.current = value; // Not needed
             prevReadOnlyRef.current = readOnly;
             prevPlaceholderRef.current = placeholder;
 

@@ -64,6 +64,7 @@ export const iconMap = {
     'x-circle': LucideIcons.XCircle, // Used for clearing search input
     'calendar-check': LucideIcons.CalendarCheck,
     'refresh-cw': LucideIcons.RefreshCw, // Used in DatePicker 'Repeat' button
+    'copy-plus': LucideIcons.CopyPlus, // Used for duplicate task action
 };
 
 // Export the type for Icon names based on the map keys

@@ -111,7 +111,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         // Determine aria-label, warn if missing for icon-only buttons
         const finalAriaLabel = ariaLabel || (size === 'icon' && !children ? undefined : (typeof children === 'string' ? children : undefined));
         if (size === 'icon' && !finalAriaLabel && !loading && !children && process.env.NODE_ENV === 'development') {
-            console.warn("Icon-only button without children is missing an 'aria-label' prop for accessibility.", { icon });
+            console.warn(`Icon-only button without children is missing an 'aria-label' prop for accessibility. Icon: ${icon || 'N/A'}`);
         }
 
         return (

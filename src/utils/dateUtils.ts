@@ -107,6 +107,11 @@ export const formatRelativeDate = (dateInput: Date | number | null | undefined):
     if (diffDays === 1) return 'Tomorrow';
     if (diffDays === -1) return 'Yesterday';
 
+    // Check if it's within the next 6 days (after tomorrow)
+    if (diffDays > 1 && diffDays <= 6) {
+        return formatFns(date, 'EEEE', { locale: currentLocale }); // 'Monday', 'Tuesday', etc.
+    }
+
     const currentYear = today.getFullYear();
     const inputYear = inputDay.getFullYear();
     if (inputYear !== currentYear) {

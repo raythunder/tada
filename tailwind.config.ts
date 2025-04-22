@@ -26,7 +26,7 @@ export default {
           inset: 'hsl(220, 30%, 96%)', // Background for inset elements like inputs
         },
         // Specific border colors (can be simplified if needed)
-        'border-color': {
+        'border-color': { // Renamed for clarity, use standard border-{color} utilities
           DEFAULT: 'hsl(210, 25%, 93%)', // Default subtle border
           medium: 'hsl(210, 20%, 88%)', // Slightly stronger border
           'glass-subtle': 'hsla(0, 0%, 0%, 0.08)', // Subtle black border for glass
@@ -69,7 +69,7 @@ export default {
         'glass': '0 4px 12px -2px hsla(var(--primary-h), var(--primary-s), 50%, 0.1), 0 2px 4px -2px hsla(var(--primary-h), var(--primary-s), 50%, 0.06)',
         'glass-lg': '0 8px 24px -6px hsla(var(--primary-h), var(--primary-s), 50%, 0.12), 0 4px 8px -4px hsla(var(--primary-h), var(--primary-s), 50%, 0.08)',
         // Standard Tailwind xl shadow
-        'xl': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', // Adjusted xl for more emphasis
       },
       // Define custom transition timing functions
       transitionTimingFunction: {

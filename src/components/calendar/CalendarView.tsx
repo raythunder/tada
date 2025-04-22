@@ -52,6 +52,9 @@ const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({ task, 
             : 'bg-primary/15 text-primary-dark backdrop-blur-sm hover:bg-primary/25 hover:backdrop-blur-sm',
         task.priority === 1 && !task.completed && "pl-3 before:content-[''] before:absolute before:left-[5px] before:top-1/2 before:-translate-y-1/2 before:h-1.5 before:w-1.5 before:rounded-full before:bg-red-500",
         task.priority === 2 && !task.completed && "pl-3 before:content-[''] before:absolute before:left-[5px] before:top-1/2 before:-translate-y-1/2 before:h-1.5 before:w-1.5 before:rounded-full before:bg-orange-400",
+        // Added P3/P4 indicators (subtle)
+        task.priority === 3 && !task.completed && "pl-3 before:content-[''] before:absolute before:left-[5px] before:top-1/2 before:-translate-y-1/2 before:h-1.5 before:w-1.5 before:rounded-full before:bg-blue-400",
+        task.priority === 4 && !task.completed && "pl-3 before:content-[''] before:absolute before:left-[5px] before:top-1/2 before:-translate-y-1/2 before:h-1.5 before:w-1.5 before:rounded-full before:bg-gray-400",
         overdue && !task.completed && 'text-red-600 bg-red-500/20 backdrop-blur-sm hover:bg-red-500/30 before:bg-red-600',
         isDragging && !overlayStyle && "shadow-medium bg-glass/30 backdrop-blur-sm ring-1 ring-primary/30 opacity-40",
         overlayStyle && "shadow-strong ring-1 ring-primary/30 bg-glass-100 backdrop-blur-lg"
@@ -214,6 +217,7 @@ const CalendarView: React.FC = () => {
                                     newTimestamp = updatedDateWithTime.getTime();
                                 }
                                 // Update task with new dueDate and updatedAt timestamp
+                                // Setter will recalculate groupCategory
                                 return { ...task, dueDate: newTimestamp, updatedAt: Date.now() };
                             }
                             return task;
@@ -353,5 +357,5 @@ const CalendarView: React.FC = () => {
         </DndContext>
     );
 };
-
+CalendarView.displayName = 'CalendarView'; // Add display name
 export default CalendarView;

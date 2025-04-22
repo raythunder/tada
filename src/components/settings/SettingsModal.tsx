@@ -245,5 +245,5 @@ const SettingsModal: React.FC = () => {
         </div>
     );
 };
-
+SettingsModal.displayName = 'SettingsModal'; // Add display name
 export default SettingsModal;

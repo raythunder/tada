@@ -15,6 +15,7 @@ const LoadingSpinner: React.FC = () => (
         <Icon name="loader" size={32} className="text-primary animate-spin" />
     </div>
 );
+LoadingSpinner.displayName = 'LoadingSpinner'; // Add display name
 
 const MainLayout: React.FC = () => {
     const isSettingsOpen = useAtomValue(isSettingsOpenAtom);
@@ -51,10 +52,11 @@ const MainLayout: React.FC = () => {
             </main>
 
             {/* Modals - Rendered conditionally based on Jotai state */}
-            {isSettingsOpen && <SettingsModal key="settings-modal" />}
+            {/* Key added to ensure modal remounts and potentially resets state if needed */}
+            {isSettingsOpen && <SettingsModal key={`settings-modal-${isSettingsOpen}`} />}
             {/* AddListModal is rendered within Sidebar */}
         </div>
     );
 };
-
+MainLayout.displayName = 'MainLayout'; // Add display name
 export default MainLayout;

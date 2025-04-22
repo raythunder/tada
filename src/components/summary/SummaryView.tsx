@@ -248,5 +248,5 @@ const SummaryView: React.FC = () => {
         </div>
     );
 };
-
+SummaryView.displayName = 'SummaryView'; // Add display name
 export default SummaryView;

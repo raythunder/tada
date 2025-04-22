@@ -42,7 +42,9 @@ const IconBar: React.FC = memo(() => {
             'flex items-center justify-center w-10 h-10 rounded-lg transition-colors duration-30 ease-apple group relative', // Base styling
             isEffectivelyActive
                 ? 'bg-primary/25 text-primary backdrop-blur-md ring-1 ring-inset ring-primary/30' // Active state
-                : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm' // Inactive state
+                : 'text-muted-foreground hover:bg-black/20 hover:text-gray-700 hover:backdrop-blur-sm', // Inactive state
+            // Tooltip styles (example - requires a tooltip library setup)
+            'before:content-[attr(title)] before:absolute before:left-full before:ml-2 before:px-1.5 before:py-0.5 before:rounded before:bg-black/80 before:text-white before:text-xs before:whitespace-nowrap before:opacity-0 before:invisible group-hover:before:opacity-100 group-hover:before:visible before:transition-opacity before:delay-500 before:z-50'
         );
     }, [location.pathname]); // Dependency on location.pathname
 
@@ -61,7 +63,7 @@ const IconBar: React.FC = memo(() => {
                         to={item.path}
                         // Apply the correct active class logic based on item path
                         className={getNavLinkClass(item.path)}
-                        title={item.label}
+                        title={item.label} // Title is used for tooltip via CSS pseudo-element
                         aria-label={item.label}
                         // `end` prop ensures exact match for top-level routes like /calendar, /summary
                         // For /all, our custom logic handles sub-routes, so `end` isn't strictly needed there, but doesn't hurt.
@@ -79,6 +81,7 @@ const IconBar: React.FC = memo(() => {
                     variant="glass" size="icon"
                     className="w-9 h-9 rounded-full overflow-hidden p-0 border border-black/10 shadow-inner hover:bg-black/15 backdrop-blur-md"
                     aria-label="Account Settings"
+                    title="Account Settings" // Add tooltip
                 >
                     {currentUser?.avatar ? (
                         <img src={currentUser.avatar} alt={currentUser.name || 'User Avatar'} className="w-full h-full object-cover" />

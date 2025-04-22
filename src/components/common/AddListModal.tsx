@@ -141,5 +141,5 @@ const AddListModal: React.FC<AddListModalProps> = ({ onAdd }) => {
         </div>
     );
 };
-
+AddListModal.displayName = 'AddListModal'; // Add display name
 export default AddListModal;

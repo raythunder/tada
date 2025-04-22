@@ -11,7 +11,7 @@ export interface Task {
     id: string;
     title: string;
     completed: boolean;
-    completedAt: number | null; // Timestamp when completed (explicitly non-optional when completed=true)
+    completedAt: number | null; // Timestamp when completed (null if not completed)
     dueDate?: number | null; // Store as timestamp (milliseconds since epoch) or null
     list: string; // List name (e.g., 'Inbox', 'Work', 'Trash')
     content?: string; // Optional Markdown content for notes

@@ -45,14 +45,21 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
     // Performance: Memoize navigation handlers
     const prevMonth = useCallback(() => setViewDate(v => subMonths(v, 1)), []);
     const nextMonth = useCallback(() => setViewDate(v => addMonths(v, 1)), []);
-    const goToToday = useCallback(() => setViewDate(today), [today]);
+    const goToToday = useCallback(() => {
+        const todayDate = startOfDay(new Date());
+        setViewDate(todayDate);
+        // If today isn't selected, select it visually for immediate feedback
+        if (!selectedDate || !isSameDay(selectedDate, todayDate)) {
+            setSelectedDate(todayDate);
+        }
+    }, [today, selectedDate]); // Added selectedDate dependency
 
     // Performance: Memoize quick selection handlers
     const createQuickSelectHandler = useCallback((dateFn: () => Date) => () => {
         const date = startOfDay(dateFn());
         setSelectedDate(date);
         setViewDate(date); // Update view to show the selected month
-        onSelect(date);
+        onSelect(date); // Select immediately on quick action
         close();
     }, [onSelect, close]);
 
@@ -68,13 +75,13 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
         const newDate = isCurrentlySelected ? undefined : dateStart; // Toggle selection
 
         setSelectedDate(newDate);
-        // Don't automatically close on selection
+        // Don't automatically close on selection, user must press OK
     }, [selectedDate]);
 
     // Clear date handler
     const handleClearDate = useCallback(() => {
         setSelectedDate(undefined);
-        onSelect(undefined);
+        onSelect(undefined); // Select immediately
         close();
     }, [onSelect, close]);
 
@@ -88,9 +95,10 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
     const weekDays = useMemo(() => ['S', 'M', 'T', 'W', 'T', 'F', 'S'], []);
 
     return (
+        // Add 'ignore-click-away' class so clicking inside doesn't close dropdowns prematurely
         <div
-            className="date-picker-content bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 p-4 w-[320px]"
-            onClick={e => e.stopPropagation()} // Prevent closing when clicking inside popover
+            className="date-picker-content ignore-click-away bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 p-4 w-[320px]"
+            onClick={e => e.stopPropagation()} // Prevent closing parent dropdowns if nested
         >
             {/* Quick Date Selection Icons */}
             <div className="flex justify-between mb-4 px-4">
@@ -98,6 +106,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                     onClick={selectToday}
                     className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 transition-colors"
                     data-tooltip-id={`${tooltipIdPrefix}today`} data-tooltip-content="Today"
+                    aria-label="Select Today"
                 >
                     <Icon name="sun" size={20} className="text-gray-500"/>
                 </button>
@@ -107,6 +116,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                     onClick={selectTomorrow}
                     className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 transition-colors"
                     data-tooltip-id={`${tooltipIdPrefix}tomorrow`} data-tooltip-content="Tomorrow"
+                    aria-label="Select Tomorrow"
                 >
                     <Icon name="sunset" size={20} className="text-gray-500"/>
                 </button>
@@ -116,6 +126,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                     onClick={selectNextWeek}
                     className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 transition-colors"
                     data-tooltip-id={`${tooltipIdPrefix}next-week`} data-tooltip-content="+7 Days"
+                    aria-label="Select 7 days from now"
                 >
                     <div className="relative">
                         <Icon name="calendar" size={20} className="text-gray-500"/>
@@ -130,6 +141,7 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                     onClick={selectNextMonth}
                     className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 transition-colors"
                     data-tooltip-id={`${tooltipIdPrefix}next-month`} data-tooltip-content="Next Month"
+                    aria-label="Select next month"
                 >
                     <Icon name="moon" size={20} className="text-gray-500"/>
                 </button>
@@ -179,10 +191,10 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                                     isDayToday && !isDaySelected && "font-semibold text-primary border border-primary/50", // Today style
                                     !isDayToday && isCurrentMonth && !isDaySelected && "text-gray-800", // Regular day
                                     isDaySelected && "bg-primary text-white font-semibold hover:bg-primary-dark", // Selected style
-                                    !isCurrentMonth && "pointer-events-none" // Disable clicking outside month
+                                    !isCurrentMonth && "pointer-events-none opacity-50" // Disable clicking outside month visually
                                 )}
                                 aria-label={format(day, 'MMMM d, yyyy')}
-                                aria-selected={isDaySelected}
+                                aria-pressed={isDaySelected} // Use aria-pressed for toggle state
                                 disabled={!isCurrentMonth} // Disable button for non-month days
                             >
                                 {format(day, 'd')}
@@ -234,6 +246,5 @@ const CustomDatePickerPopover: React.FC<CustomDatePickerPopoverProps> = (props) 
         </AnimatePresence>
     );
 };
-
-
+CustomDatePickerPopover.displayName = 'CustomDatePickerPopover'; // Add display name
 export default CustomDatePickerPopover;
