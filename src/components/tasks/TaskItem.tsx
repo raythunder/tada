@@ -52,7 +52,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
 
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // <<<--- State for delete confirmation modal
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete confirmation modal
 
     const [datePickerReferenceElement, setDatePickerReferenceElement] = useState<HTMLButtonElement | null>(null);
     const [datePickerPopperElement, setDatePickerPopperElement] = useState<HTMLDivElement | null>(null);
@@ -91,7 +91,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     const isCompleted = useMemo(() => task.completed && !isTrashItem, [task.completed, isTrashItem]);
     const isSortable = useMemo(() => !isCompleted && !isTrashItem && !isOverlay, [isCompleted, isTrashItem, isOverlay]);
 
-    // DND hook (logic unchanged)
+    // DND hook (logic unchanged, listeners/attributes will be moved)
     const { attributes, listeners, setNodeRef, transform, transition: dndTransition, isDragging } = useSortable({
         id: task.id, disabled: !isSortable, data: { task, type: 'task-item', groupCategory: groupCategory ?? task.groupCategory },
     });
@@ -110,8 +110,6 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         if (openItemId !== task.id) {
             if (isMoreActionsOpen) setIsMoreActionsOpen(false);
             if (isDatePickerOpen) setIsDatePickerOpen(false);
-            // Also ensure delete dialog closes if another item's menu opens
-            // if (isDeleteDialogOpen) setIsDeleteDialogOpen(false); // Optional: decide if needed
         }
     }, [openItemId, task.id, isMoreActionsOpen, isDatePickerOpen]);
 
@@ -155,20 +153,28 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         };
     }, [isMoreActionsOpen, calculateActionsPosition, scrollContainerRef]);
 
-    // Task Click (logic unchanged)
+    // Task Click (logic unchanged, sensor constraint handles drag vs click)
     const handleTaskClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
+        // Ignore clicks on interactive elements or elements explicitly marked to ignore
         if (target.closest('button, input, a') ||
             actionsTriggerRef.current?.contains(target) ||
             datePickerReferenceElement?.contains(target) ||
-            target.closest('.ignore-click-away') || // Check for class on target or ancestors
+            target.closest('.ignore-click-away') ||
             actionsContentRef.current?.contains(target) ||
-            target.closest('.react-tooltip') || // Ignore clicks inside react-tooltip
-            target.closest('[role="dialog"]') // Ignore clicks inside any dialog (like ConfirmDeleteModal)
+            target.closest('.react-tooltip') ||
+            target.closest('[role="dialog"]')
         ) { return; }
+
+        // Also ignore if a drag operation might have just ended on this element
+        // (helps prevent selection immediately after dropping)
+        if (isDragging) {
+            return;
+        }
+
         setSelectedTaskId(id => (id === task.id ? null : task.id));
         setOpenItemId(null); // Close any open menu
-    }, [setSelectedTaskId, task.id, datePickerReferenceElement, setOpenItemId]);
+    }, [setSelectedTaskId, task.id, datePickerReferenceElement, setOpenItemId, isDragging]);
 
 
     // Direct Update Function (logic unchanged)
@@ -183,12 +189,12 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         setOpenItemId(null);
     }, [updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
 
-    // Date Picker Handlers (logic unchanged - context handled)
+    // Date Picker Handlers (logic unchanged)
     const openDatePicker = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
         setDatePickerReferenceElement(event.currentTarget);
         setIsDatePickerOpen(true);
-        setIsMoreActionsOpen(false); // Close actions menu when opening date picker
+        setIsMoreActionsOpen(false);
         setOpenItemId(task.id);
     }, [setOpenItemId, task.id]);
 
@@ -207,12 +213,12 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     }, [updateTask, closeDatePicker]);
 
 
-    // More Actions Handlers (logic unchanged - context handled)
+    // More Actions Handlers (logic unchanged)
     const toggleActionsDropdown = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
         e.stopPropagation();
         const opening = !isMoreActionsOpen;
         setIsMoreActionsOpen(opening);
-        setIsDatePickerOpen(false); // Close date picker if opening actions
+        setIsDatePickerOpen(false);
         setOpenItemId(opening ? task.id : null);
     }, [isMoreActionsOpen, setOpenItemId, task.id]);
 
@@ -227,7 +233,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         event.stopPropagation();
         setDatePickerReferenceElement(event.currentTarget as HTMLButtonElement);
         setIsDatePickerOpen(true);
-        setOpenItemId(task.id); // Keep the item context
+        setOpenItemId(task.id);
     }, [setOpenItemId, task.id]);
 
     const handlePriorityChange = useCallback((newPriority: number | null) => { updateTask({ priority: newPriority }); closeActionsDropdown(); }, [updateTask, closeActionsDropdown]);
@@ -239,27 +245,22 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         closeActionsDropdown();
     }, [task, setTasks, setSelectedTaskId, closeActionsDropdown]);
 
-    // --- Delete Confirmation Handlers ---
+    // Delete Confirmation Handlers (logic unchanged)
     const openDeleteConfirm = useCallback(() => {
         setIsDeleteDialogOpen(true);
-        closeActionsDropdown(); // Close the dropdown when opening the modal
+        closeActionsDropdown();
     }, [closeActionsDropdown]);
 
     const closeDeleteConfirm = useCallback(() => {
         setIsDeleteDialogOpen(false);
-        // Keep item context (openItemId) unchanged when just closing the modal
     }, []);
 
     const confirmDeleteTask = useCallback(() => {
         updateTask({ list: 'Trash', completed: false });
         if (isSelected) {
-            setSelectedTaskId(null); // Deselect if it was selected
+            setSelectedTaskId(null);
         }
-        // Modal is closed automatically by its onConfirm/onClose logic
-        // setOpenItemId(null); // Reset open item context after delete confirmation
     }, [updateTask, isSelected, setSelectedTaskId]);
-    // --- End Delete Confirmation Handlers ---
-
 
     // Click Away for Actions Dropdown (logic unchanged)
     useEffect(() => {
@@ -268,8 +269,8 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
             const target = event.target as Node;
             const isClickInsideTrigger = actionsTriggerRef.current?.contains(target);
             const isClickInsideContent = actionsContentRef.current?.contains(target);
-            const isClickInsideDatePicker = datePickerPopperElement?.contains(target); // Check against date picker ref
-            const shouldIgnore = (target instanceof Element) && (target.closest('.ignore-click-away') || target.closest('.react-tooltip')); // Add tooltip check
+            const isClickInsideDatePicker = datePickerPopperElement?.contains(target);
+            const shouldIgnore = (target instanceof Element) && (target.closest('.ignore-click-away') || target.closest('.react-tooltip'));
 
             if (!isClickInsideTrigger && !isClickInsideContent && !isClickInsideDatePicker && !shouldIgnore) {
                 closeActionsDropdown();
@@ -284,20 +285,31 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('touchstart', handleClickOutside);
         };
-    }, [isMoreActionsOpen, closeActionsDropdown, datePickerPopperElement]); // Add datePickerPopperElement dependency
+    }, [isMoreActionsOpen, closeActionsDropdown, datePickerPopperElement]);
 
 
-    // Memoized values (logic unchanged)
+    // Memoized values (logic unchanged, except removed dragHandleClasses)
     const dueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
     const isValidDueDate = useMemo(() => dueDate && isValid(dueDate), [dueDate]);
     const overdue = useMemo(() => isValidDueDate && !isCompleted && !isTrashItem && isOverdue(dueDate!), [isValidDueDate, isCompleted, isTrashItem, dueDate]);
     const searchWords = useMemo(() => searchTerm ? searchTerm.trim().toLowerCase().split(' ').filter(Boolean) : [], [searchTerm]);
     const highlighterProps = useMemo(() => ({ highlightClassName: "bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs", searchWords: searchWords, autoEscape: true, }), [searchWords]);
     const showContentHighlight = useMemo(() => { if (searchWords.length === 0 || !task.content?.trim()) return false; const lc = task.content.toLowerCase(); const lt = task.title.toLowerCase(); return searchWords.some(w => lc.includes(w)) && !searchWords.every(w => lt.includes(w)); }, [searchWords, task.content, task.title]);
-    const baseClasses = useMemo(() => twMerge( 'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]', isOverlay ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong' : isSelected && !isDragging ? 'bg-primary/20 backdrop-blur-sm' : isTrashItem ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10' : isCompleted ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10' : 'bg-transparent hover:bg-black/[.05] hover:backdrop-blur-sm', isDragging || isOverlay ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-pointer'), ), [isOverlay, isSelected, isDragging, isTrashItem, isCompleted, isSortable]);
+
+    // --- MODIFICATION START: Adjust baseClasses for draggable cursor ---
+    const baseClasses = useMemo(() => twMerge(
+        'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]',
+        isOverlay ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong' : isSelected && !isDragging ? 'bg-primary/20 backdrop-blur-sm' : isTrashItem ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10' : isCompleted ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10' : 'bg-transparent hover:bg-black/[.05] hover:backdrop-blur-sm',
+        // Apply grab/grabbing cursor directly based on isSortable and isDragging
+        isDragging || isOverlay ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-pointer'),
+    ), [isOverlay, isSelected, isDragging, isTrashItem, isCompleted, isSortable]);
+    // --- MODIFICATION END ---
+
     const checkboxClasses = useMemo(() => twMerge( "h-4 w-4 rounded border-2 transition-colors duration-30 ease-apple cursor-pointer appearance-none", "focus:ring-primary/50 focus:ring-1 focus:ring-offset-1 focus:ring-offset-current/50 focus:outline-none", 'relative after:content-[""] after:absolute after:left-1/2 after:top-1/2 after:-translate-x-1/2 after:-translate-y-[60%]', 'after:h-2 after:w-1 after:rotate-45 after:border-b-2 after:border-r-2 after:border-solid after:border-transparent after:transition-opacity after:duration-100', task.completed ? 'bg-gray-300 border-gray-300 hover:bg-gray-400 hover:border-gray-400 after:border-white after:opacity-100' : 'bg-white/30 border-gray-400/80 hover:border-primary/60 backdrop-blur-sm after:opacity-0', isTrashItem && 'opacity-50 cursor-not-allowed !border-gray-300 hover:!border-gray-300 !bg-gray-200/50 after:!border-gray-400' ), [task.completed, isTrashItem]);
     const titleClasses = useMemo(() => twMerge( "text-sm text-gray-800 leading-snug block", (isCompleted || isTrashItem) && "line-through text-muted-foreground" ), [isCompleted, isTrashItem]);
-    const dragHandleClasses = useMemo(() => twMerge( "text-muted cursor-grab p-1 -ml-1 opacity-0 group-hover:opacity-50 group-focus-within:opacity-50 focus-visible:opacity-80", "transition-opacity duration-30 ease-apple outline-none rounded focus-visible:ring-1 focus-visible:ring-primary/50", isDragging && "opacity-50 cursor-grabbing" ), [isDragging]);
+    // --- MODIFICATION START: Remove dragHandleClasses ---
+    // const dragHandleClasses = useMemo(() => twMerge( ... ), [isDragging]); // <- REMOVED
+    // --- MODIFICATION END ---
     const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list'), [task.list]);
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
     const actionsMenuClasses = useMemo(() => twMerge( 'ignore-click-away min-w-[180px] overflow-hidden py-1 w-48', 'bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10' ), []);
@@ -306,24 +318,36 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     return (
         <> {/* Use fragment to wrap item and modal */}
             <div
-                ref={setNodeRef} style={style} className={baseClasses} onClick={handleTaskClick}
-                role="button" tabIndex={0}
+                ref={setNodeRef} // Provides the node ref for dnd-kit
+                style={style}
+                className={baseClasses}
+                // --- MODIFICATION START: Apply listeners/attributes directly to the main div if sortable ---
+                {...(isSortable ? attributes : {})} // Apply Draggable attributes if sortable
+                {...(isSortable ? listeners : {})}  // Apply Draggable listeners if sortable
+                // --- MODIFICATION END ---
+                onClick={handleTaskClick} // Keep onClick for selection
+                role="button" // Keep role for semantics/accessibility related to click action
+                tabIndex={0} // Keep focusable
                 onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTaskClick(e as unknown as React.MouseEvent<HTMLDivElement>); } }}
-                aria-selected={isSelected} aria-label={`Task: ${task.title || 'Untitled'}${task.completed ? ' (Completed)' : ''}`}
+                aria-selected={isSelected}
+                aria-label={`Task: ${task.title || 'Untitled'}${task.completed ? ' (Completed)' : ''}`}
             >
-                {/* Drag Handle */}
+                {/* --- MODIFICATION START: Remove Drag Handle Element --- */}
+                {/*
                 <div className="flex-shrink-0 h-full flex items-center mr-2 self-stretch">
                     {isSortable ? ( <button {...attributes} {...listeners} onClick={(e) => e.stopPropagation()} className={dragHandleClasses} aria-label="Drag task to reorder" tabIndex={-1}> <Icon name="grip-vertical" size={15} strokeWidth={2}/> </button>
                     ) : ( <div className="w-[27px]" aria-hidden="true"></div> )}
                 </div>
-
-                {/* Checkbox */}
-                <div className="flex-shrink-0 mr-2.5 pt-[3px]">
+                */}
+                {/* Add padding-left to checkbox container to compensate for removed handle width */}
+                <div className="flex-shrink-0 mr-2.5 pt-[3px] pl-[2px]">
                     <input type="checkbox" id={`task-checkbox-${task.id}`} checked={task.completed} onChange={handleCheckboxChange} onClick={(e) => e.stopPropagation()} className={checkboxClasses} aria-labelledby={`task-title-${task.id}`} disabled={isTrashItem} tabIndex={0}/>
                     <label htmlFor={`task-checkbox-${task.id}`} className="sr-only"> Complete task {task.title || 'Untitled'} </label>
                 </div>
+                {/* --- MODIFICATION END --- */}
 
-                {/* Task Info */}
+
+                {/* Task Info (content unchanged) */}
                 <div className="flex-1 min-w-0 pt-[1px] pb-[1px]">
                     <Highlighter {...highlighterProps} textToHighlight={task.title || 'Untitled Task'} id={`task-title-${task.id}`} className={titleClasses} />
                     <div className="flex items-center flex-wrap text-[11px] text-muted-foreground space-x-2 mt-1 leading-tight gap-y-0.5 min-h-[17px]">
@@ -355,7 +379,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                     </div>
                 </div>
 
-                {/* More Actions Button & Dropdown (Portal + Manual Fixed Positioning) */}
+                {/* More Actions Button & Dropdown (content unchanged) */}
                 {!isOverlay && !isCompleted && !isTrashItem && (
                     <div className="task-item-actions absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-30 ease-apple" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} >
                         <Button
@@ -392,9 +416,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                             </div>
                                             <hr className="my-1 border-black/10" />
                                             <MenuItem icon="copy-plus" onClick={handleDuplicateTask}> Duplicate Task </MenuItem>
-                                            {/* <<<--- MODIFIED: Call openDeleteConfirm instead of handleDeleteTask ---<<< */}
                                             <MenuItem icon="trash" className="!text-red-600 hover:!bg-red-500/15" onClick={openDeleteConfirm}> Move to Trash </MenuItem>
-                                            {/* <<<--- END MODIFICATION ---<<< */}
                                         </div>
                                     </motion.div>
                                 )}
@@ -404,7 +426,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                     </div>
                 )}
 
-                {/* Portal for Date Picker Popover (triggered from WITHIN this item's actions) */}
+                {/* Portal for Date Picker Popover (content unchanged) */}
                 {isDatePickerOpen && datePickerReferenceElement && ReactDOM.createPortal(
                     (
                         <div ref={setDatePickerPopperElement} style={{ ...datePickerStyles.popper, zIndex: 60 }}
@@ -414,7 +436,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                 initialDate={dueDate ?? undefined}
                                 onSelect={handleDateSelect}
                                 close={closeDatePicker}
-                                triggerElement={datePickerReferenceElement} // Pass the trigger element ref
+                                triggerElement={datePickerReferenceElement}
                             />
                         </div>
                     ), document.body
@@ -422,14 +444,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
 
             </div> {/* End of main task item div */}
 
-            {/* <<<--- ADDED: Render the Confirmation Modal conditionally ---<<< */}
+            {/* Delete Confirmation Modal (content unchanged) */}
             <ConfirmDeleteModal
                 isOpen={isDeleteDialogOpen}
                 onClose={closeDeleteConfirm}
                 onConfirm={confirmDeleteTask}
                 taskTitle={task.title || 'Untitled Task'}
             />
-            {/* <<<--- END ADDITION ---<<< */}
         </>
     );
 });
