@@ -39,7 +39,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     task,
                                                     groupCategory,
                                                     isOverlay = false,
-                                                    style: overlayStyle,
+                                                    style: overlayStyle, // Style primarily used for the DragOverlay version
                                                     scrollContainerRef
                                                 }) => {
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
@@ -52,243 +52,96 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
 
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete confirmation modal
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     const [datePickerReferenceElement, setDatePickerReferenceElement] = useState<HTMLButtonElement | null>(null);
     const [datePickerPopperElement, setDatePickerPopperElement] = useState<HTMLDivElement | null>(null);
 
-    // Popper for TaskItem Date Picker (logic unchanged)
     const { styles: datePickerStyles, attributes: datePickerAttributes, update: updateDatePickerPopper } = usePopper(
-        datePickerReferenceElement,
-        datePickerPopperElement,
-        {
-            strategy: 'fixed',
-            placement: 'bottom-start',
-            modifiers: [
-                { name: 'offset', options: { offset: [0, 8] } },
-                { name: 'preventOverflow', options: { padding: 8, boundary: scrollContainerRef?.current ?? undefined } },
-                { name: 'flip', options: { padding: 8, boundary: scrollContainerRef?.current ?? undefined, fallbackPlacements: ['top-start', 'bottom-end', 'top-end'] } }
-            ],
-        }
+        datePickerReferenceElement, datePickerPopperElement,
+        { strategy: 'fixed', placement: 'bottom-start', modifiers: [ { name: 'offset', options: { offset: [0, 8] } }, { name: 'preventOverflow', options: { padding: 8, boundary: scrollContainerRef?.current ?? undefined } }, { name: 'flip', options: { padding: 8, boundary: scrollContainerRef?.current ?? undefined, fallbackPlacements: ['top-start', 'bottom-end', 'top-end'] } } ], }
     );
-    // Effect to update TaskItem's Date Picker Popper (logic unchanged)
-    useEffect(() => {
-        if (isDatePickerOpen && scrollContainerRef?.current && updateDatePickerPopper) {
-            const rafId = requestAnimationFrame(() => updateDatePickerPopper());
-            return () => cancelAnimationFrame(rafId);
-        }
-    }, [isDatePickerOpen, updateDatePickerPopper, scrollContainerRef]);
 
-    // Refs for actions menu positioning and click away (logic unchanged)
+    useEffect(() => { if (isDatePickerOpen && scrollContainerRef?.current && updateDatePickerPopper) { const rafId = requestAnimationFrame(() => updateDatePickerPopper()); return () => cancelAnimationFrame(rafId); } }, [isDatePickerOpen, updateDatePickerPopper, scrollContainerRef]);
+
     const actionsTriggerRef = useRef<HTMLButtonElement>(null);
     const actionsContentRef = useRef<HTMLDivElement>(null);
-    const [actionsStyle, setActionsStyle] = useState<React.CSSProperties>({
-        position: 'fixed', opacity: 0, pointerEvents: 'none', zIndex: 55,
-    });
+    const [actionsStyle, setActionsStyle] = useState<React.CSSProperties>({ position: 'fixed', opacity: 0, pointerEvents: 'none', zIndex: 55, });
 
-    // Memoized derived states (logic unchanged)
     const isTrashItem = useMemo(() => task.list === 'Trash', [task.list]);
     const isCompleted = useMemo(() => task.completed && !isTrashItem, [task.completed, isTrashItem]);
     const isSortable = useMemo(() => !isCompleted && !isTrashItem && !isOverlay, [isCompleted, isTrashItem, isOverlay]);
 
-    // DND hook (logic unchanged, listeners/attributes will be moved)
     const { attributes, listeners, setNodeRef, transform, transition: dndTransition, isDragging } = useSortable({
         id: task.id, disabled: !isSortable, data: { task, type: 'task-item', groupCategory: groupCategory ?? task.groupCategory },
     });
 
-    // Memoized style (logic unchanged)
-    const style = useMemo(() => ({
-        ...overlayStyle, transform: CSS.Transform.toString(transform),
-        transition: isDragging ? (dndTransition || 'transform 50ms ease-apple') : (overlayStyle ? undefined : 'background-color 0.2s ease-apple, border-color 0.2s ease-apple'),
-        ...(isDragging && !isOverlay && { opacity: 0.3, cursor: 'grabbing', backgroundColor: 'hsla(210, 40%, 98%, 0.5)', backdropFilter: 'blur(2px)', boxShadow: 'none', border: '1px dashed hsla(0, 0%, 0%, 0.1)'}),
-        ...(isOverlay && { cursor: 'grabbing', boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)', zIndex: 1000 }),
-        zIndex: isDragging || isOverlay ? 100 : (isSelected ? 2 : 1),
-    }), [overlayStyle, transform, dndTransition, isDragging, isOverlay, isSelected]);
+    // --- STYLE CALCULATION (MODIFIED) ---
+    const style = useMemo(() => {
+        const baseTransform = CSS.Transform.toString(transform);
+        // Use dnd-kit's transition for the drag overlay and the placeholder item's movement.
+        // Framer Motion's layout prop will handle the animation of sibling items.
+        const calculatedTransition = dndTransition;
 
-    // Effect to close this item's menus if another item opens (logic unchanged)
-    useEffect(() => {
-        if (openItemId !== task.id) {
-            if (isMoreActionsOpen) setIsMoreActionsOpen(false);
-            if (isDatePickerOpen) setIsDatePickerOpen(false);
+        // Style for the original item being dragged (acts as placeholder)
+        if (isDragging && !isOverlay) {
+            return {
+                transform: baseTransform,
+                transition: calculatedTransition,
+                opacity: 0.4, // Semi-transparent to appear as a placeholder/ghost
+                cursor: 'grabbing',
+                // Add subtle placeholder visual styling
+                backgroundColor: 'hsla(210, 40%, 98%, 0.3)', // Lighter background
+                boxShadow: 'none', // Remove normal shadow
+                border: '1px dashed hsla(0, 0%, 0%, 0.15)', // Dashed border
+                zIndex: 1, // Keep it below the overlay but potentially above normal items if needed
+            };
         }
-    }, [openItemId, task.id, isMoreActionsOpen, isDatePickerOpen]);
 
-    // Actions Menu Positioning Logic (logic unchanged)
-    const calculateActionsPosition = useCallback(() => {
-        if (!actionsTriggerRef.current || !actionsContentRef.current) return;
-        const triggerRect = actionsTriggerRef.current.getBoundingClientRect();
-        const contentRect = actionsContentRef.current.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const margin = 8;
-        let top = triggerRect.bottom + margin / 2;
-        let left = triggerRect.right - contentRect.width;
-        if (top + contentRect.height + margin > viewportHeight) top = triggerRect.top - contentRect.height - margin / 2;
-        if (left < margin) left = margin;
-        if (left + contentRect.width + margin > viewportWidth) left = viewportWidth - contentRect.width - margin;
-        top = Math.max(margin, top); left = Math.max(margin, left);
-        setActionsStyle(prev => ({ ...prev, top: `${top}px`, left: `${left}px`, opacity: 1, pointerEvents: 'auto' }));
-    }, []);
-
-    useEffect(() => {
-        if (isMoreActionsOpen) {
-            requestAnimationFrame(() => calculateActionsPosition());
-        } else {
-            setActionsStyle(prev => ({ ...prev, opacity: 0, pointerEvents: 'none' }));
+        // Style for the DragOverlay version of the item
+        if (isOverlay) {
+            return {
+                ...overlayStyle, // Apply incoming overlay styles (from TaskList DragOverlay)
+                transform: baseTransform, // Apply transform for position
+                transition: calculatedTransition, // Apply dnd's transition for smooth overlay movement/drop
+                cursor: 'grabbing',
+                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)', // Keep the overlay shadow
+                zIndex: 1000, // Ensure overlay is on top
+            };
         }
-    }, [isMoreActionsOpen, calculateActionsPosition]);
 
-    useEffect(() => {
-        if (!isMoreActionsOpen || !scrollContainerRef) return;
-        const scrollElement = scrollContainerRef.current;
-        const handleUpdate = () => calculateActionsPosition();
-        let throttleTimeout: NodeJS.Timeout | null = null;
-        const throttledHandler = () => { if (!throttleTimeout) { throttleTimeout = setTimeout(() => { handleUpdate(); throttleTimeout = null; }, 50); } };
-        if (scrollElement) scrollElement.addEventListener('scroll', throttledHandler, { passive: true });
-        window.addEventListener('resize', throttledHandler);
-        return () => {
-            if (scrollElement) scrollElement.removeEventListener('scroll', throttledHandler);
-            window.removeEventListener('resize', throttledHandler);
-            if (throttleTimeout) clearTimeout(throttleTimeout);
+        // Default style for non-dragging items
+        return {
+            ...overlayStyle, // Apply base overlay styles if any (usually none here)
+            transform: baseTransform, // Still apply transform from dnd-kit for positioning
+            // For non-dragging items, use a CSS transition for background/border changes on hover/select.
+            // Framer Motion's `layout` prop on the wrapper handles position changes.
+            transition: calculatedTransition || 'background-color 0.2s ease-apple, border-color 0.2s ease-apple',
+            zIndex: isSelected ? 2 : 1, // Ensure selected is above others but below overlay
         };
-    }, [isMoreActionsOpen, calculateActionsPosition, scrollContainerRef]);
+    }, [overlayStyle, transform, dndTransition, isDragging, isOverlay, isSelected]);
+    // --- END STYLE CALCULATION ---
 
-    // Task Click (logic unchanged, sensor constraint handles drag vs click)
-    const handleTaskClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        const target = e.target as HTMLElement;
-        // Ignore clicks on interactive elements or elements explicitly marked to ignore
-        if (target.closest('button, input, a') ||
-            actionsTriggerRef.current?.contains(target) ||
-            datePickerReferenceElement?.contains(target) ||
-            target.closest('.ignore-click-away') ||
-            actionsContentRef.current?.contains(target) ||
-            target.closest('.react-tooltip') ||
-            target.closest('[role="dialog"]')
-        ) { return; }
-
-        // Also ignore if a drag operation might have just ended on this element
-        // (helps prevent selection immediately after dropping)
-        if (isDragging) {
-            return;
-        }
-
-        setSelectedTaskId(id => (id === task.id ? null : task.id));
-        setOpenItemId(null); // Close any open menu
-    }, [setSelectedTaskId, task.id, datePickerReferenceElement, setOpenItemId, isDragging]);
-
-
-    // Direct Update Function (logic unchanged)
-    const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt'>>) => {
-        setTasks(prevTasks => prevTasks.map(t => { if (t.id === task.id) { return { ...t, ...updates, updatedAt: Date.now() }; } return t; }));
-    }, [setTasks, task.id]);
-
-    // Checkbox Handler (logic unchanged)
-    const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        e.stopPropagation(); const isChecked = e.target.checked; updateTask({ completed: isChecked });
-        if (isChecked && isSelected) { setSelectedTaskId(null); }
-        setOpenItemId(null);
-    }, [updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
-
-    // Date Picker Handlers (logic unchanged)
-    const openDatePicker = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        setDatePickerReferenceElement(event.currentTarget);
-        setIsDatePickerOpen(true);
-        setIsMoreActionsOpen(false);
-        setOpenItemId(task.id);
-    }, [setOpenItemId, task.id]);
-
-    const closeDatePicker = useCallback(() => {
-        setIsDatePickerOpen(false);
-        setDatePickerReferenceElement(null);
-        if (openItemId === task.id) {
-            setOpenItemId(null);
-        }
-    }, [setOpenItemId, openItemId, task.id]);
-
-    const handleDateSelect = useCallback((date: Date | undefined) => {
-        const newDueDate = date && isValid(date) ? startOfDay(date).getTime() : null;
-        updateTask({ dueDate: newDueDate });
-        closeDatePicker();
-    }, [updateTask, closeDatePicker]);
-
-
-    // More Actions Handlers (logic unchanged)
-    const toggleActionsDropdown = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation();
-        const opening = !isMoreActionsOpen;
-        setIsMoreActionsOpen(opening);
-        setIsDatePickerOpen(false);
-        setOpenItemId(opening ? task.id : null);
-    }, [isMoreActionsOpen, setOpenItemId, task.id]);
-
-    const closeActionsDropdown = useCallback(() => {
-        setIsMoreActionsOpen(false);
-        if (openItemId === task.id) {
-            setOpenItemId(null);
-        }
-    }, [setOpenItemId, openItemId, task.id]);
-
-    const handleSetDueDateClickFromDropdown = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        setDatePickerReferenceElement(event.currentTarget as HTMLButtonElement);
-        setIsDatePickerOpen(true);
-        setOpenItemId(task.id);
-    }, [setOpenItemId, task.id]);
-
+    useEffect(() => { if (openItemId !== task.id) { if (isMoreActionsOpen) setIsMoreActionsOpen(false); if (isDatePickerOpen) setIsDatePickerOpen(false); } }, [openItemId, task.id, isMoreActionsOpen, isDatePickerOpen]);
+    const calculateActionsPosition = useCallback(() => { if (!actionsTriggerRef.current || !actionsContentRef.current) return; const triggerRect = actionsTriggerRef.current.getBoundingClientRect(); const contentRect = actionsContentRef.current.getBoundingClientRect(); const viewportWidth = window.innerWidth; const viewportHeight = window.innerHeight; const margin = 8; let top = triggerRect.bottom + margin / 2; let left = triggerRect.right - contentRect.width; if (top + contentRect.height + margin > viewportHeight) top = triggerRect.top - contentRect.height - margin / 2; if (left < margin) left = margin; if (left + contentRect.width + margin > viewportWidth) left = viewportWidth - contentRect.width - margin; top = Math.max(margin, top); left = Math.max(margin, left); setActionsStyle(prev => ({ ...prev, top: `${top}px`, left: `${left}px`, opacity: 1, pointerEvents: 'auto' })); }, []);
+    useEffect(() => { if (isMoreActionsOpen) { requestAnimationFrame(() => calculateActionsPosition()); } else { setActionsStyle(prev => ({ ...prev, opacity: 0, pointerEvents: 'none' })); } }, [isMoreActionsOpen, calculateActionsPosition]);
+    useEffect(() => { if (!isMoreActionsOpen || !scrollContainerRef) return; const scrollElement = scrollContainerRef.current; const handleUpdate = () => calculateActionsPosition(); let throttleTimeout: NodeJS.Timeout | null = null; const throttledHandler = () => { if (!throttleTimeout) { throttleTimeout = setTimeout(() => { handleUpdate(); throttleTimeout = null; }, 50); } }; if (scrollElement) scrollElement.addEventListener('scroll', throttledHandler, { passive: true }); window.addEventListener('resize', throttledHandler); return () => { if (scrollElement) scrollElement.removeEventListener('scroll', throttledHandler); window.removeEventListener('resize', throttledHandler); if (throttleTimeout) clearTimeout(throttleTimeout); }; }, [isMoreActionsOpen, calculateActionsPosition, scrollContainerRef]);
+    const handleTaskClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => { const target = e.target as HTMLElement; if (target.closest('button, input, a') || actionsTriggerRef.current?.contains(target) || datePickerReferenceElement?.contains(target) || target.closest('.ignore-click-away') || actionsContentRef.current?.contains(target) || target.closest('.react-tooltip') || target.closest('[role="dialog"]')) { return; } if (isDragging) { return; } setSelectedTaskId(id => (id === task.id ? null : task.id)); setOpenItemId(null); }, [setSelectedTaskId, task.id, datePickerReferenceElement, setOpenItemId, isDragging]);
+    const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt'>>) => { setTasks(prevTasks => prevTasks.map(t => { if (t.id === task.id) { return { ...t, ...updates, updatedAt: Date.now() }; } return t; })); }, [setTasks, task.id]);
+    const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => { e.stopPropagation(); const isChecked = e.target.checked; updateTask({ completed: isChecked }); if (isChecked && isSelected) { setSelectedTaskId(null); } setOpenItemId(null); }, [updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
+    const openDatePicker = useCallback((event: React.MouseEvent<HTMLButtonElement>) => { event.stopPropagation(); setDatePickerReferenceElement(event.currentTarget); setIsDatePickerOpen(true); setIsMoreActionsOpen(false); setOpenItemId(task.id); }, [setOpenItemId, task.id]);
+    const closeDatePicker = useCallback(() => { setIsDatePickerOpen(false); setDatePickerReferenceElement(null); if (openItemId === task.id) { setOpenItemId(null); } }, [setOpenItemId, openItemId, task.id]);
+    const handleDateSelect = useCallback((date: Date | undefined) => { const newDueDate = date && isValid(date) ? startOfDay(date).getTime() : null; updateTask({ dueDate: newDueDate }); closeDatePicker(); }, [updateTask, closeDatePicker]);
+    const toggleActionsDropdown = useCallback((e: React.MouseEvent<HTMLButtonElement>) => { e.stopPropagation(); const opening = !isMoreActionsOpen; setIsMoreActionsOpen(opening); setIsDatePickerOpen(false); setOpenItemId(opening ? task.id : null); }, [isMoreActionsOpen, setOpenItemId, task.id]);
+    const closeActionsDropdown = useCallback(() => { setIsMoreActionsOpen(false); if (openItemId === task.id) { setOpenItemId(null); } }, [setOpenItemId, openItemId, task.id]);
+    const handleSetDueDateClickFromDropdown = useCallback((event: React.MouseEvent<HTMLButtonElement>) => { event.stopPropagation(); setDatePickerReferenceElement(event.currentTarget as HTMLButtonElement); setIsDatePickerOpen(true); setOpenItemId(task.id); }, [setOpenItemId, task.id]);
     const handlePriorityChange = useCallback((newPriority: number | null) => { updateTask({ priority: newPriority }); closeActionsDropdown(); }, [updateTask, closeActionsDropdown]);
     const handleListChange = useCallback((newList: string) => { updateTask({ list: newList }); closeActionsDropdown(); }, [updateTask, closeActionsDropdown]);
-    const handleDuplicateTask = useCallback(() => {
-        const now = Date.now(); const newTask: Omit<Task, 'groupCategory'> = { ...JSON.parse(JSON.stringify(task)), id: `task-${now}-${Math.random().toString(16).slice(2)}`, title: `${task.title} (Copy)`, completed: false, completedAt: null, createdAt: now, updatedAt: now, order: task.order + 0.01, };
-        setTasks(prev => { const index = prev.findIndex(t => t.id === task.id); const newTasks = [...prev]; if (index !== -1) { newTasks.splice(index + 1, 0, newTask as Task); } else { newTasks.push(newTask as Task); } return newTasks; });
-        setSelectedTaskId(newTask.id);
-        closeActionsDropdown();
-    }, [task, setTasks, setSelectedTaskId, closeActionsDropdown]);
-
-    // Delete Confirmation Handlers (logic unchanged)
-    const openDeleteConfirm = useCallback(() => {
-        setIsDeleteDialogOpen(true);
-        closeActionsDropdown();
-    }, [closeActionsDropdown]);
-
-    const closeDeleteConfirm = useCallback(() => {
-        setIsDeleteDialogOpen(false);
-    }, []);
-
-    const confirmDeleteTask = useCallback(() => {
-        updateTask({ list: 'Trash', completed: false });
-        if (isSelected) {
-            setSelectedTaskId(null);
-        }
-    }, [updateTask, isSelected, setSelectedTaskId]);
-
-    // Click Away for Actions Dropdown (logic unchanged)
-    useEffect(() => {
-        if (!isMoreActionsOpen) return;
-        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-            const target = event.target as Node;
-            const isClickInsideTrigger = actionsTriggerRef.current?.contains(target);
-            const isClickInsideContent = actionsContentRef.current?.contains(target);
-            const isClickInsideDatePicker = datePickerPopperElement?.contains(target);
-            const shouldIgnore = (target instanceof Element) && (target.closest('.ignore-click-away') || target.closest('.react-tooltip'));
-
-            if (!isClickInsideTrigger && !isClickInsideContent && !isClickInsideDatePicker && !shouldIgnore) {
-                closeActionsDropdown();
-            }
-        };
-        const timerId = setTimeout(() => {
-            document.addEventListener('mousedown', handleClickOutside);
-            document.addEventListener('touchstart', handleClickOutside);
-        }, 0);
-        return () => {
-            clearTimeout(timerId);
-            document.removeEventListener('mousedown', handleClickOutside);
-            document.removeEventListener('touchstart', handleClickOutside);
-        };
-    }, [isMoreActionsOpen, closeActionsDropdown, datePickerPopperElement]);
-
-
-    // Memoized values (logic unchanged, except removed dragHandleClasses)
+    const handleDuplicateTask = useCallback(() => { const now = Date.now(); const newTask: Omit<Task, 'groupCategory'> = { ...JSON.parse(JSON.stringify(task)), id: `task-${now}-${Math.random().toString(16).slice(2)}`, title: `${task.title} (Copy)`, completed: false, completedAt: null, createdAt: now, updatedAt: now, order: task.order + 0.01, }; setTasks(prev => { const index = prev.findIndex(t => t.id === task.id); const newTasks = [...prev]; if (index !== -1) { newTasks.splice(index + 1, 0, newTask as Task); } else { newTasks.push(newTask as Task); } return newTasks; }); setSelectedTaskId(newTask.id); closeActionsDropdown(); }, [task, setTasks, setSelectedTaskId, closeActionsDropdown]);
+    const openDeleteConfirm = useCallback(() => { setIsDeleteDialogOpen(true); closeActionsDropdown(); }, [closeActionsDropdown]);
+    const closeDeleteConfirm = useCallback(() => { setIsDeleteDialogOpen(false); }, []);
+    const confirmDeleteTask = useCallback(() => { updateTask({ list: 'Trash', completed: false }); if (isSelected) { setSelectedTaskId(null); } }, [updateTask, isSelected, setSelectedTaskId]);
+    useEffect(() => { if (!isMoreActionsOpen) return; const handleClickOutside = (event: MouseEvent | TouchEvent) => { const target = event.target as Node; const isClickInsideTrigger = actionsTriggerRef.current?.contains(target); const isClickInsideContent = actionsContentRef.current?.contains(target); const isClickInsideDatePicker = datePickerPopperElement?.contains(target); const shouldIgnore = (target instanceof Element) && (target.closest('.ignore-click-away') || target.closest('.react-tooltip')); if (!isClickInsideTrigger && !isClickInsideContent && !isClickInsideDatePicker && !shouldIgnore) { closeActionsDropdown(); } }; const timerId = setTimeout(() => { document.addEventListener('mousedown', handleClickOutside); document.addEventListener('touchstart', handleClickOutside); }, 0); return () => { clearTimeout(timerId); document.removeEventListener('mousedown', handleClickOutside); document.removeEventListener('touchstart', handleClickOutside); }; }, [isMoreActionsOpen, closeActionsDropdown, datePickerPopperElement]);
     const dueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
     const isValidDueDate = useMemo(() => dueDate && isValid(dueDate), [dueDate]);
     const overdue = useMemo(() => isValidDueDate && !isCompleted && !isTrashItem && isOverdue(dueDate!), [isValidDueDate, isCompleted, isTrashItem, dueDate]);
@@ -296,20 +149,27 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     const highlighterProps = useMemo(() => ({ highlightClassName: "bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs", searchWords: searchWords, autoEscape: true, }), [searchWords]);
     const showContentHighlight = useMemo(() => { if (searchWords.length === 0 || !task.content?.trim()) return false; const lc = task.content.toLowerCase(); const lt = task.title.toLowerCase(); return searchWords.some(w => lc.includes(w)) && !searchWords.every(w => lt.includes(w)); }, [searchWords, task.content, task.title]);
 
-    // --- MODIFICATION START: Adjust baseClasses for draggable cursor ---
+    // --- BASE CLASSES (MODIFIED) ---
     const baseClasses = useMemo(() => twMerge(
         'task-item flex items-start px-2.5 py-2 border-b border-black/10 group relative min-h-[52px]',
-        isOverlay ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong' : isSelected && !isDragging ? 'bg-primary/20 backdrop-blur-sm' : isTrashItem ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10' : isCompleted ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10' : 'bg-transparent hover:bg-black/[.05] hover:backdrop-blur-sm',
-        // Apply grab/grabbing cursor directly based on isSortable and isDragging
-        isDragging || isOverlay ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-pointer'),
+        // Apply specific styling ONLY if it's the overlay.
+        // The original item's appearance during drag is handled by the 'style' object (opacity, background, border).
+        isOverlay
+            ? 'bg-glass-100 backdrop-blur-lg border rounded-md shadow-strong' // Overlay style
+            : isSelected && !isDragging // Selected non-dragging style
+                ? 'bg-primary/20 backdrop-blur-sm'
+                : isTrashItem // Trashed style
+                    ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10'
+                    : isCompleted // Completed style
+                        ? 'bg-glass-alt/30 backdrop-blur-xs opacity-60 hover:bg-black/10'
+                        : 'bg-transparent hover:bg-black/[.05] hover:backdrop-blur-sm', // Default style
+        // Cursor depends on sortability and drag state
+        isDragging ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-pointer')
     ), [isOverlay, isSelected, isDragging, isTrashItem, isCompleted, isSortable]);
-    // --- MODIFICATION END ---
+    // --- END BASE CLASSES ---
 
     const checkboxClasses = useMemo(() => twMerge( "h-4 w-4 rounded border-2 transition-colors duration-30 ease-apple cursor-pointer appearance-none", "focus:ring-primary/50 focus:ring-1 focus:ring-offset-1 focus:ring-offset-current/50 focus:outline-none", 'relative after:content-[""] after:absolute after:left-1/2 after:top-1/2 after:-translate-x-1/2 after:-translate-y-[60%]', 'after:h-2 after:w-1 after:rotate-45 after:border-b-2 after:border-r-2 after:border-solid after:border-transparent after:transition-opacity after:duration-100', task.completed ? 'bg-gray-300 border-gray-300 hover:bg-gray-400 hover:border-gray-400 after:border-white after:opacity-100' : 'bg-white/30 border-gray-400/80 hover:border-primary/60 backdrop-blur-sm after:opacity-0', isTrashItem && 'opacity-50 cursor-not-allowed !border-gray-300 hover:!border-gray-300 !bg-gray-200/50 after:!border-gray-400' ), [task.completed, isTrashItem]);
     const titleClasses = useMemo(() => twMerge( "text-sm text-gray-800 leading-snug block", (isCompleted || isTrashItem) && "line-through text-muted-foreground" ), [isCompleted, isTrashItem]);
-    // --- MODIFICATION START: Remove dragHandleClasses ---
-    // const dragHandleClasses = useMemo(() => twMerge( ... ), [isDragging]); // <- REMOVED
-    // --- MODIFICATION END ---
     const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list'), [task.list]);
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
     const actionsMenuClasses = useMemo(() => twMerge( 'ignore-click-away min-w-[180px] overflow-hidden py-1 w-48', 'bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10' ), []);
@@ -318,34 +178,23 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     return (
         <> {/* Use fragment to wrap item and modal */}
             <div
-                ref={setNodeRef} // Provides the node ref for dnd-kit
-                style={style}
-                className={baseClasses}
-                // --- MODIFICATION START: Apply listeners/attributes directly to the main div if sortable ---
-                {...(isSortable ? attributes : {})} // Apply Draggable attributes if sortable
-                {...(isSortable ? listeners : {})}  // Apply Draggable listeners if sortable
-                // --- MODIFICATION END ---
-                onClick={handleTaskClick} // Keep onClick for selection
-                role="button" // Keep role for semantics/accessibility related to click action
-                tabIndex={0} // Keep focusable
+                ref={setNodeRef}
+                style={style} // Apply calculated style (includes placeholder styles for dragging item)
+                className={baseClasses} // Apply base classes (overlay has distinct style)
+                {...(isSortable ? attributes : {})}
+                {...(isSortable ? listeners : {})}
+                onClick={handleTaskClick} // Use standard click handler
+                role={isSortable ? "listitem" : "button"}
+                tabIndex={0}
                 onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTaskClick(e as unknown as React.MouseEvent<HTMLDivElement>); } }}
                 aria-selected={isSelected}
                 aria-label={`Task: ${task.title || 'Untitled'}${task.completed ? ' (Completed)' : ''}`}
             >
-                {/* --- MODIFICATION START: Remove Drag Handle Element --- */}
-                {/*
-                <div className="flex-shrink-0 h-full flex items-center mr-2 self-stretch">
-                    {isSortable ? ( <button {...attributes} {...listeners} onClick={(e) => e.stopPropagation()} className={dragHandleClasses} aria-label="Drag task to reorder" tabIndex={-1}> <Icon name="grip-vertical" size={15} strokeWidth={2}/> </button>
-                    ) : ( <div className="w-[27px]" aria-hidden="true"></div> )}
-                </div>
-                */}
-                {/* Add padding-left to checkbox container to compensate for removed handle width */}
+                {/* Checkbox - Padding left added to compensate for removed handle */}
                 <div className="flex-shrink-0 mr-2.5 pt-[3px] pl-[2px]">
                     <input type="checkbox" id={`task-checkbox-${task.id}`} checked={task.completed} onChange={handleCheckboxChange} onClick={(e) => e.stopPropagation()} className={checkboxClasses} aria-labelledby={`task-title-${task.id}`} disabled={isTrashItem} tabIndex={0}/>
                     <label htmlFor={`task-checkbox-${task.id}`} className="sr-only"> Complete task {task.title || 'Untitled'} </label>
                 </div>
-                {/* --- MODIFICATION END --- */}
-
 
                 {/* Task Info (content unchanged) */}
                 <div className="flex-1 min-w-0 pt-[1px] pb-[1px]">
@@ -432,7 +281,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                         <div ref={setDatePickerPopperElement} style={{ ...datePickerStyles.popper, zIndex: 60 }}
                              {...datePickerAttributes.popper} className="ignore-click-away date-picker-popover-wrapper">
                             <CustomDatePickerPopover
-                                usePortal={false}
+                                usePortal={false} // Keep as false for relative positioning
                                 initialDate={dueDate ?? undefined}
                                 onSelect={handleDateSelect}
                                 close={closeDatePicker}
