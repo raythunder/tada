@@ -1,5 +1,6 @@
 // src/components/common/ConfirmDeleteModal.tsx
 import React, { useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import Button from './Button';
 import Icon from './Icon';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +10,7 @@ interface ConfirmDeleteModalProps {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
-    taskTitle: string; // Task title to display in the message
+    taskTitle: string;
 }
 
 const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
@@ -19,45 +20,54 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
                                                                    taskTitle
                                                                }) => {
 
-    // Prevent modal close on inner click
     const handleDialogClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation(), []);
 
-    // Handle confirm and then close
     const handleConfirmClick = useCallback(() => {
         onConfirm();
-        onClose(); // Close after confirming
+        onClose();
     }, [onConfirm, onClose]);
 
-    return (
+    const modalRoot = typeof document !== 'undefined' ? document.body : null;
+    if (!modalRoot) {
+        return null;
+    }
+
+    return ReactDOM.createPortal(
         <AnimatePresence>
             {isOpen && (
                 <motion.div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-xl z-50 flex items-center justify-center p-4"
-                    onClick={onClose} // Click outside closes
+                    // Backdrop without blur
+                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+                    onClick={onClose}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2 }} // Match duration for backdrop and content
                     aria-modal="true"
                     role="dialog"
                     aria-labelledby="confirmDeleteModalTitle"
                 >
+                    {/* Modal Dialog Content */}
                     <motion.div
+                        // --- MODIFICATION: Restored blur, simplified animation ---
                         className={twMerge(
+                            // Restore glass background with blur for the content
                             "bg-glass-100 backdrop-blur-xl w-full max-w-sm rounded-xl shadow-strong overflow-hidden border border-black/10",
-                            "flex flex-col p-5" // Padding added
+                            "flex flex-col p-5"
                         )}
-                        onClick={handleDialogClick} // Prevent closing when clicking inside
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        onClick={handleDialogClick}
+                        // Simplified animation: Fade and slight slide
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }} // Optional subtle slide down on exit
+                        transition={{ duration: 0.2, ease: 'easeOut' }} // Match backdrop duration
                     >
                         {/* Icon and Title */}
                         <div className="flex flex-col items-center text-center mb-4">
                             <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-3">
                                 <Icon name="trash" size={24} className="text-red-600" />
                             </div>
+                            {/* Use original text colors assuming glass background */}
                             <h2 id="confirmDeleteModalTitle" className="text-lg font-semibold text-gray-800 mb-1">
                                 Move to Trash?
                             </h2>
@@ -68,6 +78,7 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
 
                         {/* Actions */}
                         <div className="flex justify-center space-x-3 mt-4">
+                            {/* Use original button variants */}
                             <Button variant="glass" size="md" onClick={onClose} className="flex-1">
                                 Cancel
                             </Button>
@@ -83,7 +94,8 @@ const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
                     </motion.div>
                 </motion.div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        modalRoot
     );
 };
 ConfirmDeleteModal.displayName = 'ConfirmDeleteModal';
