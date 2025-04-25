@@ -335,6 +335,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             completed: false,
             completedAt: null,
             list: defaultList,
+            completionPercentage: null,
             dueDate: defaultDueDate,
             order: newOrder,
             createdAt: now,

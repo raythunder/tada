@@ -1,17 +1,16 @@
 // src/components/common/IconMap.tsx
 import * as LucideIcons from "lucide-react";
 
-// Comprehensive map of icons used in the application
 export const iconMap = {
     'check-square': LucideIcons.CheckSquare,
-    'calendar': LucideIcons.CalendarDays, // Use CalendarDays for consistency
+    'calendar': LucideIcons.CalendarDays,
     'search': LucideIcons.Search,
     'user': LucideIcons.User,
     'settings': LucideIcons.Settings,
     'file-text': LucideIcons.FileText,
     'trash': LucideIcons.Trash2,
     'list': LucideIcons.List,
-    'grid': LucideIcons.LayoutGrid, // Use LayoutGrid if needed
+    'grid': LucideIcons.LayoutGrid,
     'clock': LucideIcons.Clock,
     'alert-circle': LucideIcons.AlertCircle,
     'plus': LucideIcons.Plus,
@@ -21,8 +20,8 @@ export const iconMap = {
     'chevron-left': LucideIcons.ChevronLeft,
     'chevron-right': LucideIcons.ChevronRight,
     'sun': LucideIcons.Sun,
-    'sunset': LucideIcons.Sunset, // Keep if used in date picker, else remove
-    'moon': LucideIcons.Moon,   // Keep if used in date picker, else remove
+    'sunset': LucideIcons.Sunset,
+    'moon': LucideIcons.Moon,
     'calendar-plus': LucideIcons.CalendarPlus,
     'edit': LucideIcons.Edit3,
     'check': LucideIcons.Check,
@@ -32,40 +31,46 @@ export const iconMap = {
     'star': LucideIcons.Star,
     'flag': LucideIcons.Flag,
     'tag': LucideIcons.Tag,
-    'bell': LucideIcons.Bell, // Used in DatePicker and Settings
-    'share': LucideIcons.Share2, // Used in Settings
-    'upload': LucideIcons.UploadCloud, // Used in Settings
-    'download': LucideIcons.Download, // Used in Settings
-    'logout': LucideIcons.LogOut, // Used in Settings
+    'bell': LucideIcons.Bell,
+    'share': LucideIcons.Share2,
+    'upload': LucideIcons.UploadCloud,
+    'download': LucideIcons.Download,
+    'logout': LucideIcons.LogOut,
     'lock': LucideIcons.Lock,
     'tool': LucideIcons.Wrench,
     'layers': LucideIcons.Layers,
     'package': LucideIcons.Package,
     'sliders': LucideIcons.SlidersHorizontal,
-    'info': LucideIcons.Info, // Used in Settings
-    'help': LucideIcons.HelpCircle, // Fallback icon
+    'info': LucideIcons.Info,
+    'help': LucideIcons.HelpCircle,
     'phone': LucideIcons.Phone,
     'mail': LucideIcons.Mail,
     'external-link': LucideIcons.ExternalLink,
-    'crown': LucideIcons.Crown, // Used in Settings
+    'crown': LucideIcons.Crown,
     'terminal': LucideIcons.Terminal,
-    'grip-vertical': LucideIcons.GripVertical, // Used for TaskItem drag handle
+    'grip-vertical': LucideIcons.GripVertical,
     'copy': LucideIcons.Copy,
-    'archive': LucideIcons.Archive, // Used for 'All Tasks' icon
+    'archive': LucideIcons.Archive,
     'arrow-up-down': LucideIcons.ArrowUpDown,
-    'calendar-days': LucideIcons.CalendarDays, // Used for Calendar icon in IconBar
-    'loader': LucideIcons.Loader2, // Used for loading states (spin animation)
+    'calendar-days': LucideIcons.CalendarDays,
+    'loader': LucideIcons.Loader2,
     'users': LucideIcons.Users,
-    'sparkles': LucideIcons.Sparkles, // Used for AI Summary icon
-    'folder-plus': LucideIcons.FolderPlus, // Used for 'Add List' button
-    'folder': LucideIcons.Folder, // Used for 'My Lists' section header
+    'sparkles': LucideIcons.Sparkles,
+    'folder-plus': LucideIcons.FolderPlus,
+    'folder': LucideIcons.Folder,
     'minus': LucideIcons.Minus,
-    'inbox': LucideIcons.Inbox, // Used for 'Inbox' list icon
-    'x-circle': LucideIcons.XCircle, // Used for clearing search input
+    'inbox': LucideIcons.Inbox,
+    'x-circle': LucideIcons.XCircle,
     'calendar-check': LucideIcons.CalendarCheck,
-    'refresh-cw': LucideIcons.RefreshCw, // Used in DatePicker 'Repeat' button
-    'copy-plus': LucideIcons.CopyPlus, // Used for duplicate task action
+    'refresh-cw': LucideIcons.RefreshCw,
+    'copy-plus': LucideIcons.CopyPlus,
+    // --- Progress Icons (Corrected) ---
+    'circle': LucideIcons.Circle,                // For 0% / Not Started
+    'circle-dot': LucideIcons.CircleDot,          // For 20%
+    'circle-dot-dashed': LucideIcons.CircleDotDashed, // For 50% (Replaced CircleHalf)
+    'circle-slash': LucideIcons.CircleSlash,       // For 80%
+    'circle-check': LucideIcons.CircleCheckBig,    // For 100%
+    'circle-gauge': LucideIcons.GaugeCircle,        // For MetaRow label in TaskDetail
 };
 
-// Export the type for Icon names based on the map keys
 export type IconName = keyof typeof iconMap;

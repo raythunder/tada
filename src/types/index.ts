@@ -10,8 +10,11 @@ export interface User {
 export interface Task {
     id: string;
     title: string;
+    // 'completed' is now derived from completionPercentage === 100 in the atom logic
     completed: boolean;
     completedAt: number | null; // Timestamp when completed (null if not completed)
+    // NEW: Granular completion status. null or 0 means not started. 100 means fully completed.
+    completionPercentage: number | null;
     dueDate?: number | null; // Store as timestamp (milliseconds since epoch) or null
     list: string; // List name (e.g., 'Inbox', 'Work', 'Trash')
     content?: string; // Optional Markdown content for notes
