@@ -361,11 +361,8 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         event?.stopPropagation();
         const currentPercentage = task.completionPercentage ?? 0;
         let nextPercentage: number | null = null;
-        if (currentPercentage === 0) nextPercentage = 20;
-        else if (currentPercentage === 20) nextPercentage = 50;
-        else if (currentPercentage === 50) nextPercentage = 80;
-        else if (currentPercentage === 80) nextPercentage = 100;
-        else if (currentPercentage === 100) nextPercentage = null;
+        if (currentPercentage === 100) nextPercentage = null;
+        else nextPercentage = 100;
         updateTask({completionPercentage: nextPercentage});
         if (nextPercentage === 100 && isSelected) setSelectedTaskId(null);
         setOpenItemId(null);

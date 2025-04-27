@@ -275,11 +275,8 @@ const TaskDetail: React.FC = () => {
         if (!selectedTask || selectedTask.list === 'Trash') return;
         const currentPercentage = selectedTask.completionPercentage ?? 0;
         let nextPercentage: number | null = null;
-        if (currentPercentage === 0) nextPercentage = 20;
-        else if (currentPercentage === 20) nextPercentage = 50;
-        else if (currentPercentage === 50) nextPercentage = 80;
-        else if (currentPercentage === 80) nextPercentage = 100;
-        else if (currentPercentage === 100) nextPercentage = null;
+        if (currentPercentage === 100) nextPercentage = null;
+        else nextPercentage = 100;
         updateTask({completionPercentage: nextPercentage});
     }, [selectedTask, updateTask]);
     const handleProgressChange = useCallback((newPercentage: number | null, closeDropdown?: () => void) => {
