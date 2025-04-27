@@ -3,6 +3,7 @@ import * as LucideIcons from "lucide-react";
 
 export const iconMap = {
     'check-square': LucideIcons.CheckSquare,
+    'square': LucideIcons.Square,
     'calendar': LucideIcons.CalendarDays,
     'search': LucideIcons.Search,
     'user': LucideIcons.User,
@@ -21,6 +22,7 @@ export const iconMap = {
     'chevron-right': LucideIcons.ChevronRight,
     'sun': LucideIcons.Sun,
     'sunset': LucideIcons.Sunset,
+    'history': LucideIcons.History,
     'moon': LucideIcons.Moon,
     'calendar-plus': LucideIcons.CalendarPlus,
     'edit': LucideIcons.Edit3,
