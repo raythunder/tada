@@ -1,52 +1,35 @@
 // src/components/tasks/TaskDetail.tsx
-import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { selectedTaskAtom, selectedTaskIdAtom, tasksAtom, userListNamesAtom } from '@/store/atoms';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {selectedTaskAtom, selectedTaskIdAtom, tasksAtom, userListNamesAtom} from '@/store/atoms';
 import Icon from '../common/Icon';
-import { Button, buttonVariants } from '@/components/ui/button';
-import CodeMirrorEditor, { CodeMirrorEditorRef } from '../common/CodeMirrorEditor';
-import { formatDateTime, formatRelativeDate, isOverdue, isValid, safeParseDate, startOfDay } from '@/lib/utils/dateUtils';
-import { Task } from '@/types';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import {
-    DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import {
-    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
-} from "@/components/ui/dialog";
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { IconName } from "@/components/common/IconMap";
+import Button from '../common/Button';
+import CodeMirrorEditor, {CodeMirrorEditorRef} from '../common/CodeMirrorEditor';
+import {formatDateTime, formatRelativeDate, isOverdue, isValid, safeParseDate, startOfDay} from '@/utils/dateUtils';
+import {Task} from '@/types';
+import {motion} from 'framer-motion';
+import {twMerge} from 'tailwind-merge';
+import CustomDatePickerPopover from '../common/CustomDatePickerPopover';
+import Dropdown from "@/components/common/Dropdown";
+import MetaRow from "@/components/tasks/MetaRow";
+import ConfirmDeleteModal from "@/components/common/ConfirmDeleteModal";
+import {ProgressIndicator} from './TaskItem'; // Use the enhanced indicator
+import MenuItem from "@/components/common/MenuItem";
+import {IconName} from "@/components/common/IconMap";
 
-// Meta Row Component (Unchanged)
-const MetaRow: React.FC<{ icon: IconName; label: string; children: React.ReactNode; disabled?: boolean }> =
-    memo(({ icon, label, children, disabled = false }) => (
-        <div className={cn("flex items-center group min-h-[36px] py-1", disabled && "opacity-60 pointer-events-none select-none")}>
-            <span className="text-muted-foreground flex items-center text-xs font-medium w-24 flex-shrink-0">
-                <Icon name={icon} size={14} className="mr-2 opacity-70" aria-hidden="true" />
-                {label}
-            </span>
-            <div className="flex-1 text-right min-w-0">
-                {children}
-            </div>
-        </div>
-    ));
-MetaRow.displayName = 'MetaRow';
+// --- Helper TagPill Component ---
+interface TagPillProps {
+    tag: string;
+    onRemove: () => void;
+    disabled?: boolean;
+}
 
-// Tag Pill Component (Unchanged)
-interface TagPillProps { tag: string; onRemove: () => void; disabled?: boolean; }
 const TagPill: React.FC<TagPillProps> = React.memo(({ tag, onRemove, disabled }) => (
-    <Badge
-        variant="secondary"
-        className={cn(
-            "mr-1 mb-1 group/pill whitespace-nowrap cursor-default h-6 text-xs font-normal",
-            disabled ? "opacity-70" : "hover:bg-accent"
+    <span
+        className={twMerge(
+            "inline-flex items-center bg-black/10 text-gray-700 rounded-sm pl-1.5 pr-1 py-0.5 text-xs mr-1 mb-1 group/pill whitespace-nowrap",
+            "transition-colors duration-100 ease-apple",
+            disabled ? "opacity-70 cursor-not-allowed" : "hover:bg-black/20"
         )}
         aria-label={`Tag: ${tag}${disabled ? ' (disabled)' : ''}`}
     >
@@ -54,32 +37,40 @@ const TagPill: React.FC<TagPillProps> = React.memo(({ tag, onRemove, disabled })
         {!disabled && (
             <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onRemove(); }}
-                className="ml-1 text-muted-foreground hover:text-destructive opacity-50 group-hover/pill:opacity-100 focus:outline-none rounded-full p-0.5 -mr-1 flex items-center justify-center ring-offset-background focus-visible:ring-1 focus-visible:ring-ring"
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent container click
+                    onRemove();
+                }}
+                className="ml-1 text-gray-500 hover:text-red-600 opacity-50 group-hover/pill:opacity-100 focus:outline-none rounded-full p-0.5 -mr-0.5 flex items-center justify-center"
                 aria-label={`Remove tag ${tag}`}
-                tabIndex={-1}
+                tabIndex={-1} // Don't include in normal tab order
             >
-                <Icon name="x" size={10} strokeWidth={3} />
+                <Icon name="x" size={10} strokeWidth={3}/>
             </button>
         )}
-    </Badge>
+    </span>
 ));
 TagPill.displayName = 'TagPill';
+
 
 // --- TaskDetail Component ---
 const TaskDetail: React.FC = () => {
     // Hooks and state setup
     const [selectedTask] = useAtom(selectedTaskAtom);
-    const [currentSelectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom); // Get current global selection ID
     const setTasks = useSetAtom(tasksAtom);
+    const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const userLists = useAtomValue(userListNamesAtom);
     const [localTitle, setLocalTitle] = useState('');
     const [localContent, setLocalContent] = useState('');
     const [localDueDate, setLocalDueDate] = useState<Date | undefined>(undefined);
+    // localTags remains the string source of truth for saving
     const [localTags, setLocalTags] = useState('');
+    // New state for the text being typed in the tag input
     const [tagInputValue, setTagInputValue] = useState('');
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
     const titleInputRef = useRef<HTMLInputElement>(null);
+    // Renamed ref specifically for the tag text input element
     const tagInputElementRef = useRef<HTMLInputElement>(null);
     const editorRef = useRef<CodeMirrorEditorRef>(null);
     const latestTitleRef = useRef(localTitle);
@@ -88,37 +79,41 @@ const TaskDetail: React.FC = () => {
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const hasUnsavedChangesRef = useRef(false);
     const isMountedRef = useRef(true);
-    const instanceTaskId = useRef<string | null>(selectedTask?.id ?? null); // Store the ID this instance was mounted with
 
     // Mount/Unmount Effect
     useEffect(() => {
         isMountedRef.current = true;
-        instanceTaskId.current = selectedTask?.id ?? null; // Track instance ID on mount/update
         return () => {
             isMountedRef.current = false;
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current);
                 saveTimeoutRef.current = null;
+                // Optionally trigger one last save on unmount if changes exist
+                // savePendingChanges(); // Be cautious with state updates on unmount
             }
         };
-    }, [selectedTask?.id]); // Update instance ID if the selected task changes for this component instance
+    }, []);
 
-    // Debounced Save Logic (Unchanged)
+    // Debounced Save Logic
     const savePendingChanges = useCallback(() => {
-        // ... (save logic unchanged) ...
-        if (!selectedTask || !hasUnsavedChangesRef.current || !isMountedRef.current) return;
+        if (!selectedTask || !hasUnsavedChangesRef.current || !isMountedRef.current) {
+            return;
+        }
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = null;
         }
+
         const currentTitle = latestTitleRef.current;
         const currentContent = latestContentRef.current;
         const currentDueDate = localDueDate;
-        const currentTagsString = latestTagsRef.current;
+        const currentTagsString = latestTagsRef.current; // Use the string ref
 
         const processedTitle = currentTitle.trim();
         const processedDueDate = currentDueDate && isValid(currentDueDate) ? currentDueDate.getTime() : null;
+        // Parse tags just before saving to ensure clean data
         const processedTags = currentTagsString.split(',').map(t => t.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i);
+
         const originalTaskState = selectedTask;
         const changesToSave: Partial<Task> = {};
 
@@ -126,139 +121,195 @@ const TaskDetail: React.FC = () => {
         if (currentContent !== (originalTaskState.content || '')) changesToSave.content = currentContent;
         const originalDueTime = originalTaskState.dueDate ?? null;
         if (processedDueDate !== originalDueTime) changesToSave.dueDate = processedDueDate;
+
         const originalTagsSorted = (originalTaskState.tags ?? []).slice().sort();
         const processedTagsSorted = processedTags.slice().sort();
         if (JSON.stringify(processedTagsSorted) !== JSON.stringify(originalTagsSorted)) changesToSave.tags = processedTags;
 
         if (Object.keys(changesToSave).length > 0) {
             changesToSave.updatedAt = Date.now();
-            setTasks(prevTasks => prevTasks.map(t => t.id === originalTaskState.id ? { ...t, ...changesToSave } : t));
+            setTasks(prevTasks =>
+                prevTasks.map((t) => {
+                    if (t.id === originalTaskState.id) {
+                        return {...t, ...changesToSave};
+                    }
+                    return t;
+                })
+            );
         }
         hasUnsavedChangesRef.current = false;
+
     }, [selectedTask, setTasks, localDueDate]);
 
-    // Sync Local State from Atom (Re-introduced Auto-Focus with Delay and Checks)
+    // Sync Local State from Atom
     useEffect(() => {
         if (selectedTask) {
             const isTitleFocused = titleInputRef.current === document.activeElement;
-            const isTagsFocused = tagInputElementRef.current === document.activeElement;
+            const isTagsFocused = tagInputElementRef.current === document.activeElement; // Use new ref
             const isContentFocused = editorRef.current?.getView()?.hasFocus ?? false;
 
-            // Update local state if not focused
-            if (!isTitleFocused) setLocalTitle(selectedTask.title);
-            latestTitleRef.current = selectedTask.title;
+            if (!isTitleFocused) {
+                setLocalTitle(selectedTask.title);
+                latestTitleRef.current = selectedTask.title;
+            }
 
             const taskContent = selectedTask.content || '';
-            if (!isContentFocused) setLocalContent(taskContent);
-            latestContentRef.current = taskContent;
+            if (!isContentFocused) {
+                setLocalContent(taskContent);
+                latestContentRef.current = taskContent;
+            }
 
             const taskDueDate = safeParseDate(selectedTask.dueDate);
             const validTaskDueDate = taskDueDate && isValid(taskDueDate) ? taskDueDate : undefined;
             setLocalDueDate(validTaskDueDate);
 
             const taskTagsString = (selectedTask.tags ?? []).join(', ');
-            if (!isTagsFocused) setLocalTags(taskTagsString);
-            latestTagsRef.current = taskTagsString;
-            if (!isTagsFocused) setTagInputValue('');
-
-            hasUnsavedChangesRef.current = false;
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-
-            // --- RE-INTRODUCED AUTO-FOCUS with DELAY and CHECKS ---
-            if (selectedTask.title === '' && !isTitleFocused && !isContentFocused && !isTagsFocused) {
-                const focusTimer = setTimeout(() => {
-                    // Perform checks inside the timeout callback
-                    if (
-                        isMountedRef.current &&                      // Is component still mounted?
-                        currentSelectedTaskId === selectedTask.id && // Is this task *still* the selected one globally?
-                        titleInputRef.current &&                     // Is the input ref available?
-                        titleInputRef.current.value === ''           // Is the title *still* empty? (Check local state ref)
-                    ) {
-                        console.log("Attempting delayed focus for task:", selectedTask.id);
-                        titleInputRef.current.focus();
-                        // Selecting text can sometimes be unreliable immediately after focus, but let's try
-                        // Use another small delay if selection is inconsistent
-                        // setTimeout(() => titleInputRef.current?.select(), 10);
-                        titleInputRef.current.select();
-                    } else {
-                        console.log("Delayed focus aborted for task:", selectedTask.id, { mounted: isMountedRef.current, stillSelected: currentSelectedTaskId === selectedTask.id, titleEmpty: titleInputRef.current?.value === '' });
-                    }
-                }, 350); // Delay > MainPage transition duration (300ms)
-                return () => clearTimeout(focusTimer); // Cleanup the timer
+            // Only reset localTags string if tag input isn't focused
+            // Keep tagInputValue separate, reset it if needed
+            if (!isTagsFocused) {
+                setLocalTags(taskTagsString);
+                latestTagsRef.current = taskTagsString;
+                setTagInputValue(''); // Clear any leftover input when task changes externally
             }
-            // --- END RE-INTRODUCTION ---
-        } else {
-            // Reset state when no task is selected (unchanged)
-            setLocalTitle(''); latestTitleRef.current = '';
-            setLocalContent(''); latestContentRef.current = '';
-            setLocalDueDate(undefined);
-            setLocalTags(''); latestTagsRef.current = '';
-            setTagInputValue('');
+
             hasUnsavedChangesRef.current = false;
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+                saveTimeoutRef.current = null;
+            }
+
+            if (selectedTask.title === '' && !isTitleFocused && !isContentFocused && !isTagsFocused) {
+                const timer = setTimeout(() => {
+                    if (isMountedRef.current && titleInputRef.current) {
+                        titleInputRef.current.focus();
+                        titleInputRef.current.select();
+                    }
+                }, 350);
+                return () => clearTimeout(timer);
+            }
+
+        } else {
+            setLocalTitle('');
+            latestTitleRef.current = '';
+            setLocalContent('');
+            latestContentRef.current = '';
+            setLocalDueDate(undefined);
+            setLocalTags('');
+            latestTagsRef.current = '';
+            setTagInputValue(''); // Clear tag input
+            hasUnsavedChangesRef.current = false;
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+                saveTimeoutRef.current = null;
+            }
+            setIsDeleteConfirmOpen(false);
         }
-        // Depend on selectedTask?.id and the global currentSelectedTaskId
-    }, [selectedTask?.id, currentSelectedTaskId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedTask?.id]); // Keep dependency on selectedTask.id only
 
+    // Update Refs on Local State Change (No change needed here)
+    useEffect(() => {
+        latestTitleRef.current = localTitle;
+    }, [localTitle]);
+    useEffect(() => {
+        latestContentRef.current = localContent;
+    }, [localContent]);
+    useEffect(() => {
+        latestTagsRef.current = localTags; // Keep tracking the string version for saving
+    }, [localTags]);
 
-    // Update Refs on Local State Change (Unchanged)
-    useEffect(() => { latestTitleRef.current = localTitle; }, [localTitle]);
-    useEffect(() => { latestContentRef.current = localContent; }, [localContent]);
-    useEffect(() => { latestTagsRef.current = localTags; }, [localTags]);
-
-    // Debounced Save Trigger (Unchanged)
+    // Debounced Save Trigger (No change needed here)
     const triggerSave = useCallback(() => {
-        // ... (trigger logic unchanged) ...
         if (!selectedTask || !isMountedRef.current) return;
         hasUnsavedChangesRef.current = true;
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(savePendingChanges, 600);
+        saveTimeoutRef.current = setTimeout(() => {
+            savePendingChanges();
+        }, 600);
     }, [selectedTask, savePendingChanges]);
 
-    // Direct Update Function (Unchanged)
+    // Direct Update Function (No change needed here)
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed'>>) => {
-        // ... (update logic unchanged) ...
         if (!selectedTask || !isMountedRef.current) return;
+        // Save any pending text/tag changes before applying direct updates
         if (hasUnsavedChangesRef.current) savePendingChanges();
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
         hasUnsavedChangesRef.current = false;
-        setTasks(prevTasks => prevTasks.map(t => t.id === selectedTask.id ? { ...t, ...updates, updatedAt: Date.now() } : t));
+
+        setTasks(prevTasks => prevTasks.map(t => {
+            if (t.id === selectedTask.id) {
+                return {...t, ...updates, updatedAt: Date.now()};
+            }
+            return t;
+        }));
     }, [selectedTask, setTasks, savePendingChanges]);
 
-    // Event Handlers (Unchanged)
-    const handleClose = useCallback(() => { savePendingChanges(); setSelectedTaskId(null); }, [setSelectedTaskId, savePendingChanges]);
-    const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => { setLocalTitle(e.target.value); triggerSave(); }, [triggerSave]);
-    const handleContentChange = useCallback((newValue: string) => { setLocalContent(newValue); triggerSave(); }, [triggerSave]);
+    // Event Handlers (Close, Title, Content, Date, List, Priority, Progress - mostly unchanged)
+    const handleClose = useCallback(() => {
+        savePendingChanges();
+        setSelectedTaskId(null);
+    }, [setSelectedTaskId, savePendingChanges]);
+    const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setLocalTitle(e.target.value);
+        triggerSave();
+    }, [triggerSave]);
+    const handleContentChange = useCallback((newValue: string) => {
+        setLocalContent(newValue);
+        triggerSave();
+    }, [triggerSave]);
     const handleDatePickerSelect = useCallback((date: Date | undefined) => {
-        const newDate = date ? startOfDay(date) : undefined;
+        const newDate = date && isValid(date) ? startOfDay(date) : undefined;
         setLocalDueDate(newDate);
-        updateTask({ dueDate: newDate ? newDate.getTime() : null });
+        updateTask({dueDate: newDate ? newDate.getTime() : null});
     }, [updateTask]);
-    const handleListChange = useCallback((newList: string) => { updateTask({ list: newList }); }, [updateTask]);
-    const handlePriorityChange = useCallback((newPriority: string) => { updateTask({ priority: newPriority === 'null' ? null : Number(newPriority) }); }, [updateTask]);
-    const handleProgressChange = useCallback((newValue: string) => { updateTask({ completionPercentage: newValue === 'null' ? null : Number(newValue) }); }, [updateTask]);
-    const handleCompletionToggle = useCallback((checked: boolean | 'indeterminate') => {
-        const newPercentage = checked === true ? 100 : null;
-        updateTask({ completionPercentage: newPercentage });
+    const handleListChange = useCallback((newList: string, closeDropdown?: () => void) => {
+        updateTask({list: newList});
+        closeDropdown?.();
     }, [updateTask]);
+    const handlePriorityChange = useCallback((newPriority: number | null, closeDropdown?: () => void) => {
+        updateTask({priority: newPriority});
+        closeDropdown?.();
+    }, [updateTask]);
+    const cycleCompletionPercentage = useCallback(() => {
+        if (!selectedTask || selectedTask.list === 'Trash') return;
+        const currentPercentage = selectedTask.completionPercentage ?? 0;
+        let nextPercentage: number | null = null;
+        if (currentPercentage === 100) nextPercentage = null;
+        else nextPercentage = 100;
+        updateTask({completionPercentage: nextPercentage});
+    }, [selectedTask, updateTask]);
+    const handleProgressChange = useCallback((newPercentage: number | null, closeDropdown?: () => void) => {
+        updateTask({completionPercentage: newPercentage});
+        closeDropdown?.();
+    }, [updateTask]);
+    const handleProgressIndicatorKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            cycleCompletionPercentage();
+        }
+    }, [cycleCompletionPercentage]);
 
     // Delete/Restore Handling (Unchanged)
+    const openDeleteConfirm = useCallback(() => setIsDeleteConfirmOpen(true), []);
+    const closeDeleteConfirm = useCallback(() => setIsDeleteConfirmOpen(false), []);
     const confirmDelete = useCallback(() => {
         if (!selectedTask) return;
-        updateTask({ list: 'Trash', completionPercentage: null });
+        updateTask({list: 'Trash', completionPercentage: null});
         setSelectedTaskId(null);
-    }, [selectedTask, updateTask, setSelectedTaskId]);
+        closeDeleteConfirm();
+    }, [selectedTask, updateTask, setSelectedTaskId, closeDeleteConfirm]);
     const handleRestore = useCallback(() => {
         if (!selectedTask || selectedTask.list !== 'Trash') return;
-        updateTask({ list: 'Inbox' });
+        updateTask({list: 'Inbox'});
     }, [selectedTask, updateTask]);
 
-    // Input KeyDown Handlers (Unchanged)
+    // Input KeyDown Handlers (Title unchanged, Tag handler updated below)
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             savePendingChanges();
-            (e.target as HTMLInputElement).blur();
+            titleInputRef.current?.blur();
         } else if (e.key === 'Escape' && selectedTask) {
             e.preventDefault();
             if (localTitle !== selectedTask.title) {
@@ -267,55 +318,99 @@ const TaskDetail: React.FC = () => {
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
                 hasUnsavedChangesRef.current = false;
             }
-            (e.target as HTMLInputElement).blur();
+            titleInputRef.current?.blur();
         }
     }, [selectedTask, localTitle, savePendingChanges]);
 
-    // Tag Input Logic (Unchanged)
-    const tagsArray = useMemo(() => localTags.split(',').map(t => t.trim()).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i), [localTags]);
+    // --- Tag Input Specific Logic ---
+
+    // Derive tags array from the localTags string for rendering pills
+    const tagsArray = useMemo(() => {
+        return localTags.split(',')
+            .map(t => t.trim())
+            .filter(Boolean)
+            // Ensure uniqueness for display consistency, though save logic also handles it
+            .filter((v, i, a) => a.indexOf(v) === i);
+    }, [localTags]);
+
     const isTrash = useMemo(() => selectedTask?.list === 'Trash', [selectedTask?.list]);
-    const isCompleted = useMemo(() => selectedTask?.completed ?? false, [selectedTask?.completed]);
+    const isCompleted = useMemo(() => (selectedTask?.completionPercentage ?? 0) === 100 && !isTrash, [selectedTask?.completionPercentage, isTrash]);
     const isTagHandlingDisabled = useMemo(() => isTrash || isCompleted, [isTrash, isCompleted]);
-    const addTag = useCallback((tagToAdd: string) => { /* ... */
-        const trimmedTag = tagToAdd.trim().replace(/,/g, '');
+
+    // Add a new tag to the localTags string state
+    const addTag = useCallback((tagToAdd: string) => {
+        const trimmedTag = tagToAdd.trim();
         if (!trimmedTag || isTagHandlingDisabled) return;
+
+        // Prevent adding duplicates
         const currentTags = localTags.split(',').map(t => t.trim()).filter(Boolean);
-        if (currentTags.includes(trimmedTag)) { setTagInputValue(''); return; }
+        if (currentTags.includes(trimmedTag)) {
+            setTagInputValue(''); // Clear input even if duplicate
+            return;
+        }
+
         const newTagsString = [...currentTags, trimmedTag].join(', ');
         setLocalTags(newTagsString);
-        setTagInputValue('');
-        triggerSave();
+        setTagInputValue(''); // Clear input field
+        triggerSave(); // Debounce save
     }, [localTags, isTagHandlingDisabled, triggerSave]);
-    const removeTag = useCallback((tagToRemove: string) => { /* ... */
+
+    // Remove a tag from the localTags string state
+    const removeTag = useCallback((tagToRemove: string) => {
         if (isTagHandlingDisabled) return;
         const newTagsArray = tagsArray.filter(t => t !== tagToRemove);
         setLocalTags(newTagsArray.join(', '));
-        triggerSave();
-        tagInputElementRef.current?.focus();
+        triggerSave(); // Debounce save
+        tagInputElementRef.current?.focus(); // Keep focus in the input area
     }, [tagsArray, isTagHandlingDisabled, triggerSave]);
-    const handleTagInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => { /* ... */
+
+    // Handle KeyDown in the tag input field
+    const handleTagInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (isTagHandlingDisabled) return;
+
         const value = tagInputValue.trim();
-        if ((e.key === 'Enter' || e.key === ',') && value) { e.preventDefault(); addTag(value); }
-        else if (e.key === 'Backspace' && tagInputValue === '' && tagsArray.length > 0) { e.preventDefault(); removeTag(tagsArray[tagsArray.length - 1]); }
-        else if (e.key === 'Escape') { e.preventDefault(); setTagInputValue(''); (e.target as HTMLInputElement).blur(); }
+
+        if ((e.key === 'Enter' || e.key === ',') && value) {
+            e.preventDefault();
+            addTag(value);
+        } else if (e.key === 'Backspace' && tagInputValue === '' && tagsArray.length > 0) {
+            e.preventDefault();
+            // Remove the last tag when backspace is pressed in empty input
+            removeTag(tagsArray[tagsArray.length - 1]);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setTagInputValue(''); // Clear current input
+            (e.target as HTMLInputElement).blur(); // Blur the input
+        }
     }, [tagInputValue, tagsArray, addTag, removeTag, isTagHandlingDisabled]);
-    const handleTagInputBlur = useCallback(() => { /* ... */
+
+    // Handle blur on the tag input - add current input value if any, then trigger save
+    const handleTagInputBlur = useCallback(() => {
+        // Add any remaining text in the input as a tag on blur
         const value = tagInputValue.trim();
-        if (value && !isTagHandlingDisabled) addTag(value);
-        setTimeout(savePendingChanges, 50);
+        if (value && !isTagHandlingDisabled) {
+            addTag(value); // This will trigger save via triggerSave()
+        }
+        // Ensure final state is saved if focus leaves the component entirely
+        savePendingChanges();
     }, [tagInputValue, addTag, isTagHandlingDisabled, savePendingChanges]);
-    const handleTagContainerClick = useCallback(() => { if (!isTagHandlingDisabled) tagInputElementRef.current?.focus(); }, [isTagHandlingDisabled]);
+
+    // Focus the inner text input when the container div is clicked
+    const handleTagContainerClick = useCallback(() => {
+        if (!isTagHandlingDisabled) {
+            tagInputElementRef.current?.focus();
+        }
+    }, [isTagHandlingDisabled]);
 
 
-    // Memos for Display Logic (Unchanged)
+    // Memos for Display Logic (mostly unchanged, adapted paths/refs)
     const priorityMap: Record<number, { label: string; iconColor: string }> = useMemo(() => ({
-        1: { label: 'High', iconColor: 'text-red-500 dark:text-red-400' },
-        2: { label: 'Medium', iconColor: 'text-orange-500 dark:text-orange-400' },
-        3: { label: 'Low', iconColor: 'text-blue-500 dark:text-blue-400' },
-        4: { label: 'Lowest', iconColor: 'text-gray-500 dark:text-gray-400' },
+        1: { label: 'High', iconColor: 'text-red-500' },
+        2: { label: 'Medium', iconColor: 'text-orange-500' },
+        3: { label: 'Low', iconColor: 'text-blue-500' },
+        4: { label: 'Lowest', iconColor: 'text-gray-500' },
     }), []);
-    const displayDueDateForPicker = localDueDate;
+    const displayDueDateForPicker = useMemo(() => localDueDate, [localDueDate]);
     const displayDueDateForRender = useMemo(() => localDueDate ?? safeParseDate(selectedTask?.dueDate), [localDueDate, selectedTask?.dueDate]);
     const overdue = useMemo(() => displayDueDateForRender && isValid(displayDueDateForRender) && !isCompleted && !isTrash && isOverdue(displayDueDateForRender), [displayDueDateForRender, isCompleted, isTrash]);
     const displayPriority = selectedTask?.priority;
@@ -323,269 +418,234 @@ const TaskDetail: React.FC = () => {
     const displayCreatedAt = useMemo(() => selectedTask ? formatDateTime(selectedTask.createdAt) : '', [selectedTask?.createdAt]);
     const displayUpdatedAt = useMemo(() => selectedTask ? formatDateTime(selectedTask.updatedAt) : '', [selectedTask?.updatedAt]);
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
-    const editorClasses = cn("!min-h-[150px] h-full text-sm !bg-transparent !border-none !shadow-none", (isCompleted || isTrash) && "opacity-70", isTrash && "pointer-events-none");
-    const progressStatusText = useMemo(() => { /* ... */
+    const titleInputClasses = useMemo(() => twMerge("w-full text-lg font-medium border-none focus:ring-0 focus:outline-none bg-transparent p-0 m-0 leading-tight", "placeholder:text-muted placeholder:font-normal", (isCompleted || isTrash) && "line-through text-muted-foreground", "task-detail-title-input"), [isCompleted, isTrash]);
+    const editorClasses = useMemo(() => twMerge("!min-h-[150px] h-full text-sm", "!bg-transparent", (isCompleted || isTrash) && "opacity-70", isTrash && "pointer-events-none"), [isCompleted, isTrash]);
+    const progressStatusText = useMemo(() => {
         const p = selectedTask?.completionPercentage;
-        if (isCompleted) return "Completed";
+        if (p === 100) return "Completed";
         if (p === 80) return "Almost Done (80%)";
         if (p === 50) return "Halfway (50%)";
         if (p === 20) return "Started (20%)";
         return "Not Started";
-    }, [selectedTask?.completionPercentage, isCompleted]);
+    }, [selectedTask?.completionPercentage]);
     const progressMenuItems = useMemo(() => [
-        {label: 'Not Started', value: 'null', icon: 'circle' as IconName},
-        {label: 'Started (20%)', value: '20', icon: 'circle-dot-dashed' as IconName},
-        {label: 'Halfway (50%)', value: '50', icon: 'circle-dot' as IconName},
-        {label: 'Almost Done (80%)', value: '80', icon: 'circle-slash' as IconName},
-        {label: 'Completed (100%)', value: '100', icon: 'circle-check' as IconName},
+        {label: 'Not Started', value: null, icon: 'circle' as IconName},
+        {label: 'Started (20%)', value: 20, icon: 'circle-dot' as IconName}, // Corrected icon
+        {label: 'Halfway (50%)', value: 50, icon: 'circle-dot-dashed' as IconName}, // Corrected icon
+        {label: 'Almost Done (80%)', value: 80, icon: 'circle-slash' as IconName},
+        {label: 'Completed (100%)', value: 100, icon: 'circle-check' as IconName},
     ], []);
-    const currentProgressValue = useMemo(() => String(selectedTask?.completionPercentage ?? 'null'), [selectedTask?.completionPercentage]);
-    const checkboxState = useMemo(() => { /* ... */
-        if (isCompleted) return true;
-        if (selectedTask?.completionPercentage && selectedTask.completionPercentage > 0) return 'indeterminate';
-        return false;
-    }, [isCompleted, selectedTask?.completionPercentage]);
-    const tagInputContainerClasses = cn( /* ... */
-        "flex items-center flex-wrap border border-input bg-background rounded-md min-h-[36px] px-2 py-1",
-        "transition-colors duration-150 ease-in-out",
+
+    // --- Tag Input Container Styling ---
+    const tagInputContainerClasses = useMemo(() => twMerge(
+        "flex items-center flex-wrap bg-transparent rounded-sm w-full min-h-[28px] px-1.5 py-1", // Adjusted padding for vertical rhythm (py-1 fits pills better)
+        "transition-colors duration-100 ease-apple backdrop-blur-sm",
         isTagHandlingDisabled
-            ? "opacity-60 cursor-not-allowed"
-            : "hover:border-ring/50 focus-within:border-primary focus-within:ring-1 focus-within:ring-ring cursor-text"
-    );
+            ? "opacity-60 cursor-not-allowed bg-transparent" // Keep opacity consistent with MetaRow
+            : "hover:bg-white/15 focus-within:bg-white/20 cursor-text"
+    ), [isTagHandlingDisabled]);
 
 
     if (!selectedTask) return null;
 
-    const animationDuration = 0.15;
-
     return (
         <>
-            <Dialog>
-                <motion.div key={selectedTask.id}
-                            className={cn(
-                                "border-l border-border/50 w-[400px] shrink-0 h-full flex flex-col shadow-lg z-10",
-                                "bg-glass-100 backdrop-blur-xl"
-                            )}
-                            initial={{ x: '100%' }} animate={{ x: 0 }}
-                            exit={{ x: '100%', transition: { duration: animationDuration, ease: 'linear' } }}
-                            transition={{ duration: 0.25, ease: "easeOut" }}
-                >
+            <motion.div key={selectedTask.id}
+                        className={twMerge("border-l border-black/10 w-[420px] shrink-0 h-full flex flex-col shadow-xl z-20", "bg-glass-100 backdrop-blur-xl")}
+                        initial={{x: '100%'}} animate={{x: 0}} exit={{x: '100%'}}
+                        transition={{duration: 0.3, ease: "easeOut"}}>
+                {/* Header (Unchanged) */}
+                <div
+                    className="px-3 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 h-11 bg-glass-alt-100 backdrop-blur-lg">
+                    <div className="w-20 flex justify-start">
+                        {isTrash ? (<Button variant="ghost" size="sm" icon="arrow-left" onClick={handleRestore}
+                                            className="text-green-600 hover:bg-green-400/20 hover:text-green-700 text-xs px-1.5"> Restore </Button>) : (
+                            <Button variant="ghost" size="icon" icon="trash" onClick={openDeleteConfirm}
+                                    className="text-red-600 hover:bg-red-400/20 hover:text-red-700 w-7 h-7"
+                                    aria-label="Move task to Trash"/>)}
+                    </div>
+                    <div className="flex-1 text-center h-4"></div>
+                    <div className="w-20 flex justify-end"><Button variant="ghost" size="icon" icon="x"
+                                                                   onClick={handleClose} aria-label="Close task details"
+                                                                   className="text-muted-foreground hover:bg-black/15 w-7 h-7"/>
+                    </div>
+                </div>
 
-                    {/* Header (Unchanged - including DialogTrigger fix) */}
-                    <div className="px-3 py-2 border-b border-border/50 flex justify-between items-center flex-shrink-0 h-11 bg-glass-alt-100 backdrop-blur-lg">
-                        <div className="w-20 flex justify-start">
-                            {isTrash ? (
-                                <Button variant="ghost" size="sm" icon="arrow-left" onClick={handleRestore} className="text-green-600 hover:bg-green-500/10 hover:text-green-700 text-xs px-1.5"> Restore </Button>
-                            ) : (
-                                <DialogTrigger
-                                    className={cn(buttonVariants({ variant: 'ghost', size: 'icon'}), "text-destructive hover:bg-destructive/10 hover:text-destructive w-7 h-7")}
-                                    aria-label="Move task to Trash"
-                                >
-                                    <Icon name="trash" size={16}/>
-                                </DialogTrigger>
-                            )}
-                        </div>
-                        <div className="flex-1 text-center h-4"></div>
-                        <div className="w-20 flex justify-end">
-                            <Button variant="ghost" size="icon" icon="x" onClick={handleClose} aria-label="Close task details"
-                                    className="text-muted-foreground hover:bg-accent w-7 h-7"/>
-                        </div>
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto p-5 styled-scrollbar flex flex-col">
+                    {/* Progress Indicator and Title (Unchanged) */}
+                    <div className="flex items-start space-x-3 mb-4 flex-shrink-0">
+                        <ProgressIndicator
+                            percentage={selectedTask.completionPercentage}
+                            isTrash={isTrash}
+                            onClick={cycleCompletionPercentage}
+                            onKeyDown={handleProgressIndicatorKeyDown}
+                            size={20}
+                            className="mt-[3px]"
+                            ariaLabelledby={`task-title-input-${selectedTask.id}`}
+                        />
+                        <input
+                            ref={titleInputRef} type="text" value={localTitle} onChange={handleTitleChange}
+                            onKeyDown={handleTitleKeyDown} onBlur={savePendingChanges} // Save on blur
+                            className={titleInputClasses}
+                            placeholder="Task title..." disabled={isTrash} aria-label="Task title"
+                            id={`task-title-input-${selectedTask.id}`}
+                        />
                     </div>
 
-                    {/* Scrollable Content (Unchanged) */}
-                    <ScrollArea className="flex-1" type="auto">
-                        <div className="p-4 space-y-4">
-                            {/* Progress Checkbox and Title */}
-                            <div className="flex items-start space-x-3 mb-2">
-                                <Checkbox
-                                    id={`detail-complete-${selectedTask.id}`}
-                                    checked={checkboxState}
-                                    onCheckedChange={handleCompletionToggle}
-                                    disabled={isTrash}
-                                    className="mt-[5px] w-5 h-5 rounded-full flex-shrink-0"
-                                    aria-label="Mark task complete/incomplete"
-                                />
-                                <Input
-                                    ref={titleInputRef} type="text" value={localTitle} onChange={handleTitleChange}
-                                    onKeyDown={handleTitleKeyDown} onBlur={savePendingChanges}
-                                    className={cn(
-                                        "w-full text-lg font-medium border-none focus-visible:ring-0 focus:ring-0 focus:outline-none bg-transparent p-0 m-0 h-auto leading-tight",
-                                        "placeholder:text-muted-foreground placeholder:font-normal",
-                                        (isCompleted || isTrash) && "line-through text-muted-foreground",
-                                        "task-detail-title-input"
-                                    )}
-                                    placeholder="Task title..." disabled={isTrash} aria-label="Task title"
-                                    id={`task-title-input-${selectedTask.id}`}
-                                />
-                            </div>
-
-                            {/* Metadata Section (Unchanged) */}
-                            <div className="space-y-0 text-sm border-t border-b border-border/50 py-1 my-3">
-                                {/* ... MetaRows ... */}
-                                <MetaRow icon="circle-gauge" label="Progress" disabled={isTrash}>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm"
-                                                    className={cn(
-                                                        "text-xs h-7 px-1.5 w-full text-left justify-start font-normal",
-                                                        "disabled:text-muted-foreground disabled:line-through truncate hover:bg-accent",
-                                                        isCompleted ? "text-primary" : "text-foreground",
-                                                        "disabled:hover:!bg-transparent disabled:cursor-not-allowed"
-                                                    )}
-                                                    disabled={isTrash}>
-                                                {progressStatusText}
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-48">
-                                            <DropdownMenuRadioGroup value={currentProgressValue} onValueChange={handleProgressChange}>
-                                                {progressMenuItems.map(item => (
-                                                    <DropdownMenuRadioItem key={item.label} value={item.value} className="text-xs">
-                                                        <Icon name={item.icon} size={13} className="mr-2 opacity-70"/>
-                                                        {item.label}
-                                                    </DropdownMenuRadioItem>
-                                                ))}
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </MetaRow>
-                                <MetaRow icon="calendar" label="Due Date" disabled={isTrash}>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="ghost" size="sm"
-                                                className={cn(
-                                                    "text-xs h-7 px-1.5 w-full text-left justify-start font-normal truncate hover:bg-accent",
-                                                    displayDueDateForRender ? 'text-foreground' : 'text-muted-foreground',
-                                                    overdue && 'text-destructive font-medium',
-                                                    isTrash && 'text-muted-foreground line-through !bg-transparent hover:!bg-transparent cursor-not-allowed',
-                                                    isCompleted && !isTrash && "line-through text-muted-foreground"
-                                                )}
-                                                disabled={isTrash}>
-                                                <Icon name="calendar" size={13} className="mr-1.5 opacity-70"/>
-                                                {displayDueDateForRender && isValid(displayDueDateForRender) ? formatRelativeDate(displayDueDateForRender) : 'Set date'}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                                mode="single"
-                                                selected={displayDueDateForPicker}
-                                                onSelect={handleDatePickerSelect}
-                                                initialFocus
-                                            />
-                                        </PopoverContent>
-                                    </Popover>
-                                </MetaRow>
-                                <MetaRow icon="list" label="List" disabled={isTrash}>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm"
-                                                    className="text-xs h-7 px-1.5 w-full text-left justify-start text-foreground font-normal disabled:text-muted-foreground disabled:line-through truncate hover:bg-accent disabled:hover:!bg-transparent disabled:cursor-not-allowed"
-                                                    disabled={isTrash}>
-                                                <Icon name={displayList === 'Inbox' ? 'inbox' : 'list'} size={13} className="mr-1.5 opacity-70"/>
-                                                {displayList}
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-48 max-h-48 overflow-y-auto styled-scrollbar-thin">
-                                            <DropdownMenuRadioGroup value={displayList ?? ''} onValueChange={handleListChange}>
-                                                {availableLists.map(list => (
-                                                    <DropdownMenuRadioItem key={list} value={list} className="text-xs">
-                                                        <Icon name={list === 'Inbox' ? 'inbox' : 'list'} size={13} className="mr-1.5 opacity-70"/>
-                                                        {list}
-                                                    </DropdownMenuRadioItem>
-                                                ))}
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </MetaRow>
-                                <MetaRow icon="flag" label="Priority" disabled={isTagHandlingDisabled}>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="sm"
-                                                    className={cn(
-                                                        "text-xs h-7 px-1.5 w-full text-left justify-start font-normal disabled:text-muted-foreground disabled:line-through truncate hover:bg-accent",
-                                                        displayPriority ? priorityMap[displayPriority]?.iconColor : 'text-foreground',
-                                                        isTagHandlingDisabled && 'hover:!bg-transparent cursor-not-allowed'
-                                                    )}
-                                                    disabled={isTagHandlingDisabled}>
-                                                <Icon name="flag" size={13} className={cn("mr-1.5", displayPriority ? "opacity-100" : "opacity-70")}/>
-                                                {displayPriority ? `P${displayPriority} ${priorityMap[displayPriority]?.label}` : 'Set Priority'}
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-48">
-                                            <DropdownMenuRadioGroup value={String(displayPriority ?? 'null')} onValueChange={handlePriorityChange}>
-                                                {[1, 2, 3, 4, null].map(p => (
-                                                    <DropdownMenuRadioItem key={p ?? 'none'} value={String(p ?? 'null')} className={cn("text-xs", p && priorityMap[p]?.iconColor)}>
-                                                        <Icon name="flag" size={13} className={cn("mr-1.5", p ? "opacity-100" : "opacity-70")}/>
-                                                        {p ? `P${p} ${priorityMap[p]?.label}` : 'None'}
-                                                    </DropdownMenuRadioItem>
-                                                ))}
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </MetaRow>
-                                <MetaRow icon="tag" label="Tags" disabled={isTagHandlingDisabled}>
-                                    <div className={tagInputContainerClasses} onClick={handleTagContainerClick}>
-                                        {tagsArray.map((tag) => (
-                                            <TagPill key={tag} tag={tag} onRemove={() => removeTag(tag)} disabled={isTagHandlingDisabled} />
+                    {/* Metadata Section */}
+                    <div className="space-y-1.5 text-sm border-t border-b border-black/10 py-2.5 my-4 flex-shrink-0">
+                        {/* Progress Row (Unchanged) */}
+                        <MetaRow icon="circle-gauge" label="Progress" disabled={isTrash}>
+                            {/* ... Dropdown content ... */}
+                            <Dropdown
+                                trigger={<Button variant="ghost" size="sm"
+                                                 className={twMerge("text-xs h-7 px-1.5 w-full text-left justify-start font-normal disabled:text-muted disabled:line-through truncate hover:bg-black/10 backdrop-blur-sm disabled:hover:!bg-transparent disabled:cursor-not-allowed", isCompleted ? "text-primary" : "text-gray-700")}
+                                                 disabled={isTrash}> {progressStatusText} </Button>}
+                                contentClassName="py-1" usePortal={false}
+                            >
+                                {(props) => (
+                                    <>
+                                        {progressMenuItems.map(item => (
+                                            <MenuItem
+                                                key={item.label} icon={item.icon}
+                                                selected={selectedTask?.completionPercentage === item.value || (selectedTask?.completionPercentage === null && item.value === null)}
+                                                onClick={() => handleProgressChange(item.value, props.close)}
+                                            >
+                                                {item.label}
+                                            </MenuItem>
                                         ))}
-                                        <Input
-                                            ref={tagInputElementRef} type="text" value={tagInputValue}
-                                            onChange={(e) => setTagInputValue(e.target.value)}
-                                            onKeyDown={handleTagInputKeyDown} onBlur={handleTagInputBlur}
-                                            placeholder={tagsArray.length === 0 ? "Add tag..." : ""}
-                                            className={cn(
-                                                "flex-1 text-xs border-none focus-visible:ring-0 focus:ring-0 bg-transparent p-0 m-0 h-[22px] min-w-[60px] self-center shadow-none",
-                                                "placeholder:text-muted-foreground placeholder:font-normal",
-                                                "disabled:bg-transparent disabled:cursor-not-allowed"
-                                            )}
-                                            disabled={isTagHandlingDisabled}
-                                            aria-label="Add a new tag (use comma or Enter to confirm)"
-                                        />
-                                    </div>
-                                </MetaRow>
-                            </div>
+                                    </>
+                                )}
+                            </Dropdown>
+                        </MetaRow>
+                        {/* Due Date Row (Unchanged) */}
+                        <MetaRow icon="calendar" label="Due Date" disabled={isTrash}>
+                            {/* ... Dropdown content ... */}
+                            <Dropdown
+                                trigger={
+                                    <Button variant="ghost" size="sm"
+                                            className={twMerge("text-xs h-7 px-1.5 w-full text-left justify-start font-normal truncate hover:bg-black/10 backdrop-blur-sm", displayDueDateForRender ? 'text-gray-700' : 'text-muted-foreground', overdue && 'text-red-600 font-medium', isTrash && 'text-muted line-through !bg-transparent hover:!bg-transparent cursor-not-allowed', isCompleted && !isTrash && "line-through text-muted-foreground")}
+                                            disabled={isTrash}>
+                                        {displayDueDateForRender && isValid(displayDueDateForRender) ? formatRelativeDate(displayDueDateForRender) : 'Set date'}
+                                    </Button>
+                                }
+                                contentClassName="date-picker-popover p-0 border-0 shadow-none bg-transparent"
+                                placement="bottom-end"
+                                usePortal={false}
+                            >
+                                {(props) => (
+                                    <CustomDatePickerPopover
+                                        initialDate={displayDueDateForPicker}
+                                        onSelect={handleDatePickerSelect}
+                                        close={props.close}
+                                        usePortal={false}
+                                    />
+                                )}
+                            </Dropdown>
+                        </MetaRow>
+                        {/* List Row (Unchanged) */}
+                        <MetaRow icon="list" label="List" disabled={isTrash}>
+                            {/* ... Dropdown content ... */}
+                            <Dropdown
+                                trigger={<Button variant="ghost" size="sm"
+                                                 className="text-xs h-7 px-1.5 w-full text-left justify-start text-gray-700 font-normal disabled:text-muted disabled:line-through truncate hover:bg-black/10 backdrop-blur-sm disabled:hover:!bg-transparent disabled:cursor-not-allowed"
+                                                 disabled={isTrash}> {displayList} </Button>}
+                                contentClassName="max-h-48 overflow-y-auto styled-scrollbar py-1"
+                                usePortal={false}
+                            >
+                                {(props) => (<> {availableLists.map(list => (
+                                    <button key={list} onClick={() => handleListChange(list, props.close)}
+                                            className={twMerge("block w-full text-left px-2.5 py-1 text-sm hover:bg-black/15 transition-colors duration-100 ease-apple focus:outline-none focus-visible:bg-black/10 rounded-[3px]", displayList === list && "bg-primary/20 text-primary font-medium")}
+                                            role="menuitemradio"
+                                            aria-checked={displayList === list}> {list} </button>))} </>)}
+                            </Dropdown>
+                        </MetaRow>
+                        {/* Priority Row (Unchanged) */}
+                        <MetaRow icon="flag" label="Priority" disabled={isTagHandlingDisabled}>
+                            {/* ... Dropdown content ... */}
+                            <Dropdown
+                                trigger={<Button variant="ghost" size="sm"
+                                                 className={twMerge("text-xs h-7 px-1.5 w-full text-left justify-start font-normal disabled:text-muted disabled:line-through truncate hover:bg-black/10 backdrop-blur-sm", displayPriority ? priorityMap[displayPriority]?.iconColor : 'text-gray-700', (isTagHandlingDisabled) && 'hover:!bg-transparent cursor-not-allowed')}
+                                                 icon={displayPriority ? 'flag' : undefined}
+                                                 disabled={isTagHandlingDisabled}> {displayPriority ? `P${displayPriority} ${priorityMap[displayPriority]?.label}` : 'Set Priority'} </Button>}
+                                contentClassName="py-1"
+                                usePortal={false}
+                            >
+                                {(props) => (<> {[1, 2, 3, 4, null].map(p => (
+                                    <button key={p ?? 'none'} onClick={() => handlePriorityChange(p, props.close)}
+                                            className={twMerge("block w-full text-left px-2.5 py-1 text-sm hover:bg-black/15 transition-colors duration-100 ease-apple flex items-center focus:outline-none focus-visible:bg-black/10 rounded-[3px]", displayPriority === p && "bg-primary/20 text-primary font-medium", p && priorityMap[p]?.iconColor)}
+                                            role="menuitemradio" aria-checked={displayPriority === p}> {p &&
+                                        <Icon name="flag" size={14}
+                                              className="mr-1.5 flex-shrink-0"/>} {p ? `P${p} ${priorityMap[p]?.label}` : 'None'} </button>))} </>)}
+                            </Dropdown>
+                        </MetaRow>
 
-                            {/* Content Editor (Unchanged) */}
-                            <div className="task-detail-content-editor flex-1 min-h-[150px] flex flex-col">
-                                <Label className="text-xs font-medium text-muted-foreground mb-1.5">Notes</Label>
-                                <CodeMirrorEditor
-                                    ref={editorRef} value={localContent} onChange={handleContentChange}
-                                    onBlur={savePendingChanges}
-                                    placeholder="Add notes, links, or details here... Markdown is supported."
-                                    className={editorClasses} readOnly={isTrash}/>
+                        {/* --- Updated Tags Row --- */}
+                        <MetaRow icon="tag" label="Tags" disabled={isTagHandlingDisabled}>
+                            <div
+                                className={tagInputContainerClasses}
+                                onClick={handleTagContainerClick}
+                                aria-disabled={isTagHandlingDisabled}
+                            >
+                                {/* Render existing tags as pills */}
+                                {tagsArray.map((tag) => (
+                                    <TagPill
+                                        key={tag}
+                                        tag={tag}
+                                        onRemove={() => removeTag(tag)}
+                                        disabled={isTagHandlingDisabled}
+                                    />
+                                ))}
+                                {/* Input for adding new tags */}
+                                <input
+                                    ref={tagInputElementRef}
+                                    type="text"
+                                    value={tagInputValue}
+                                    onChange={(e) => setTagInputValue(e.target.value)}
+                                    onKeyDown={handleTagInputKeyDown}
+                                    onBlur={handleTagInputBlur} // Use specific blur handler
+                                    placeholder={tagsArray.length === 0 ? "Add tag..." : ""}
+                                    className={twMerge(
+                                        "flex-1 text-xs border-none focus:ring-0 bg-transparent p-0 m-0 h-[22px] min-w-[60px] self-center", // Ensure input aligns vertically and has min width
+                                        "placeholder:text-muted placeholder:font-normal",
+                                        "disabled:bg-transparent disabled:cursor-not-allowed"
+                                    )}
+                                    disabled={isTagHandlingDisabled}
+                                    aria-label="Add a new tag (use comma or Enter to confirm)"
+                                />
                             </div>
-                        </div>
-                    </ScrollArea>
-
-                    {/* Footer (Unchanged) */}
-                    <div className="px-4 py-1.5 border-t border-border/50 flex justify-end items-center flex-shrink-0 h-8 bg-glass-alt-200 backdrop-blur-lg">
-                        <div className="text-[10px] text-muted-foreground space-x-3">
-                            <span>Created: {displayCreatedAt}</span>
-                            <span>Updated: {displayUpdatedAt}</span>
-                        </div>
+                        </MetaRow>
                     </div>
-                </motion.div>
 
-                {/* Delete Confirmation Dialog Content (Structure remains the same) */}
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Move Task to Trash?</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to move the task "{selectedTask.title || 'Untitled Task'}" to the Trash?
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <DialogClose asChild>
-                            <Button onClick={confirmDelete} variant="destructive">
-                                Move to Trash
-                            </Button>
-                        </DialogClose>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    {/* Content Editor (Unchanged) */}
+                    <div className="task-detail-content-editor flex-1 min-h-[150px] flex flex-col mb-4">
+                        <CodeMirrorEditor
+                            ref={editorRef} value={localContent} onChange={handleContentChange}
+                            onBlur={savePendingChanges} // Save on blur
+                            placeholder="Add notes, links, or details here... Markdown is supported."
+                            className={editorClasses}
+                            readOnly={isTrash}/>
+                    </div>
+                </div>
+
+                {/* Footer (Unchanged) */}
+                <div
+                    className="px-4 py-2 border-t border-black/10 flex justify-end items-center flex-shrink-0 h-9 bg-glass-alt-200 backdrop-blur-lg">
+                    <div className="text-[11px] text-muted-foreground space-x-4">
+                        <span>Created: {displayCreatedAt}</span>
+                        <span>Updated: {displayUpdatedAt}</span>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Delete Confirmation Modal (Unchanged) */}
+            <ConfirmDeleteModal
+                isOpen={isDeleteConfirmOpen}
+                onClose={closeDeleteConfirm}
+                onConfirm={confirmDelete}
+                taskTitle={selectedTask.title} // Ensure title is passed even if empty initially
+            />
         </>
     );
 };

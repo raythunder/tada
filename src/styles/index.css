@@ -4,163 +4,206 @@
 @tailwind utilities;
 
 @layer base {
-    :root {
-        /* Your existing color variables */
-        --background: 0 0% 100%;
-        --foreground: 224 71.4% 4.1%;
-        --muted: 220 14.3% 95.8%;
-        --muted-foreground: 220 8.9% 46.1%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 224 71.4% 4.1%;
-        --card: 0 0% 100%;
-        --card-foreground: 224 71.4% 4.1%;
-        --border: 220 13% 91%;
-        --input: 220 13% 91%; /* Used for input borders */
-        --primary: 262.1 83.3% 57.8%; /* Adjusted primary */
-        --primary-foreground: 210 20% 98%;
-        --secondary: 220 14.3% 95.8%;
-        --secondary-foreground: 224 71.4% 4.1%;
-        --accent: 220 14.3% 95.8%;
-        --accent-foreground: 224 71.4% 4.1%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 210 20% 98%;
-        --ring: 262.1 83.3% 57.8%; /* Ring defaults to primary */
-        --radius: 0.5rem;
-
-        /* Add canvas color if needed, or use background */
-        --canvas: 230 20% 98%; /* Light grey canvas */
-
-        /* Glass effect colors */
-        --glass-100-light: 230 50% 98% / 0.6; /* Lighter glass */
-        --glass-alt-100-light: 230 50% 96% / 0.75;
-        --glass-alt-200-light: 230 50% 94% / 0.85;
-        --glass-inset-100-light: 230 50% 99% / 0.4;
-        --glass-inset-200-light: 230 50% 97% / 0.5;
-
-        --glass-100-dark: 220 15% 18% / 0.6; /* Darker glass */
-        --glass-alt-100-dark: 220 15% 15% / 0.75;
-        --glass-alt-200-dark: 220 15% 13% / 0.85;
-        --glass-inset-100-dark: 220 15% 22% / 0.4;
-        --glass-inset-200-dark: 220 15% 20% / 0.5;
-
-        /* Shadows */
-        --shadow-subtle: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        --shadow-strong: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
+    html {
+        scroll-behavior: smooth;
+        /* Base font size for consistent rem units */
+        font-size: 16px;
     }
 
-    .dark {
-        --background: 220 15% 12%; /* Dark background */
-        --foreground: 210 20% 98%;
-        --muted: 215 18% 20%;
-        --muted-foreground: 215 10% 65%;
-        --popover: 220 15% 15%; /* Dark popover */
-        --popover-foreground: 210 20% 98%;
-        --card: 220 15% 15%; /* Dark card */
-        --card-foreground: 210 20% 98%;
-        --border: 215 15% 25%;
-        --input: 215 15% 25%; /* Dark input borders */
-        --primary: 262.1 83.3% 67.8%; /* Lighter primary for dark */
-        --primary-foreground: 224 71.4% 4.1%;
-        --secondary: 215 18% 20%;
-        --secondary-foreground: 210 20% 98%;
-        --accent: 215 18% 20%;
-        --accent-foreground: 210 20% 98%;
-        --destructive: 0 72% 51%;
-        --destructive-foreground: 210 20% 98%;
-        --ring: 262.1 83.3% 67.8%; /* Lighter ring for dark */
-        --canvas: 220 15% 10%; /* Very dark canvas */
-    }
-
-    /* Apply variables to glass utilities */
-    .bg-glass-100 {
-        background-color: hsl(var(--glass-100-light));
-    }
-
-    .bg-glass-alt-100 {
-        background-color: hsl(var(--glass-alt-100-light));
-    }
-
-    .bg-glass-alt-200 {
-        background-color: hsl(var(--glass-alt-200-light));
-    }
-
-    .bg-glass-inset-100 {
-        background-color: hsl(var(--glass-inset-100-light));
-    }
-
-    .bg-glass-inset-200 {
-        background-color: hsl(var(--glass-inset-200-light));
-    }
-
-    .shadow-subtle {
-        box-shadow: var(--shadow-subtle);
-    }
-
-    .shadow-strong {
-        box-shadow: var(--shadow-strong);
-    }
-
-    .dark .bg-glass-100 {
-        background-color: hsl(var(--glass-100-dark));
-    }
-
-    .dark .bg-glass-alt-100 {
-        background-color: hsl(var(--glass-alt-100-dark));
-    }
-
-    .dark .bg-glass-alt-200 {
-        background-color: hsl(var(--glass-alt-200-dark));
-    }
-
-    .dark .bg-glass-inset-100 {
-        background-color: hsl(var(--glass-inset-100-dark));
-    }
-
-    .dark .bg-glass-inset-200 {
-        background-color: hsl(var(--glass-inset-200-dark));
-    }
-
-    /* Apply base styles */
     body {
-        @apply bg-canvas text-foreground;
-        /* Use canvas color */
-        font-feature-settings: "rlig" 1, "calt" 1;
+        @apply bg-canvas-alt font-sans text-gray-900 antialiased;
+        /* Apple system font stack */
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background-color: hsl(220, 40%, 98%); /* Match canvas-alt */
     }
 
-    /* Basic thin scrollbar styling */
-    .styled-scrollbar-thin {
-        scrollbar-width: thin; /* Firefox */
-        scrollbar-color: hsl(var(--border)) transparent; /* Firefox */
+    *:focus-visible {
+        /* Consistent focus ring */
+        @apply outline-none ring-1 ring-primary/70 ring-offset-1 ring-offset-canvas;
     }
 
-    /* Webkit (Chrome, Safari, Edge) */
-    .styled-scrollbar-thin::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+    button:focus {
+        /* Remove default browser outline on buttons when focus-visible is handled */
+        outline: none;
     }
 
-    .styled-scrollbar-thin::-webkit-scrollbar-track {
-        background: transparent;
-        border-radius: 3px;
-    }
-
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb {
-        background-color: hsl(var(--border) / 0.6);
-        border-radius: 3px;
-        border: 1px solid transparent;
-        background-clip: content-box;
-    }
-
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        background-color: hsl(var(--border));
-    }
-
-    .styled-scrollbar-thin::-webkit-scrollbar-corner {
-        background: transparent;
+    /* CSS Variables for theming */
+    :root {
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --primary-h: 208; /* Hue for primary color (Blue) */
+        --primary-s: 100%; /* Saturation */
+        --primary-l: 50%; /* Lightness */
+        --canvas: hsl(0, 0%, 100%); /* White */
+        --canvas-alt: hsl(220, 40%, 98%); /* Very light grey-blue */
     }
 }
 
 @layer components {
+    /* Custom Scrollbar Styling (Subtle, macOS-like) */
+    .styled-scrollbar {
+        scrollbar-width: thin; /* "thin" keyword for Firefox */
+        scrollbar-color: hsla(0, 0%, 0%, 0.3) transparent; /* Thumb color and track color */
+    }
+
+    /* Webkit browsers (Chrome, Safari, Edge) */
+    .styled-scrollbar::-webkit-scrollbar {
+        width: 8px; /* Width of vertical scrollbar */
+        height: 8px; /* Height of horizontal scrollbar */
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-track {
+        background-color: transparent; /* Make track invisible */
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-thumb {
+        @apply bg-black/20 rounded-full border-[2.5px] border-solid border-transparent;
+        /* Slightly transparent black thumb with padding */
+        background-clip: padding-box; /* Ensures border creates padding effect */
+        transition: background-color 0.15s ease-out; /* Smooth hover effect */
+    }
+
+    /* Hover effects for scrollbar thumb */
+    .styled-scrollbar:hover::-webkit-scrollbar-thumb {
+        @apply bg-black/30;
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-thumb:hover {
+        @apply bg-black/35;
+    }
+
+    .styled-scrollbar::-webkit-scrollbar-thumb:active {
+        @apply bg-black/40;
+    }
+
+    .styled-scrollbar-thin::-webkit-scrollbar {
+        width: 4px; /* Adjust width */
+        height: 4px; /* Adjust height for horizontal */
+    }
+    .styled-scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent; /* Or a very light color */
+    }
+    .styled-scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.2); /* Adjust color and opacity */
+        border-radius: 4px;
+        border: 1px solid transparent; /* Prevent border clipping */
+        background-clip: padding-box;
+    }
+    .styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    /* Add Firefox equivalent if needed using scrollbar-width: thin; */
+    .styled-scrollbar-thin {
+        scrollbar-width: thin; /* For Firefox */
+        scrollbar-color: rgba(0, 0, 0, 0.2) transparent; /* thumb track */
+    }
+
+    /* Isolation context for hover effects if needed */
+    .hover-isolate {
+        isolation: isolate;
+    }
+
+    /* CodeMirror Editor Base Styles Integration */
+    .cm-editor-container {
+        /* Container specific styles if needed */
+    }
+
+    .cm-editor {
+        /* Editor view itself */
+        @apply text-sm h-full bg-transparent;
+
+        &.cm-focused {
+            outline: none; /* Remove default CM outline */
+        }
+    }
+
+    .cm-scroller {
+        /* Scrollable area */
+        @apply h-full styled-scrollbar bg-transparent overflow-auto;
+        font-family: var(--font-mono);
+        line-height: 1.65; /* Consistent line height */
+    }
+
+    .cm-gutters {
+        /* Line numbers area */
+        @apply bg-glass-alt-100/80 backdrop-blur-lg border-r border-black/10 text-muted-foreground text-xs opacity-90 pr-2 pl-2;
+        /* Adjusted padding */
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .cm-activeLineGutter {
+        /* Active line number background */
+        @apply bg-primary/15;
+        /* Subtle highlight */
+    }
+
+    .cm-content {
+        /* Editable content area */
+        @apply p-3.5 bg-transparent;
+        /* Match padding elsewhere */
+        caret-color: hsl(var(--primary-h), var(--primary-s), var(--primary-l)); /* Primary color caret */
+    }
+
+    .cm-line {
+        /* Individual lines */
+        @apply leading-relaxed px-1;
+    }
+
+    .cm-placeholder {
+        /* Placeholder text style */
+        @apply text-muted-foreground italic opacity-70 pointer-events-none absolute;
+        top: 14px; /* Align with content padding */
+        left: 14px; /* Align with content padding */
+        padding-left: 4px; /* Match .cm-line padding */
+    }
+
+    .cm-selectionBackground, ::selection {
+        /* Text selection background */
+        @apply bg-primary/30;
+        /* Use primary color with alpha */
+    }
+
+    .cm-activeLine {
+        /* Active line background */
+        background-color: hsla(var(--primary-h), var(--primary-s), 95%, 0.75); /* Light primary highlight */
+    }
+
+    .cm-foldMarker {
+        /* Fold marker style */
+        color: hsl(210, 10%, 65%);
+        margin-left: 2px;
+        padding: 0 2px;
+        cursor: pointer;
+
+        &:hover {
+            color: hsl(210, 10%, 45%);
+        }
+    }
+
+    .cm-foldGutter .cm-gutterElement {
+        padding-left: 4px !important; /* Ensure padding */
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .cm-searchMatch {
+        /* Search match highlight */
+        @apply bg-yellow-300/50 outline-none rounded-[2px];
+    }
+
+    .cm-searchMatch-selected {
+        /* Selected search match highlight */
+        @apply bg-yellow-400/70;
+    }
+
+    /* Wrapper for TaskItem used by framer-motion */
+    .task-motion-wrapper {
+        /* Ensures layout animation works correctly */
+        position: relative;
+    }
+
     /* --- FIX: Hide browser's default clear button for search inputs --- */
     input[type="search"]::-webkit-search-decoration,
     input[type="search"]::-webkit-search-cancel-button,
@@ -185,8 +228,8 @@
 }
 
 @layer utilities {
-    /* Custom utility classes */
-    .ease-apple {
-        transition-timing-function: cubic-bezier(.25, .1, .25, 1);
+    /* Utility for content visibility optimization if needed */
+    .content-auto {
+        content-visibility: auto;
     }
 }

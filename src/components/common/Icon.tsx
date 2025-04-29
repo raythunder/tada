@@ -1,13 +1,13 @@
 // src/components/common/Icon.tsx
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
-import { iconMap, IconName } from "./IconMap"; // Keep using local IconMap
-import { cn } from '@/lib/utils';
+import { twMerge } from 'tailwind-merge';
+import { iconMap, IconName } from "@/components/common/IconMap";
 
 // Extend LucideProps, but omit 'ref' as it's handled by forwardRef
 interface IconProps extends Omit<LucideIcons.LucideProps, 'ref'> {
     name: IconName;
-    size?: number | string;
+    size?: number | string; // Allow string for flexibility, e.g., "1.5em"
     className?: string;
 }
 
@@ -18,18 +18,19 @@ const IconComponent = React.memo(React.forwardRef<SVGSVGElement, IconProps>(
 
         // Fallback for missing icons
         if (!LucideIcon) {
-            if (process.env.NODE_ENV === 'development') {
+            if (process.env.NODE_ENV === 'development') { // Only warn in development
                 console.warn(`Icon "${name}" not found in iconMap. Rendering fallback (HelpCircle).`);
             }
+            // Use the imported fallback icon directly
             const FallbackIcon = LucideIcons.HelpCircle;
             return (
                 <FallbackIcon
                     ref={ref}
                     size={size}
                     strokeWidth={strokeWidth}
-                    absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3}
-                    className={cn(
-                        'inline-block flex-shrink-0 stroke-current text-destructive animate-pulse', // Use theme color
+                    absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3} // Maintain absolute stroke width logic
+                    className={twMerge(
+                        'inline-block flex-shrink-0 stroke-current text-red-500 animate-pulse', // Fallback styling
                         className
                     )}
                     {...props}
@@ -44,11 +45,11 @@ const IconComponent = React.memo(React.forwardRef<SVGSVGElement, IconProps>(
                 size={size}
                 strokeWidth={strokeWidth}
                 absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3}
-                className={cn(
-                    'inline-block flex-shrink-0 stroke-current', // Base styling
-                    className
+                className={twMerge(
+                    'inline-block flex-shrink-0 stroke-current', // Base styling: ensures icon doesn't grow/shrink unexpectedly
+                    className // Allow external classes to override or add styles
                 )}
-                {...props}
+                {...props} // Pass other SVG attributes (like color, fill, data attributes, etc.)
             />
         );
     }
