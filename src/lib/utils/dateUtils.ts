@@ -27,7 +27,8 @@ import {
     startOfWeek,
     subDays,
     subMonths,
-    subWeeks
+    subWeeks,
+    formatDistanceToNowStrict
 } from 'date-fns';
 import {enUS} from 'date-fns/locale'; // Use English locale
 
@@ -169,6 +170,7 @@ export {
     startOfDay, endOfDay, isBefore, isAfter, addDays, subDays, addWeeks, subWeeks,
     differenceInCalendarDays,
     getMonth, getYear, setMonth, setYear, isWithinInterval,
+    formatDistanceToNowStrict, parseISO,
     isTodayFns as isTodayFns, // Export original under different name if needed
 };
 export {enUS}; // Export locale if needed elsewhere

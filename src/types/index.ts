@@ -3,8 +3,8 @@ export interface User {
     id: string;
     name: string;
     email: string;
-    avatar?: string; // Optional avatar URL
-    isPremium: boolean; // Premium status flag
+    avatar?: string;
+    isPremium: boolean;
 }
 
 export interface Task {
@@ -13,28 +13,26 @@ export interface Task {
     completed: boolean;
     completedAt: number | null;
     completionPercentage: number | null;
-    dueDate?: number | null; // Store as timestamp (milliseconds since epoch) or null
-    list: string; // List name (e.g., 'Inbox', 'Work', 'Trash')
-    content?: string; // Optional Markdown content for notes
-    order: number; // Fractional index for sorting
-    createdAt: number; // Timestamp when created
-    updatedAt: number; // Timestamp when last updated
-    tags?: string[]; // Optional array of tag strings
-    priority?: number | null; // Priority level (e.g., 1-4) or null
-    groupCategory: TaskGroupCategory; // Derived category for grouping (non-optional)
+    dueDate?: number | null;
+    list: string;
+    content?: string;
+    order: number;
+    createdAt: number;
+    updatedAt: number;
+    tags?: string[];
+    priority?: number | null;
+    groupCategory: TaskGroupCategory;
 }
 
-// Defines the possible filter strings used for routing and state
 export type TaskFilter =
     | 'all'
     | 'today'
     | 'next7days'
     | 'completed'
     | 'trash'
-    | `list-${string}` // e.g., 'list-Inbox', 'list-Work'
-    | `tag-${string}`; // e.g., 'tag-urgent', 'tag-review'
+    | `list-${string}`
+    | `tag-${string}`;
 
-// Defines the possible tabs in the settings modal
 export type SettingsTab =
     | 'account'
     | 'appearance'
@@ -43,10 +41,9 @@ export type SettingsTab =
     | 'integrations'
     | 'about';
 
-// Defines the categories used for grouping tasks in the 'All Tasks' view
 export type TaskGroupCategory =
     | 'overdue'
     | 'today'
     | 'next7days'
-    | 'later' // Due date is beyond 7 days
-    | 'nodate'; // No due date assigned or task is completed/trashed
+    | 'later'
+    | 'nodate';

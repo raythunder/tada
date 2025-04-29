@@ -4,9 +4,9 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider as JotaiProvider } from 'jotai';
 import App from './App';
-import 'react-tooltip/dist/react-tooltip.css' // Import tooltip CSS
+import { TooltipProvider } from "@/components/ui/tooltip"; // Import TooltipProvider
 
-import './styles/index.css'; // Import Tailwind CSS
+import './styles/index.css'; // Use globals.css from shadcn setup
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -21,7 +21,10 @@ root.render(
         <JotaiProvider>
             {/* BrowserRouter for routing */}
             <BrowserRouter>
-                <App />
+                {/* TooltipProvider wraps the entire app */}
+                <TooltipProvider delayDuration={300}>
+                    <App />
+                </TooltipProvider>
             </BrowserRouter>
         </JotaiProvider>
     </React.StrictMode>
