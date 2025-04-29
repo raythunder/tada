@@ -189,6 +189,28 @@
         @apply bg-[hsla(var(--glass-inset-200))] backdrop-blur-md;
     }
 
+    /* --- FIX: Hide browser's default clear button for search inputs --- */
+    input[type="search"]::-webkit-search-decoration,
+    input[type="search"]::-webkit-search-cancel-button,
+    input[type="search"]::-webkit-search-results-button,
+    input[type="search"]::-webkit-search-results-decoration {
+        -webkit-appearance: none; /* Older way */
+        display: none; /* Standard way */
+    }
+
+    /* Optional: Add similar rules for other browsers if needed, e.g., Edge/IE */
+    input[type="search"]::-ms-clear {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    input[type="search"]::-ms-reveal {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
     /* Specific overrides if needed */
     .react-tooltip {
         @apply !z-[9999] !px-2 !py-1 !text-xs !rounded-md !bg-neutral-800 !text-neutral-100 dark:!bg-neutral-200 dark:!text-neutral-900 shadow-md;
