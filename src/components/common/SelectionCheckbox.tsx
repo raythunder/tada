@@ -1,12 +1,13 @@
-import React, { memo, useMemo, useEffect, useRef } from 'react';
+// src/components/common/SelectionCheckbox.tsx
+import React, { memo, useMemo } from 'react';
 import { twMerge } from 'tailwind-merge';
+import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
 import Icon from './Icon';
 
 interface SelectionCheckboxProps {
     id: string;
-    checked: boolean;
-    indeterminate?: boolean;
-    onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    checked: CheckboxPrimitive.CheckboxProps['checked']; // Use Radix type ('indeterminate' | boolean)
+    onCheckedChange: (checked: boolean | 'indeterminate') => void; // Use Radix handler prop name
     'aria-label': string;
     size?: number;
     className?: string;
@@ -16,74 +17,64 @@ interface SelectionCheckboxProps {
 const SelectionCheckbox: React.FC<SelectionCheckboxProps> = memo(({
                                                                       id,
                                                                       checked,
-                                                                      indeterminate = false,
-                                                                      onChange,
+                                                                      onCheckedChange,
                                                                       'aria-label': ariaLabel,
                                                                       size = 16,
                                                                       className,
                                                                       disabled = false,
                                                                   }) => {
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (inputRef.current) {
-            inputRef.current.indeterminate = indeterminate;
-        }
-    }, [indeterminate]);
-
     const state = useMemo(() => {
-        if (indeterminate) return 'indeterminate';
+        if (checked === 'indeterminate') return 'indeterminate';
         return checked ? 'checked' : 'unchecked';
-    }, [checked, indeterminate]);
+    }, [checked]);
 
     const wrapperClasses = useMemo(() => twMerge(
-        "relative inline-flex items-center justify-center flex-shrink-0 rounded-full border transition-all duration-200 ease-apple focus-within:ring-1 focus-within:ring-primary/50 focus-within:ring-offset-1",
-        disabled
-            ? "opacity-50 cursor-not-allowed bg-gray-200/50 border-gray-300"
-            : "cursor-pointer",
-        state === 'checked'
-            ? "bg-primary border-primary hover:bg-primary/90 hover:border-primary/90"
-            : state === 'indeterminate'
-                ? "bg-primary/50 border-primary/50 hover:bg-primary/60 hover:border-primary/60"
-                : "bg-white/40 border-gray-400/80 hover:border-primary/60", // unchecked
-        className
-    ), [state, disabled, className]);
+        // Base styles for the Root element
+        "relative inline-flex items-center justify-center flex-shrink-0 rounded-full border transition-all duration-150 ease-apple focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas",
+        // Disabled state
+        "data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed data-[disabled]:bg-gray-200/50 data-[disabled]:border-gray-300",
+        // State-based styling
+        state === 'checked' && "bg-primary border-primary hover:bg-primary/90",
+        state === 'indeterminate' && "bg-primary/80 border-primary/80 hover:bg-primary/90", // Slightly different for indeterminate
+        state === 'unchecked' && "bg-white/40 border-gray-400/80 hover:border-primary/60",
+        className // Allow external classes
+    ), [state, className]);
 
     const iconName = useMemo(() => {
         if (state === 'checked') return 'check';
         if (state === 'indeterminate') return 'minus';
-        return undefined; // No icon for unchecked state inside the SVG
+        return undefined;
     }, [state]);
 
     const iconColor = useMemo(() => {
         if (state === 'checked' || state === 'indeterminate') return 'text-white';
-        return 'text-transparent'; // Hidden icon for unchecked
+        return 'text-transparent';
     }, [state]);
 
     return (
-        <label htmlFor={id} className={wrapperClasses} style={{ width: size, height: size }}>
-            <input
-                ref={inputRef}
-                id={id}
-                type="checkbox"
-                checked={checked}
-                onChange={onChange}
-                aria-label={ariaLabel}
-                disabled={disabled}
-                className="sr-only" // Hide the actual checkbox input
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
+        // Use Radix Checkbox Root
+        <CheckboxPrimitive.Root
+            id={id}
+            checked={checked}
+            onCheckedChange={onCheckedChange}
+            disabled={disabled}
+            aria-label={ariaLabel}
+            className={wrapperClasses}
+            style={{ width: size, height: size }}
+        >
+            {/* Radix Checkbox Indicator for the checkmark/minus */}
+            <CheckboxPrimitive.Indicator className="flex items-center justify-center w-full h-full">
                 {iconName && (
                     <Icon
                         name={iconName}
-                        size={size * 0.65} // Adjust icon size relative to checkbox size
+                        size={size * 0.65} // Adjust icon size
                         className={twMerge("transition-colors duration-100 ease-apple", iconColor)}
                         strokeWidth={3} // Make icon bolder
                         aria-hidden="true"
                     />
                 )}
-            </div>
-        </label>
+            </CheckboxPrimitive.Indicator>
+        </CheckboxPrimitive.Root>
     );
 });
 SelectionCheckbox.displayName = 'SelectionCheckbox';

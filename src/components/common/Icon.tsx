@@ -1,8 +1,8 @@
 // src/components/common/Icon.tsx
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
-import { twMerge } from 'tailwind-merge';
-import { iconMap, IconName } from "@/components/common/IconMap";
+import {twMerge} from 'tailwind-merge';
+import {iconMap, IconName} from "@/components/common/IconMap";
 
 // Extend LucideProps, but omit 'ref' as it's handled by forwardRef
 interface IconProps extends Omit<LucideIcons.LucideProps, 'ref'> {
@@ -13,7 +13,7 @@ interface IconProps extends Omit<LucideIcons.LucideProps, 'ref'> {
 
 // Performance: Use React.memo as Icons are pure components based on props
 const IconComponent = React.memo(React.forwardRef<SVGSVGElement, IconProps>(
-    ({ name, size = 16, className, strokeWidth = 1.75, ...props }, ref) => {
+    ({name, size = 16, className, strokeWidth = 1.75, ...props}, ref) => {
         const LucideIcon = iconMap[name];
 
         // Fallback for missing icons

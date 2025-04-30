@@ -1,5 +1,5 @@
 // src/context/TaskItemMenuContext.tsx
-import React, { createContext, useState, useMemo, useContext } from 'react';
+import React, {createContext, useContext, useMemo, useState} from 'react';
 
 // Define the shape of the context data
 interface TaskItemMenuContextType {
@@ -11,11 +11,10 @@ interface TaskItemMenuContextType {
 const TaskItemMenuContext = createContext<TaskItemMenuContextType | undefined>(undefined);
 
 // Create a provider component
-export const TaskItemMenuProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const TaskItemMenuProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
     const [openItemId, setOpenItemId] = useState<string | null>(null);
 
     // Memoize the context value to prevent unnecessary re-renders of consumers
-    // if the provider's parent re-renders but the state hasn't changed.
     const contextValue = useMemo(() => ({
         openItemId,
         setOpenItemId,

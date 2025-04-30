@@ -5,7 +5,7 @@ import CalendarView from '../components/calendar/CalendarView';
 // Simple wrapper component for the Calendar View
 const CalendarPage: React.FC = () => {
     // CalendarView internally handles its state and logic
-    return <CalendarView />;
+    return <CalendarView/>;
 };
-CalendarPage.displayName = 'CalendarPage'; // Add display name
+CalendarPage.displayName = 'CalendarPage';
 export default CalendarPage;

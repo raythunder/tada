@@ -1,65 +1,82 @@
 // src/components/common/CustomDatePickerPopover.tsx
-import React, { useState, useMemo, useCallback, useRef } from 'react'; // Added useRef
-import ReactDOM from 'react-dom';
-import { twMerge } from 'tailwind-merge';
-import { Tooltip } from 'react-tooltip';
+import React, {useCallback, useMemo, useState} from 'react';
+import {twMerge} from 'tailwind-merge';
+import {Tooltip} from 'react-tooltip';
+import * as PopoverPrimitive from '@radix-ui/react-popover';
 import {
-    addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek,
-    format, isSameDay, isSameMonth, isToday, startOfDay, startOfMonth,
-    startOfWeek, subMonths, isValid
+    addDays,
+    addMonths,
+    eachDayOfInterval,
+    endOfMonth,
+    endOfWeek,
+    format,
+    isSameDay,
+    isSameMonth,
+    isToday,
+    isValid,
+    startOfDay,
+    startOfMonth,
+    startOfWeek,
+    subMonths
 } from '@/utils/dateUtils';
 import Button from './Button';
 import Icon from './Icon';
-import { motion, AnimatePresence } from 'framer-motion';
-import useClickAway from '@/hooks/useClickAway'; // <<< Import useClickAway
 
-interface CustomDatePickerPopoverProps {
+// Re-export Popover parts for convenience
+export const Popover = PopoverPrimitive.Root;
+export const PopoverTrigger = PopoverPrimitive.Trigger;
+export const PopoverAnchor = PopoverPrimitive.Anchor;
+export const PopoverClose = PopoverPrimitive.Close;
+
+// Styled Popover Content
+export const PopoverContent = React.forwardRef<
+    React.ElementRef<typeof PopoverPrimitive.Content>,
+    React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
+>(({className, align = 'center', sideOffset = 4, ...props}, ref) => (
+    <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+            ref={ref}
+            align={align}
+            sideOffset={sideOffset}
+            className={twMerge(
+                // Base Radix preset styling
+                "z-50 w-72 rounded-lg border border-black/10 bg-glass-100 backdrop-blur-xl p-4 shadow-strong outline-none data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+                // Customizations
+                className
+            )}
+            {...props}
+        />
+    </PopoverPrimitive.Portal>
+));
+PopoverContent.displayName = PopoverPrimitive.Content.displayName;
+
+
+// --- Date Picker Internal Logic Component ---
+interface CustomDatePickerInternalProps {
     initialDate: Date | undefined;
     onSelect: (date: Date | undefined) => void;
-    close: () => void;
-    triggerElement?: HTMLElement | null; // Still useful for positioning if not using portal
-    usePortal?: boolean;
+    closePopover: () => void; // Function passed down to close the Radix Popover
 }
 
-// Internal content component remains largely the same, but adds useClickAway
-const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = React.memo(({
-                                                                                               initialDate,
-                                                                                               onSelect,
-                                                                                               close,
-                                                                                               triggerElement // Keep triggerElement prop for potential useClickAway logic with trigger
-                                                                                           }) => {
+const CustomDatePickerInternal: React.FC<CustomDatePickerInternalProps> = React.memo(({
+                                                                                          initialDate,
+                                                                                          onSelect,
+                                                                                          closePopover,
+                                                                                      }) => {
     const today = useMemo(() => startOfDay(new Date()), []);
     const [viewDate, setViewDate] = useState(initialDate && isValid(initialDate) ? startOfDay(initialDate) : today);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate && isValid(initialDate) ? startOfDay(initialDate) : undefined);
-    const popoverRef = useRef<HTMLDivElement>(null); // <<< Ref for the popover content
 
-    // <<< Apply useClickAway hook >>>
-    // We pass both the popover content ref and the trigger element ref (if available)
-    // This prevents closing if the user clicks the trigger button again while the popover is open.
-    // const refsToWatch: React.RefObject<HTMLElement>[] = [popoverRef];
-    if (triggerElement instanceof HTMLElement) {
-        // Create a RefObject on the fly if triggerElement is passed and is an HTMLElement
-        // Note: This isn't ideal as the ref isn't stable, but works for preventing trigger clicks closing.
-        // A more robust way would be to require the trigger ref to be passed if needed.
-        // However, for this specific problem in TaskList, triggerElement isn't strictly necessary
-        // for the click-away logic *of the popover itself*. We primarily need the popoverRef.
-        // Let's keep it simple and just watch the popoverRef for now.
-        // If issues arise with trigger clicks, this part can be revisited.
-    }
-    useClickAway(popoverRef, close); // Watch only the popover content itself
-
-    // --- Rest of the component logic remains the same ---
-
-    const { calendarDays } = useMemo(() => {
+    const {calendarDays} = useMemo(() => {
         const mStart = startOfMonth(viewDate);
         const mEnd = endOfMonth(viewDate);
         const cStart = startOfWeek(mStart);
         const cEnd = endOfWeek(mEnd);
-        const days = eachDayOfInterval({ start: cStart, end: cEnd });
-        return { monthStart: mStart, monthEnd: mEnd, calendarStart: cStart, calendarEnd: cEnd, calendarDays: days };
+        const days = eachDayOfInterval({start: cStart, end: cEnd});
+        return {calendarDays: days};
     }, [viewDate]);
 
-    const tooltipIdPrefix = useMemo(() => `date-picker-tooltip-${Math.random().toString(36).substring(7)}`, []); // Unique prefix per instance
+    const tooltipIdPrefix = useMemo(() => `date-picker-tooltip-${Math.random().toString(36).substring(7)}`, []);
 
     const prevMonth = useCallback(() => setViewDate(v => subMonths(v, 1)), []);
     const nextMonth = useCallback(() => setViewDate(v => addMonths(v, 1)), []);
@@ -73,11 +90,11 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
 
     const createQuickSelectHandler = useCallback((dateFn: () => Date) => () => {
         const date = startOfDay(dateFn());
-        setSelectedDate(date);
-        setViewDate(date);
-        onSelect(date);
-        close();
-    }, [onSelect, close]);
+        setSelectedDate(date); // Select internally
+        setViewDate(date);     // Update view
+        onSelect(date);      // Trigger external onSelect
+        closePopover();      // Close the Radix popover
+    }, [onSelect, closePopover]);
 
     const selectToday = useMemo(() => createQuickSelectHandler(() => new Date()), [createQuickSelectHandler]);
     const selectTomorrow = useMemo(() => createQuickSelectHandler(() => addDays(new Date(), 1)), [createQuickSelectHandler]);
@@ -89,62 +106,58 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
         const isCurrentlySelected = selectedDate && isSameDay(dateStart, selectedDate);
         const newDate = isCurrentlySelected ? undefined : dateStart;
         setSelectedDate(newDate);
+        // Don't call onSelect or close here, wait for OK button
     }, [selectedDate]);
 
     const handleClearDate = useCallback(() => {
         setSelectedDate(undefined);
-        onSelect(undefined);
-        close();
-    }, [onSelect, close]);
+        onSelect(undefined); // Call external handler
+        closePopover();      // Close popover
+    }, [onSelect, closePopover]);
 
     const handleConfirm = useCallback(() => {
-        onSelect(selectedDate);
-        close();
-    }, [selectedDate, onSelect, close]);
+        onSelect(selectedDate); // Call external handler with the finally selected date
+        closePopover();       // Close popover
+    }, [selectedDate, onSelect, closePopover]);
 
     const weekDays = useMemo(() => ['S', 'M', 'T', 'W', 'T', 'F', 'S'], []);
 
     return (
-        // <<< Attach ref and ignore-click-away class >>>
-        <div
-            ref={popoverRef}
-            className="date-picker-content ignore-click-away bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 p-4 w-[320px]"
-            // Stop propagation needed to prevent triggering parent click-away handlers if nested
-            onClick={e => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-        >
+        // Removed the outer wrapper div (bg-glass, etc.) as that's now handled by PopoverContent
+        // Added ignore-click-away to prevent closing when interacting inside
+        <div className="date-picker-internal-content ignore-click-away w-[300px]">
             {/* Quick Date Selection Icons */}
-            <div className="flex justify-between mb-4 px-4">
+            <div className="flex justify-between mb-4 px-2">
                 <button
                     onClick={selectToday}
-                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 transition-colors"
+                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 dark:hover:bg-white/10 transition-colors duration-150 ease-apple"
                     data-tooltip-id={`${tooltipIdPrefix}today`} data-tooltip-content="Today"
                     aria-label="Select Today"
                 >
-                    <Icon name="sun" size={20} className="text-gray-500"/>
+                    <Icon name="sun" size={20} className="text-gray-500 dark:text-gray-400"/>
                 </button>
                 <Tooltip id={`${tooltipIdPrefix}today`} place="top" className="!z-[60]"/>
 
                 <button
                     onClick={selectTomorrow}
-                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 transition-colors"
+                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 dark:hover:bg-white/10 transition-colors duration-150 ease-apple"
                     data-tooltip-id={`${tooltipIdPrefix}tomorrow`} data-tooltip-content="Tomorrow"
                     aria-label="Select Tomorrow"
                 >
-                    <Icon name="sunset" size={20} className="text-gray-500"/>
+                    <Icon name="sunset" size={20} className="text-gray-500 dark:text-gray-400"/>
                 </button>
                 <Tooltip id={`${tooltipIdPrefix}tomorrow`} place="top" className="!z-[60]"/>
 
                 <button
                     onClick={selectNextWeek}
-                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 transition-colors"
+                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 dark:hover:bg-white/10 transition-colors duration-150 ease-apple"
                     data-tooltip-id={`${tooltipIdPrefix}next-week`} data-tooltip-content="+7 Days"
                     aria-label="Select 7 days from now"
                 >
                     <div className="relative">
-                        <Icon name="calendar" size={20} className="text-gray-500"/>
-                        <div className="absolute top-0 right-0 -mt-1 -mr-1 bg-gray-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                        <Icon name="calendar" size={20} className="text-gray-500 dark:text-gray-400"/>
+                        <div
+                            className="absolute top-0 right-0 -mt-1 -mr-1 bg-gray-500 text-white text-[8px] font-bold rounded-full w-3.5 h-3.5 flex items-center justify-center">
                             +7
                         </div>
                     </div>
@@ -153,26 +166,32 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
 
                 <button
                     onClick={selectNextMonth}
-                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 transition-colors"
+                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/15 dark:hover:bg-white/10 transition-colors duration-150 ease-apple"
                     data-tooltip-id={`${tooltipIdPrefix}next-month`} data-tooltip-content="Next Month"
                     aria-label="Select next month"
                 >
-                    <Icon name="moon" size={20} className="text-gray-500"/>
+                    <Icon name="moon" size={20} className="text-gray-500 dark:text-gray-400"/>
                 </button>
                 <Tooltip id={`${tooltipIdPrefix}next-month`} place="top" className="!z-[60]"/>
             </div>
 
             {/* Month Navigation */}
-            <div className="flex items-center justify-between mb-4">
-                <div className="text-base font-medium text-gray-800">
+            <div className="flex items-center justify-between mb-3 px-1">
+                <div className="text-sm font-medium text-gray-800 dark:text-gray-100 flex-1 text-center tabular-nums">
                     {format(viewDate, 'MMMM yyyy')}
                 </div>
-                <div className="flex items-center space-x-1">
-                    <Button onClick={prevMonth} variant="ghost" size="icon" icon="chevron-left" className="w-7 h-7 text-gray-500 hover:bg-black/10" aria-label="Previous month"/>
-                    <Button onClick={goToToday} variant="ghost" size="icon" className="w-7 h-7" aria-label="Go to current month">
-                        <div className={twMerge("w-1.5 h-1.5 rounded-full", isSameMonth(viewDate, today) ? "bg-primary" : "bg-gray-300")}></div>
+                <div className="flex items-center space-x-0.5">
+                    <Button onClick={prevMonth} variant="ghost" size="icon" icon="chevron-left"
+                            className="w-7 h-7 text-gray-500 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10"
+                            aria-label="Previous month"/>
+                    <Button onClick={goToToday} variant="ghost" size="icon" className="w-7 h-7"
+                            aria-label="Go to current month">
+                        <div
+                            className={twMerge("w-1.5 h-1.5 rounded-full", isSameMonth(viewDate, today) ? "bg-primary" : "bg-gray-400 dark:bg-gray-600")}></div>
                     </Button>
-                    <Button onClick={nextMonth} variant="ghost" size="icon" icon="chevron-right" className="w-7 h-7 text-gray-500 hover:bg-black/10" aria-label="Next month"/>
+                    <Button onClick={nextMonth} variant="ghost" size="icon" icon="chevron-right"
+                            className="w-7 h-7 text-gray-500 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10"
+                            aria-label="Next month"/>
                 </div>
             </div>
 
@@ -181,14 +200,15 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                 {/* Day Headers */}
                 <div className="grid grid-cols-7 mb-1">
                     {weekDays.map((day, i) => (
-                        <div key={i} className="text-center text-xs text-gray-500 h-8 flex items-center justify-center font-medium">
+                        <div key={i}
+                             className="text-center text-[11px] text-gray-500 dark:text-gray-400 h-8 flex items-center justify-center font-medium">
                             {day}
                         </div>
                     ))}
                 </div>
 
                 {/* Calendar Days */}
-                <div className="grid grid-cols-7 gap-0">
+                <div className="grid grid-cols-7">
                     {calendarDays.map((day, i) => {
                         const isCurrentMonth = isSameMonth(day, viewDate);
                         const isDaySelected = selectedDate && isSameDay(day, selectedDate);
@@ -199,13 +219,14 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
                                 key={i}
                                 onClick={() => handleSelectDate(day)}
                                 className={twMerge(
-                                    "h-9 w-9 flex items-center justify-center rounded-full text-sm transition-colors mx-auto",
-                                    !isCurrentMonth && "text-gray-400/70 hover:bg-transparent",
-                                    isCurrentMonth && "hover:bg-black/10",
-                                    isDayToday && !isDaySelected && "font-semibold text-primary border border-primary/50",
-                                    !isDayToday && isCurrentMonth && !isDaySelected && "text-gray-800",
-                                    isDaySelected && "bg-primary text-white font-semibold hover:bg-primary-dark",
-                                    !isCurrentMonth && "pointer-events-none opacity-50"
+                                    "h-8 w-8 flex items-center justify-center rounded-full text-sm transition-colors duration-100 ease-apple mx-auto",
+                                    "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 relative z-0", // Base focus
+                                    !isCurrentMonth && "text-gray-400/60 dark:text-gray-600 hover:bg-transparent",
+                                    isCurrentMonth && "hover:bg-black/10 dark:hover:bg-white/10",
+                                    isDayToday && !isDaySelected && "font-semibold text-primary border border-primary/40",
+                                    !isDayToday && isCurrentMonth && !isDaySelected && "text-gray-700 dark:text-gray-200",
+                                    isDaySelected && "bg-primary text-primary-foreground font-semibold hover:bg-primary-dark z-10", // Selected state on top
+                                    !isCurrentMonth && "pointer-events-none opacity-50" // Disabled state
                                 )}
                                 aria-label={format(day, 'MMMM d, yyyy')}
                                 aria-pressed={isDaySelected}
@@ -219,48 +240,78 @@ const CustomDatePickerPopoverContent: React.FC<CustomDatePickerPopoverProps> = R
             </div>
 
             {/* Action Buttons */}
-            <div className="flex space-x-2 mt-4 border-t border-black/10 pt-3">
+            <div className="flex space-x-2 mt-2 border-t border-black/10 dark:border-white/10 pt-3">
                 <Button
                     variant="outline"
-                    size="md"
+                    size="md" // Use consistent size
                     className="flex-1 justify-center"
                     onClick={handleClearDate}
                 >
                     Clear
                 </Button>
-                <Button
-                    variant="primary"
-                    size="md"
-                    className="flex-1 justify-center"
-                    onClick={handleConfirm}
-                >
-                    OK
-                </Button>
+                {/* Use PopoverClose for the OK button to semantically close */}
+                <PopoverClose asChild>
+                    <Button
+                        variant="primary"
+                        size="md" // Use consistent size
+                        className="flex-1 justify-center"
+                        onClick={handleConfirm}
+                    >
+                        OK
+                    </Button>
+                </PopoverClose>
             </div>
         </div>
     );
 });
-CustomDatePickerPopoverContent.displayName = 'CustomDatePickerPopoverContent';
+CustomDatePickerInternal.displayName = 'CustomDatePickerInternal';
 
+// --- Main Exported Component: Wraps Radix Popover ---
+interface CustomDatePickerPopoverProps {
+    initialDate: Date | undefined;
+    onSelect: (date: Date | undefined) => void;
+    children: React.ReactNode; // The trigger element(s)
+    align?: PopoverPrimitive.PopoverContentProps['align'];
+    side?: PopoverPrimitive.PopoverContentProps['side'];
+    sideOffset?: PopoverPrimitive.PopoverContentProps['sideOffset'];
+}
 
-// Main Popover component - wrapper for portal logic (remains the same)
-const CustomDatePickerPopover: React.FC<CustomDatePickerPopoverProps> = ({ usePortal = false, ...props }) => {
-    const content = (
-        <AnimatePresence>
-            <motion.div
-                className="date-picker-popover z-[60]" // Keep high z-index
-                initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -5, transition: { duration: 0.1 } }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-            >
-                {/* Pass all props down, including triggerElement */}
-                <CustomDatePickerPopoverContent {...props} />
-            </motion.div>
-        </AnimatePresence>
+const CustomDatePickerPopover: React.FC<CustomDatePickerPopoverProps> = ({
+                                                                             initialDate,
+                                                                             onSelect,
+                                                                             children,
+                                                                             align = 'center',
+                                                                             side = 'bottom',
+                                                                             sideOffset = 5,
+                                                                         }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSelectAndClose = useCallback((date: Date | undefined) => {
+        onSelect(date);
+        setIsOpen(false); // Close popover after selection or action
+    }, [onSelect]);
+
+    const handlePopoverClose = useCallback(() => {
+        setIsOpen(false);
+    }, []);
+
+    return (
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+                {children}
+            </PopoverTrigger>
+            {/* Use the styled PopoverContent */}
+            <PopoverContent align={align} side={side} sideOffset={sideOffset}
+                            className="w-auto p-0 border-none bg-transparent shadow-none">
+                {/* Pass down props and the specific close handler */}
+                <CustomDatePickerInternal
+                    initialDate={initialDate}
+                    onSelect={handleSelectAndClose} // Use the wrapper handler
+                    closePopover={handlePopoverClose} // Pass the function to close the popover
+                />
+            </PopoverContent>
+        </Popover>
     );
-
-    return usePortal ? ReactDOM.createPortal(content, document.body) : content;
 };
 CustomDatePickerPopover.displayName = 'CustomDatePickerPopover';
 export default CustomDatePickerPopover;

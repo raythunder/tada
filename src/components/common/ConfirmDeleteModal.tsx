@@ -1,10 +1,9 @@
 // src/components/common/ConfirmDeleteModal.tsx
-import React, { useCallback } from 'react';
-import ReactDOM from 'react-dom';
+import React, {useCallback} from 'react';
 import Button from './Button';
 import Icon from './Icon';
-import { motion, AnimatePresence } from 'framer-motion';
-import { twMerge } from 'tailwind-merge';
+import {twMerge} from 'tailwind-merge';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 
 interface ConfirmDeleteModalProps {
     isOpen: boolean;
@@ -15,87 +14,62 @@ interface ConfirmDeleteModalProps {
 
 const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
                                                                    isOpen,
-                                                                   onClose,
+                                                                   onClose, // Will be called by Radix onOpenChange
                                                                    onConfirm,
                                                                    taskTitle
                                                                }) => {
 
-    const handleDialogClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation(), []);
-
     const handleConfirmClick = useCallback(() => {
         onConfirm();
-        onClose();
-    }, [onConfirm, onClose]);
+        // No need to call onClose here, Radix handles it if button is wrapped in DialogClose
+    }, [onConfirm]);
 
-    const modalRoot = typeof document !== 'undefined' ? document.body : null;
-    if (!modalRoot) {
-        return null;
-    }
-
-    return ReactDOM.createPortal(
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    // Backdrop without blur
-                    className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
-                    onClick={onClose}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }} // Match duration for backdrop and content
-                    aria-modal="true"
-                    role="dialog"
-                    aria-labelledby="confirmDeleteModalTitle"
+    return (
+        <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogPrimitive.Portal>
+                {/* Overlay */}
+                <DialogPrimitive.Overlay
+                    className="fixed inset-0 z-50 bg-black/65 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out"/>
+                {/* Content */}
+                <DialogPrimitive.Content
+                    className={twMerge(
+                        // Base styling using Tailwind and Radix data attributes
+                        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border border-black/10 bg-glass-100 backdrop-blur-xl p-6 shadow-strong duration-200 data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out rounded-xl"
+                    )}
+                    onEscapeKeyDown={onClose} // Ensure ESC closes
+                    onPointerDownOutside={onClose} // Ensure click outside closes
                 >
-                    {/* Modal Dialog Content */}
-                    <motion.div
-                        // --- MODIFICATION: Restored blur, simplified animation ---
-                        className={twMerge(
-                            // Restore glass background with blur for the content
-                            "bg-glass-100 backdrop-blur-xl w-full max-w-sm rounded-xl shadow-strong overflow-hidden border border-black/10",
-                            "flex flex-col p-5"
-                        )}
-                        onClick={handleDialogClick}
-                        // Simplified animation: Fade and slight slide
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }} // Optional subtle slide down on exit
-                        transition={{ duration: 0.2, ease: 'easeOut' }} // Match backdrop duration
-                    >
-                        {/* Icon and Title */}
-                        <div className="flex flex-col items-center text-center mb-4">
-                            <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-3">
-                                <Icon name="trash" size={24} className="text-red-600" />
-                            </div>
-                            {/* Use original text colors assuming glass background */}
-                            <h2 id="confirmDeleteModalTitle" className="text-lg font-semibold text-gray-800 mb-1">
-                                Move to Trash?
-                            </h2>
-                            <p className="text-sm text-muted-foreground px-4">
-                                Are you sure you want to move the task "{taskTitle || 'Untitled Task'}" to the Trash?
-                            </p>
+                    {/* Icon and Title */}
+                    <div className="flex flex-col items-center text-center space-y-3">
+                        <div
+                            className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                            <Icon name="trash" size={24} className="text-red-600 dark:text-red-500"/>
                         </div>
+                        <div className="space-y-1">
+                            <DialogPrimitive.Title className="text-lg font-semibold text-gray-900 dark:text-gray-50">
+                                Move to Trash?
+                            </DialogPrimitive.Title>
+                            <DialogPrimitive.Description className="text-sm text-muted-foreground px-2">
+                                Are you sure you want to move the task "{taskTitle || 'Untitled Task'}" to the Trash?
+                            </DialogPrimitive.Description>
+                        </div>
+                    </div>
 
-                        {/* Actions */}
-                        <div className="flex justify-center space-x-3 mt-4">
-                            {/* Use original button variants */}
-                            <Button variant="glass" size="md" onClick={onClose} className="flex-1">
+                    {/* Actions */}
+                    <div className="flex justify-center space-x-3 mt-2">
+                        <DialogPrimitive.Close asChild>
+                            <Button variant="outline" size="md" className="flex-1">
                                 Cancel
                             </Button>
-                            <Button
-                                variant="danger"
-                                size="md"
-                                onClick={handleConfirmClick}
-                                className="flex-1"
-                            >
-                                Move to Trash
-                            </Button>
-                        </div>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>,
-        modalRoot
+                        </DialogPrimitive.Close>
+                        {/* Confirm button closes the dialog via its own logic */}
+                        <Button variant="danger" size="md" onClick={handleConfirmClick} className="flex-1">
+                            Move to Trash
+                        </Button>
+                    </div>
+                </DialogPrimitive.Content>
+            </DialogPrimitive.Portal>
+        </DialogPrimitive.Root>
     );
 };
 ConfirmDeleteModal.displayName = 'ConfirmDeleteModal';

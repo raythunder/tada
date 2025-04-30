@@ -170,5 +170,6 @@ export {
     differenceInCalendarDays,
     getMonth, getYear, setMonth, setYear, isWithinInterval,
     isTodayFns as isTodayFns, // Export original under different name if needed
+    parseISO, // Export parseISO as it's used internally and might be useful
 };
 export {enUS}; // Export locale if needed elsewhere

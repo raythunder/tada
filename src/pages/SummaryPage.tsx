@@ -5,7 +5,7 @@ import SummaryView from '../components/summary/SummaryView';
 // Simple wrapper component for the Summary View
 const SummaryPage: React.FC = () => {
     // SummaryView handles its own state and logic
-    return <SummaryView />;
+    return <SummaryView/>;
 };
-SummaryPage.displayName = 'SummaryPage'; // Add display name
+SummaryPage.displayName = 'SummaryPage';
 export default SummaryPage;

@@ -1,5 +1,5 @@
 // src/hooks/useClickAway.ts
-import { useEffect, RefObject } from 'react';
+import {RefObject, useEffect} from 'react';
 
 /**
  * Custom hook to detect clicks outside a specified element (or multiple elements).
@@ -7,7 +7,7 @@ import { useEffect, RefObject } from 'react';
  * @param handler Callback function to execute when a click outside occurs.
  */
 function useClickAway(
-    refs: RefObject<HTMLElement> | RefObject<HTMLElement>[],
+    refs: RefObject<HTMLElement | null> | RefObject<HTMLElement | null>[], // Accept null refs
     handler: (event: MouseEvent | TouchEvent) => void
 ) {
     useEffect(() => {
@@ -17,9 +17,10 @@ function useClickAway(
 
             // Check if the click is inside any of the provided refs or an element marked to be ignored
             const isInside = refsArray.some(ref => {
-                const el = ref.current;
+                const el = ref?.current; // Safely access current
                 // Do nothing if clicking ref's element or descendent elements
-                return el && (el.contains(target) || (target instanceof Element && target.closest('.ignore-click-away')));
+                // Also check if the target or its ancestor has the ignore class
+                return el && (el.contains(target) || (target instanceof Element && !!target.closest('.ignore-click-away')));
             });
 
             // If the click is not inside any ref element or ignored element, call the handler
@@ -41,7 +42,11 @@ function useClickAway(
             document.removeEventListener('mousedown', listener);
             document.removeEventListener('touchstart', listener);
         };
-    }, [refs, handler]); // Re-run if refs or handler changes
+        // Ensure refs array itself is stable or properly included in dependencies if it can change identity
+        // Using JSON.stringify is a quick way but might have performance implications if refs change often.
+        // If refs array identity is stable, just [handler] might be enough, or explicitly list stable refs if possible.
+        // For simplicity here, assuming refs array identity is stable or changes infrequently.
+    }, [refs, handler]);
 }
 
 export default useClickAway;

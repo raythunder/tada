@@ -1,5 +1,5 @@
 // src/components/tasks/TaskList.tsx
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useMemo, useRef, useState} from 'react';
 import TaskItem from './TaskItem';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/store/atoms';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
-import CustomDatePickerPopover from '../common/CustomDatePickerPopover';
+import CustomDatePickerPopover from '../common/CustomDatePickerPopover'; // Radix-based popover
 import {Task, TaskGroupCategory} from '@/types';
 import {
     closestCenter,
@@ -29,12 +29,10 @@ import {
     useSensor,
     useSensors
 } from '@dnd-kit/core';
-import {usePopper} from 'react-popper';
 import {arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy} from '@dnd-kit/sortable';
-import {AnimatePresence, motion} from 'framer-motion';
+import {AnimatePresence, motion} from 'framer-motion'; // Keep for task add/remove animation
 import {
     addDays,
-    isBefore,
     isOverdue,
     isToday,
     isValid,
@@ -50,41 +48,38 @@ interface TaskListProps {
     title: string;
 }
 
-interface HeaderDatePickerState {
-    referenceElement: HTMLElement | null;
-    isVisible: boolean;
-}
-
+// Styled Task Group Header
 const TaskGroupHeader: React.FC<{
     title: string;
     groupKey: TaskGroupCategory;
-    onRescheduleAllClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
-}> = React.memo(({title, groupKey, onRescheduleAllClick}) => (
+    rescheduleTrigger?: React.ReactNode; // Allow passing the trigger
+}> = React.memo(({title, groupKey, rescheduleTrigger}) => (
     <div
-        className="flex items-center justify-between px-3 pt-3 pb-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider sticky top-0 z-20"
+        className="flex items-center justify-between px-3 pt-3 pb-1.5 text-[10px] font-semibold text-muted-foreground dark:text-neutral-400 uppercase tracking-wider sticky top-0 z-20"
         style={{
-            backgroundColor: 'hsla(220, 40%, 98%, 0.85)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
+            // Subtle glass effect for sticky header
+            backgroundColor: 'hsla(220, 40%, 98%, 0.85)', // Light mode base
+            // TODO: Add dark mode equivalent background color if needed
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            // Mask to fade bottom edge
+            WebkitMaskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 80%, transparent 100%)',
         }}
     >
         <span>{title}</span>
-        {groupKey === 'overdue' && onRescheduleAllClick && (
-            <Button
-                variant="ghost" size="sm" icon="calendar-check"
-                onClick={onRescheduleAllClick}
-                className="text-xs !h-5 px-1.5 text-muted-foreground hover:text-primary hover:bg-primary/15 -mr-1"
-                title="Reschedule all overdue tasks..."
-            >
-                Reschedule All
-            </Button>
+        {/* Render the trigger passed from parent for Radix Popover */}
+        {groupKey === 'overdue' && rescheduleTrigger && (
+            <div className="-mr-1"> {/* Adjust spacing */}
+                {rescheduleTrigger}
+            </div>
         )}
     </div>
 ));
 TaskGroupHeader.displayName = 'TaskGroupHeader';
 
+
+// DND Config (Keep as is)
 const dropAnimationConfig: DropAnimation = {sideEffects: defaultDropAnimationSideEffects({styles: {active: {opacity: '0.4'}}}),};
 const groupTitles: Record<TaskGroupCategory, string> = {
     overdue: 'Overdue',
@@ -94,6 +89,7 @@ const groupTitles: Record<TaskGroupCategory, string> = {
     nodate: 'No Date',
 };
 const groupOrder: TaskGroupCategory[] = ['overdue', 'today', 'next7days', 'later', 'nodate'];
+
 
 const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const allTasks = useAtomValue(tasksAtom);
@@ -106,20 +102,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [draggingTask, setDraggingTask] = useState<Task | null>(null);
-    const [headerDatePickerState, setHeaderDatePickerState] = useState<HeaderDatePickerState>({
-        isVisible: false,
-        referenceElement: null
-    });
-    const [headerPopperElement, setHeaderPopperElement] = useState<HTMLDivElement | null>(null);
 
-    const {styles: headerPopperStyles, attributes: headerPopperAttributes, update: updateHeaderPopper} = usePopper(
-        headerDatePickerState.referenceElement, headerPopperElement,
-        { placement: 'bottom-end', strategy: 'absolute', modifiers: [ {name: 'offset', options: {offset: [0, 8]}}, {name: 'preventOverflow', options: {padding: 8, boundary: scrollContainerRef.current ?? undefined}}, { name: 'flip', options: { padding: 8, boundary: scrollContainerRef.current ?? undefined, fallbackPlacements: ['top-end', 'bottom-start', 'top-start'] } } ] }
-    );
-
-    useEffect(() => { if (headerDatePickerState.isVisible && scrollContainerRef.current && updateHeaderPopper) { const rafId = requestAnimationFrame(() => updateHeaderPopper()); return () => cancelAnimationFrame(rafId); } }, [headerDatePickerState.isVisible, updateHeaderPopper]);
-
-    // NOTE: Corrected the name back from isGroupView to isGroupedView
+    // Filter/Grouping logic (remains the same)
     const {tasksToDisplay, isGroupedView, isSearching} = useMemo(() => {
         const searching = searchTerm.trim().length > 0;
         let displayData: Task[] | Record<TaskGroupCategory, Task[]> = [];
@@ -146,7 +130,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                     });
                     break;
                 case 'completed':
-                    filtered = activeTasks.filter((task: Task) => task.completed).sort((a: Task, b: Task) => (b.completedAt ?? b.updatedAt ?? 0) - (a.completedAt ?? a.updatedAt ?? 0));
+                    // Sort completed by completion/update time DESC
+                    filtered = activeTasks.filter((task: Task) => task.completed && task.list !== 'Trash').sort((a: Task, b: Task) => (b.completedAt ?? b.updatedAt ?? 0) - (a.completedAt ?? a.updatedAt ?? 0));
                     break;
                 case 'trash':
                     filtered = trashedTasks.sort((a: Task, b: Task) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -154,9 +139,11 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                 default:
                     if (currentFilterGlobal.startsWith('list-')) {
                         const listName = currentFilterGlobal.substring(5);
+                        // Show non-completed tasks for specific lists
                         filtered = activeTasks.filter((task: Task) => !task.completed && task.list === listName);
                     } else if (currentFilterGlobal.startsWith('tag-')) {
                         const tagName = currentFilterGlobal.substring(4);
+                        // Show non-completed tasks for specific tags
                         filtered = activeTasks.filter((task: Task) => !task.completed && task.tags?.includes(tagName));
                     } else {
                         console.warn(`Unrecognized filter: ${currentFilterGlobal}`);
@@ -164,6 +151,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                     }
                     break;
             }
+            // Default sort for non-completed/trash views
             if (currentFilterGlobal !== 'completed' && currentFilterGlobal !== 'trash') {
                 filtered.sort((a: Task, b: Task) => (a.order - b.order) || (a.createdAt - b.createdAt));
             }
@@ -173,7 +161,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         return {tasksToDisplay: displayData, isGroupedView: grouped, isSearching: searching};
     }, [searchTerm, currentFilterGlobal, groupedTasks, rawSearchResults, allTasks]);
 
-
+    // Sortable items for dnd-kit (remains the same)
     const sortableItems: UniqueIdentifier[] = useMemo(() => {
         if (isGroupedView) {
             return groupOrder.flatMap(groupKey => (tasksToDisplay as Record<TaskGroupCategory, Task[]>)[groupKey]?.map(task => task.id) ?? []);
@@ -182,14 +170,23 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         }
     }, [tasksToDisplay, isGroupedView]);
 
+    // DND Sensors (remains the same)
     const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 8}}), useSensor(KeyboardSensor, {coordinateGetter: sortableKeyboardCoordinates}));
 
+    // DND Handlers (remains the same logic)
     const handleDragStart = useCallback((event: DragStartEvent) => {
         const {active} = event;
-        const activeTask = (isGroupedView ? Object.values(tasksToDisplay as Record<TaskGroupCategory, Task[]>).flat() : (tasksToDisplay as Task[])).find((task: Task) => task.id === active.id) ?? allTasks.find((task: Task) => task.id === active.id);
+        // Find task from appropriate source (grouped, flat, or all)
+        const sourceTasks = isGroupedView ? Object.values(tasksToDisplay as Record<TaskGroupCategory, Task[]>).flat() : (tasksToDisplay as Task[]);
+        let activeTask = sourceTasks.find((task: Task) => task.id === active.id);
+        if (!activeTask) {
+            activeTask = allTasks.find((task: Task) => task.id === active.id);
+        }
+
+        // Allow dragging only non-completed, non-trash items
         if (activeTask && !activeTask.completed && activeTask.list !== 'Trash') {
             setDraggingTask(activeTask);
-            setSelectedTaskId(activeTask.id);
+            setSelectedTaskId(activeTask.id); // Select task being dragged
         } else {
             setDraggingTask(null);
         }
@@ -200,15 +197,15 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         setDraggingTask(null);
 
         if (!over || !active.data.current?.task || active.id === over.id) {
-            return;
+            return; // No valid drop target or no movement
         }
 
         const activeId = active.id as string;
         const overId = over.id as string;
         const originalTask = active.data.current.task as Task;
 
+        // Determine target category only if in 'all' view and dropped onto another task
         let targetGroupCategory: TaskGroupCategory | undefined = undefined;
-
         if (currentFilterGlobal === 'all' && over.data.current?.type === 'task-item') {
             targetGroupCategory = over.data.current?.groupCategory as TaskGroupCategory | undefined;
         }
@@ -218,44 +215,54 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         setTasks((currentTasks) => {
             const oldIndex = currentTasks.findIndex(t => t.id === activeId);
             const newIndex = currentTasks.findIndex(t => t.id === overId);
-            if (oldIndex === -1 || newIndex === -1) return currentTasks;
+            if (oldIndex === -1 || newIndex === -1) return currentTasks; // Task not found (shouldn't happen)
 
+            // Use the visual order derived from sortableItems for order calculation
             const currentVisualOrderIds = sortableItems;
             const activeVisualIndex = currentVisualOrderIds.indexOf(activeId);
             const overVisualIndex = currentVisualOrderIds.indexOf(overId);
+
             if (activeVisualIndex === -1 || overVisualIndex === -1) {
-                console.warn("DragEnd: Task not found in visual order.");
-                return currentTasks;
+                console.warn("DragEnd: Task not found in visual order for reordering.");
+                return currentTasks; // Fallback: don't change order if visual indexes are invalid
             }
             const movedVisualOrderIds = arrayMove(currentVisualOrderIds, activeVisualIndex, overVisualIndex);
             const finalMovedVisualIndex = movedVisualOrderIds.indexOf(activeId);
+
+            // Calculate new fractional order based on surrounding tasks in the *visual* order
             const prevTaskId = finalMovedVisualIndex > 0 ? movedVisualOrderIds[finalMovedVisualIndex - 1] : null;
             const nextTaskId = finalMovedVisualIndex < movedVisualOrderIds.length - 1 ? movedVisualOrderIds[finalMovedVisualIndex + 1] : null;
             const prevTask = prevTaskId ? currentTasks.find((t: Task) => t.id === prevTaskId) : null;
             const nextTask = nextTaskId ? currentTasks.find((t: Task) => t.id === nextTaskId) : null;
+
             const prevOrder = prevTask?.order;
             const nextOrder = nextTask?.order;
             let newOrderValue: number;
-            if (prevOrder === undefined || prevOrder === null) {
+
+            if (prevOrder === undefined || prevOrder === null) { // Dropped at the beginning
                 newOrderValue = (nextOrder ?? Date.now()) - 1000;
-            } else if (nextOrder === undefined || nextOrder === null) {
+            } else if (nextOrder === undefined || nextOrder === null) { // Dropped at the end
                 newOrderValue = prevOrder + 1000;
-            } else {
+            } else { // Dropped in the middle
                 const mid = prevOrder + (nextOrder - prevOrder) / 2;
+                // Handle potential precision issues or equality
                 if (!Number.isFinite(mid) || mid <= prevOrder || mid >= nextOrder) {
-                    newOrderValue = prevOrder + Math.random();
-                    console.warn("Order calc fallback (random).");
+                    // Fallback: Insert very close to the previous item
+                    newOrderValue = prevOrder + Math.random() * 0.01; // Small random offset
+                    console.warn("Order calculation fallback (random offset). Prev:", prevOrder, "Next:", nextOrder);
                 } else {
                     newOrderValue = mid;
                 }
             }
+            // Final sanity check for finiteness
             if (!Number.isFinite(newOrderValue)) {
-                newOrderValue = Date.now();
-                console.warn("Order calc fallback (Date.now()).");
+                newOrderValue = Date.now(); // Absolute fallback
+                console.warn("Order calculation fallback (Date.now()).");
             }
 
-            let newDueDate: number | null | undefined = undefined;
 
+            // Calculate new due date if category changed in 'all' view
+            let newDueDate: number | null | undefined = undefined; // Use undefined to signal no change initially
             if (categoryChanged && targetGroupCategory) {
                 const todayStart = startOfDay(new Date());
                 switch (targetGroupCategory) {
@@ -263,36 +270,40 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                         newDueDate = todayStart.getTime();
                         break;
                     case 'next7days':
-                        newDueDate = startOfDay(addDays(new Date(), 1)).getTime(); // Tomorrow
-                        break;
+                        newDueDate = startOfDay(addDays(new Date(), 1)).getTime();
+                        break; // Default to tomorrow
                     case 'later':
-                        newDueDate = startOfDay(addDays(new Date(), 8)).getTime(); // 8 days later
-                        break;
+                        newDueDate = startOfDay(addDays(new Date(), 8)).getTime();
+                        break; // Default to 8 days later
                     case 'overdue':
-                        newDueDate = startOfDay(subDays(new Date(), 1)).getTime(); // Yesterday
-                        break;
+                        newDueDate = startOfDay(subDays(new Date(), 1)).getTime();
+                        break; // Default to yesterday
                     case 'nodate':
                         newDueDate = null;
                         break;
                 }
 
+                // Avoid updating if the effective day hasn't changed
                 const currentDueDateObj = safeParseDate(originalTask.dueDate);
                 const currentDueDayStart = currentDueDateObj && isValid(currentDueDateObj) ? startOfDay(currentDueDateObj).getTime() : null;
                 const newDueDayStart = newDueDate !== null && newDueDate !== undefined ? startOfDay(new Date(newDueDate)).getTime() : null;
 
                 if (currentDueDayStart === newDueDayStart) {
-                    newDueDate = undefined;
+                    newDueDate = undefined; // Signal no effective date change needed
                 }
             }
 
+            // Update the task
             return currentTasks.map((task: Task) => {
                 if (task.id === activeId) {
-                    const updatedTask = {
+                    const updatedTask: Task = {
                         ...task,
-                        order: newOrderValue,
-                        updatedAt: Date.now(),
-                        ...(newDueDate !== undefined && { dueDate: newDueDate }),
+                        order: newOrderValue, // Apply new order
+                        updatedAt: Date.now(), // Update timestamp
+                        // Conditionally update dueDate only if it's defined (meaning a change is needed)
+                        ...(newDueDate !== undefined && {dueDate: newDueDate}),
                     };
+                    // Group category will be recalculated by the atom setter
                     return updatedTask;
                 }
                 return task;
@@ -300,6 +311,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         });
     }, [setTasks, currentFilterGlobal, sortableItems]);
 
+
+    // Add Task logic (remains the same)
     const handleAddTask = useCallback(() => {
         const now = Date.now();
         let defaultList = 'Inbox';
@@ -331,11 +344,11 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         }
         const newTask: Omit<Task, 'groupCategory'> = {
             id: `task-${now}-${Math.random().toString(16).slice(2)}`,
-            title: '',
+            title: '', // Start with empty title to trigger focus
             completed: false,
             completedAt: null,
             list: defaultList,
-            completionPercentage: null,
+            completionPercentage: null, // Start as null
             dueDate: defaultDueDate,
             order: newOrder,
             createdAt: now,
@@ -344,52 +357,45 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             tags: defaultTags,
             priority: null,
         };
-        setTasks(prev => [newTask as Task, ...prev]);
-        setSelectedTaskId(newTask.id);
+        setTasks(prev => [newTask as Task, ...prev]); // Add to the beginning
+        setSelectedTaskId(newTask.id); // Select the new task for editing
     }, [currentFilterGlobal, setTasks, setSelectedTaskId, sortableItems, allTasks]);
 
-    const handleOpenHeaderDatePicker = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation();
-        setHeaderDatePickerState({referenceElement: event.currentTarget, isVisible: true});
-    }, []);
-    const handleCloseHeaderDatePicker = useCallback(() => {
-        setHeaderDatePickerState({isVisible: false, referenceElement: null});
-    }, []);
+    // Bulk Reschedule logic (Date Picker in header)
     const handleBulkRescheduleDateSelect = useCallback((date: Date | undefined) => {
         if (!date || !isValid(date)) {
-            handleCloseHeaderDatePicker();
-            return;
+            return; // Don't close popover if date is invalid/undefined
         }
         const newDueDateTimestamp = startOfDay(date).getTime();
         setTasks(currentTasks =>
             currentTasks.map((task: Task) => {
-                const isTaskOverdue = !task.completed && task.list !== 'Trash' &&
-                    task.dueDate != null && isValid(task.dueDate) &&
-                    isBefore(startOfDay(safeParseDate(task.dueDate)!), startOfDay(new Date()));
+                // Find overdue tasks (using the groupCategory derived state)
+                const isTaskOverdue = task.groupCategory === 'overdue';
                 if (isTaskOverdue) {
                     return {...task, dueDate: newDueDateTimestamp, updatedAt: Date.now()};
                 }
                 return task;
             })
         );
-        handleCloseHeaderDatePicker();
-    }, [setTasks, handleCloseHeaderDatePicker]);
+        // Popover closes itself via Radix PopoverClose or the internal picker logic
+    }, [setTasks]);
 
-    // --- MODIFIED renderTaskGroup ---
-    // No layout prop, No exit prop, SLIGHTLY LONGER duration
+    // Render Task Group - Kept Framer Motion as requested
     const renderTaskGroup = useCallback((groupTasks: Task[], groupKey: TaskGroupCategory | 'flat-list' | string) => (
         <AnimatePresence initial={false} key={`group-anim-${groupKey}`}>
             {groupTasks.map((task: Task) => (
+                // Keep motion.div for add/remove animation
                 <motion.div
-                    key={task.id}
-                    // No layout prop
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    // No exit prop - item will disappear instantly
-                    transition={{ duration: 0.25, ease: "easeOut" }} // <<< SLIGHTLY LONGER DURATION (0.25s) >>>
-                    className="task-motion-wrapper"
-                    id={`task-item-${task.id}`}
+                    key={task.id} // Key is crucial for AnimatePresence
+                    // layout // Keep layout animation for reordering smoothness? Test performance.
+                    initial={{opacity: 0, height: 0}} // Animate height for smooth insertion/deletion
+                    animate={{opacity: 1, height: 'auto'}}
+                    exit={{opacity: 0, height: 0}}
+                    transition={{duration: 0.25, ease: "easeOut"}}
+                    className="task-motion-wrapper overflow-hidden" // Add overflow hidden
+                    id={`task-item-${task.id}`} // ID for potential linking
                 >
+                    {/* Pass down scroll container ref for potential popover boundaries */}
                     <TaskItem
                         task={task}
                         groupCategory={isGroupedView && groupKey !== 'flat-list' ? groupKey as TaskGroupCategory : undefined}
@@ -399,8 +405,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             ))}
         </AnimatePresence>
     ), [isGroupedView, scrollContainerRef]); // Depend on isGroupedView
-    // --- END MODIFIED renderTaskGroup ---
 
+    // Empty state calculations
     const isEmpty = useMemo(() => {
         if (isGroupedView) {
             return Object.values(tasksToDisplay as Record<TaskGroupCategory, Task[]>).every((group: Task[]) => group.length === 0);
@@ -414,83 +420,131 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         if (currentFilterGlobal === 'completed') return 'No completed tasks yet';
         return `No tasks in "${pageTitle}"`;
     }, [isSearching, searchTerm, currentFilterGlobal, pageTitle]);
-    const headerClass = useMemo(() => twMerge("px-3 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 h-11 z-10", "bg-glass-alt-100 backdrop-blur-lg"), []);
+
+    // Header/Button visibility
+    const headerClass = useMemo(() => twMerge(
+        "px-3 py-2 border-b border-black/10 dark:border-white/10 flex justify-between items-center flex-shrink-0 h-11 z-10",
+        "bg-neutral-100/60 dark:bg-neutral-800/60 backdrop-blur-lg" // Adjusted glass effect
+    ), []);
     const showAddTaskButton = useMemo(() => !['completed', 'trash'].includes(currentFilterGlobal) && !isSearching, [currentFilterGlobal, isSearching]);
 
     return (
         <TaskItemMenuProvider>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart}
-                        onDragEnd={handleDragEnd} measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
+            {/* DND Context wraps the list */}
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                measuring={{droppable: {strategy: MeasuringStrategy.Always}}} // Ensure droppables are always measured
+            >
                 <div className="h-full flex flex-col bg-transparent overflow-hidden relative">
                     {/* Header */}
                     <div className={headerClass}>
-                        <h1 className="text-base font-semibold text-gray-800 truncate pr-2"
-                            title={pageTitle}>{pageTitle}</h1>
-                        <div className="flex items-center space-x-1"> {showAddTaskButton && (
-                            <Button variant="primary" size="sm" icon="plus" onClick={handleAddTask}
-                                    className="px-2.5 !h-[30px]"> Add </Button>)} </div>
+                        <h1 className="text-base font-semibold text-gray-800 dark:text-gray-100 truncate pr-2"
+                            title={pageTitle}>
+                            {pageTitle}
+                        </h1>
+                        <div className="flex items-center space-x-1">
+                            {showAddTaskButton && (
+                                <Button
+                                    variant="primary"
+                                    size="sm"
+                                    icon="plus"
+                                    onClick={handleAddTask}
+                                    className="px-2.5 !h-[30px]" // Explicit height
+                                >
+                                    Add
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Scrollable Task List Area */}
                     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto styled-scrollbar relative">
-                        {isEmpty ? (<div
-                                className="flex flex-col items-center justify-center h-full text-gray-400 px-6 text-center pt-10">
+                        {isEmpty ? (
+                            // Empty State Styling
+                            <div
+                                className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-neutral-500 px-6 text-center pt-10">
                                 <Icon
                                     name={currentFilterGlobal === 'trash' ? 'trash' : (currentFilterGlobal === 'completed' ? 'check-square' : (isSearching ? 'search' : 'archive'))}
-                                    size={40} className="mb-3 text-gray-300 opacity-80"/> <p
-                                className="text-sm font-medium text-gray-500">{emptyStateTitle}</p> {showAddTaskButton && (
-                                <p className="text-xs mt-1 text-muted">Click the '+' button to add a new task.</p>)}
+                                    size={40}
+                                    className="mb-3 text-gray-300 dark:text-neutral-600 opacity-80"
+                                />
+                                <p className="text-sm font-medium text-gray-500 dark:text-neutral-400">{emptyStateTitle}</p>
+                                {showAddTaskButton && (
+                                    <p className="text-xs mt-1 text-muted dark:text-neutral-500">Click the '+' button to
+                                        add a new task.</p>
+                                )}
                             </div>
                         ) : (
+                            // Task List Content
                             <div>
+                                {/* SortableContext wraps the list items */}
                                 <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
                                     {isGroupedView ? (
                                         <>
                                             {groupOrder.map(groupKey => {
                                                 const groupTasks = (tasksToDisplay as Record<TaskGroupCategory, Task[]>)[groupKey];
                                                 if (groupTasks && groupTasks.length > 0) {
-                                                    return (<div key={groupKey}>
-                                                        <TaskGroupHeader
-                                                            title={groupTitles[groupKey]} groupKey={groupKey}
-                                                            onRescheduleAllClick={groupKey === 'overdue' ? handleOpenHeaderDatePicker : undefined}
-                                                        />
-                                                        {renderTaskGroup(groupTasks, groupKey)}
-                                                    </div>);
+                                                    // Prepare the trigger for the date picker popover
+                                                    const rescheduleTrigger = groupKey === 'overdue' ? (
+                                                        <CustomDatePickerPopover
+                                                            initialDate={undefined} // No initial date for bulk reschedule
+                                                            onSelect={handleBulkRescheduleDateSelect}
+                                                        >
+                                                            {/* Button that triggers the popover */}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                icon="calendar-check"
+                                                                className="text-xs !h-5 px-1.5 text-muted-foreground dark:text-neutral-400 hover:text-primary dark:hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/15"
+                                                                title="Reschedule all overdue tasks..."
+                                                            >
+                                                                Reschedule All
+                                                            </Button>
+                                                        </CustomDatePickerPopover>
+                                                    ) : undefined;
+
+                                                    return (
+                                                        <div key={groupKey}>
+                                                            <TaskGroupHeader
+                                                                title={groupTitles[groupKey]}
+                                                                groupKey={groupKey}
+                                                                rescheduleTrigger={rescheduleTrigger} // Pass trigger down
+                                                            />
+                                                            {/* Render tasks using the animated function */}
+                                                            {renderTaskGroup(groupTasks, groupKey)}
+                                                        </div>
+                                                    );
                                                 }
                                                 return null;
                                             })}
                                         </>
-                                    ) : (<div
-                                        className="pt-0.5"> {renderTaskGroup(tasksToDisplay as Task[], 'flat-list')} </div>)}
+                                    ) : (
+                                        // Flat list view
+                                        <div className="pt-0.5">
+                                            {renderTaskGroup(tasksToDisplay as Task[], 'flat-list')}
+                                        </div>
+                                    )}
                                 </SortableContext>
                             </div>
                         )}
+                    </div>
+                    {/* End scrollable area */}
+                </div>
+                {/* End main flex container */}
 
-                        {/* Header Date Picker Popover */}
-                        <AnimatePresence>
-                            {headerDatePickerState.isVisible && headerDatePickerState.referenceElement && (
-                                <div ref={setHeaderPopperElement} style={{
-                                    ...headerPopperStyles.popper,
-                                    zIndex: 60
-                                }} {...headerPopperAttributes.popper} className="ignore-click-away">
-                                    <CustomDatePickerPopover
-                                        usePortal={false}
-                                        initialDate={undefined}
-                                        onSelect={handleBulkRescheduleDateSelect}
-                                        close={handleCloseHeaderDatePicker}
-                                        triggerElement={headerDatePickerState.referenceElement}
-                                    />
-                                </div>
-                            )}
-                        </AnimatePresence>
-
-                    </div> {/* End scrollable area */}
-                </div> {/* End main flex container */}
-
-                {/* Drag Overlay */}
-                <DragOverlay dropAnimation={dropAnimationConfig}> {draggingTask ? (
-                    <TaskItem task={draggingTask} isOverlay={true}
-                              scrollContainerRef={scrollContainerRef}/>) : null} </DragOverlay>
+                {/* Drag Overlay for smooth dragging visual */}
+                <DragOverlay dropAnimation={dropAnimationConfig}>
+                    {draggingTask ? (
+                        <TaskItem
+                            task={draggingTask}
+                            isOverlay={true}
+                            scrollContainerRef={scrollContainerRef} // Pass ref to overlay item too
+                        />
+                    ) : null}
+                </DragOverlay>
             </DndContext>
         </TaskItemMenuProvider>
     );
