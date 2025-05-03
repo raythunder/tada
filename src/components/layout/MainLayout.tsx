@@ -5,8 +5,9 @@ import IconBar from './IconBar';
 import Sidebar from './Sidebar';
 // Keep SettingsModal import, it uses Radix Dialog internally now
 import SettingsModal from '../settings/SettingsModal';
-import {useAtomValue} from 'jotai';
-import {searchTermAtom} from '@/store/atoms';
+// REMOVED: searchTermAtom import is no longer needed here
+// import {useAtomValue} from 'jotai';
+// import {searchTermAtom} from '@/store/atoms';
 import Icon from "@/components/common/Icon";
 import {twMerge} from 'tailwind-merge';
 
@@ -19,14 +20,16 @@ const LoadingSpinner: React.FC = () => (
 LoadingSpinner.displayName = 'LoadingSpinner';
 
 const MainLayout: React.FC = () => {
-    const searchTerm = useAtomValue(searchTermAtom);
+    // REMOVED: searchTermAtom usage is removed from hideSidebar logic
+    // const searchTerm = useAtomValue(searchTermAtom);
     const location = useLocation();
 
-    // Sidebar visibility logic (No changes)
+    // --- UPDATED Sidebar visibility logic ---
+    // Sidebar is hidden ONLY if the current path is /calendar or /summary,
+    // regardless of search state.
     const hideSidebar = useMemo(() => {
-        const isSearching = searchTerm.trim().length > 0;
-        return !isSearching && ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
-    }, [searchTerm, location.pathname]);
+        return ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
+    }, [location.pathname]); // Dependency is now only location.pathname
 
     return (
         // Overall layout structure remains the same
