@@ -1,7 +1,6 @@
 // src/components/common/IconMap.tsx
 import * as LucideIcons from "lucide-react";
 
-// Map friendly names to Lucide icon components
 export const iconMap = {
     'check-square': LucideIcons.CheckSquare,
     'square': LucideIcons.Square,
@@ -56,23 +55,23 @@ export const iconMap = {
     'archive': LucideIcons.Archive,
     'arrow-up-down': LucideIcons.ArrowUpDown,
     'calendar-days': LucideIcons.CalendarDays,
-    'loader': LucideIcons.Loader2, // Use Loader2 for spinning
+    'loader': LucideIcons.Loader2,
     'users': LucideIcons.Users,
     'sparkles': LucideIcons.Sparkles,
     'folder-plus': LucideIcons.FolderPlus,
     'folder': LucideIcons.Folder,
-    'minus': LucideIcons.Minus, // For indeterminate checkbox
+    'minus': LucideIcons.Minus,
     'inbox': LucideIcons.Inbox,
     'x-circle': LucideIcons.XCircle,
     'calendar-check': LucideIcons.CalendarCheck,
     'refresh-cw': LucideIcons.RefreshCw,
     'copy-plus': LucideIcons.CopyPlus,
-    // --- Progress Icons (Using appropriate Lucide icons) ---
+    // --- Progress Icons (Corrected) ---
     'circle': LucideIcons.Circle,                // For 0% / Not Started
-    'circle-dot': LucideIcons.CircleDot,          // For 20% or general progress step
-    'circle-dot-dashed': LucideIcons.CircleDotDashed, // For 50% or intermediate step
-    'circle-slash': LucideIcons.CircleSlash,       // For 80% or significant progress
-    'circle-check': LucideIcons.CircleCheckBig,    // For 100% / Completed
+    'circle-dot': LucideIcons.CircleDot,          // For 20%
+    'circle-dot-dashed': LucideIcons.CircleDotDashed, // For 50% (Replaced CircleHalf)
+    'circle-slash': LucideIcons.CircleSlash,       // For 80%
+    'circle-check': LucideIcons.CircleCheckBig,    // For 100%
     'circle-gauge': LucideIcons.GaugeCircle,        // For MetaRow label in TaskDetail
 };
 

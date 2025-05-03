@@ -10,7 +10,7 @@ import {
     placeholder as viewPlaceholder,
     rectangularSelection
 } from '@codemirror/view';
-import {defaultKeymap, history, historyKeymap, indentWithTab} from '@codemirror/commands';
+import {defaultKeymap, history, historyKeymap, indentWithTab} from '@codemirror/commands'; // Added insertNewline
 import {markdown, markdownLanguage} from '@codemirror/lang-markdown';
 import {languages} from '@codemirror/language-data';
 import {bracketMatching, foldKeymap, indentOnInput} from '@codemirror/language';
@@ -19,7 +19,76 @@ import {highlightSelectionMatches, searchKeymap} from '@codemirror/search';
 import {lintKeymap} from '@codemirror/lint';
 import {twMerge} from 'tailwind-merge';
 
-// Define an Annotation type for external changes
+// Consistent Editor Theme definition
+// Added overflow: auto !important to cm-scroller
+const editorTheme = EditorView.theme({
+    '&': {height: '100%', fontSize: '13.5px', backgroundColor: 'transparent', borderRadius: 'inherit',},
+    // --- FIX: Ensure cm-scroller handles overflow ---
+    '.cm-scroller': {
+        fontFamily: `var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace)`,
+        lineHeight: '1.65',
+        overflow: 'auto !important', // Explicitly set overflow
+        position: 'relative',
+        backgroundColor: 'transparent !important',
+        height: '100%',
+        outline: 'none',
+        boxSizing: 'border-box', // Include padding in height calculation
+    },
+    '.cm-content': {
+        padding: '14px 16px', // Padding inside the content area
+        caretColor: 'hsl(var(--primary-h), var(--primary-s), var(--primary-l))',
+        backgroundColor: 'transparent !important',
+        outline: 'none',
+        // whiteSpace: 'pre-wrap', // Ensure wrapping works correctly
+        wordBreak: 'break-word', // Break long words
+        boxSizing: 'border-box', // Ensure padding doesn't cause overflow issues with width
+    },
+    '.cm-gutters': {
+        backgroundColor: 'hsla(220, 40%, 98%, 0.65)',
+        borderRight: '1px solid hsla(210, 20%, 85%, 0.4)',
+        color: 'hsl(210, 9%, 55%)',
+        paddingLeft: '8px',
+        paddingRight: '4px',
+        fontSize: '11px',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+    },
+    '.cm-lineNumbers .cm-gutterElement': {minWidth: '24px', textAlign: 'right'},
+    '.cm-line': {padding: '0 4px'},
+    '.cm-activeLine': {backgroundColor: 'hsla(var(--primary-h), var(--primary-s), 50%, 0.10)'},
+    '.cm-activeLineGutter': {backgroundColor: 'hsla(var(--primary-h), var(--primary-s), 50%, 0.15)'},
+    // Adjust placeholder padding to match content padding
+    '.cm-placeholder': {
+        color: 'hsl(210, 9%, 60%)',
+        fontStyle: 'italic',
+        pointerEvents: 'none',
+        padding: '14px 16px',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+    },
+    '.cm-foldGutter .cm-gutterElement': {padding: '0 4px 0 8px', cursor: 'pointer', textAlign: 'center',},
+    '.cm-foldMarker': {display: 'inline-block', color: 'hsl(210, 10%, 70%)', '&:hover': {color: 'hsl(210, 10%, 50%)'},},
+    '.cm-searchMatch': {
+        backgroundColor: 'hsla(50, 100%, 50%, 0.35)',
+        outline: '1px solid hsla(50, 100%, 50%, 0.5)',
+        borderRadius: '2px',
+    },
+    '.cm-searchMatch-selected': {
+        backgroundColor: 'hsla(50, 100%, 50%, 0.55)',
+        outline: '1px solid hsla(50, 100%, 40%, 0.8)'
+    },
+    '.cm-selectionBackground, ::selection': {backgroundColor: 'hsla(var(--primary-h), var(--primary-s), 50%, 0.25) !important',},
+    '.cm-focused': {outline: 'none !important'},
+    // Ensure the editor takes up available height within its container
+    '&.cm-focused': {outline: 'none !important'},
+    '.cm-editor': {height: '100%'}, // Added this line
+});
+
+
+// Define an Annotation type for external changes (No changes needed)
 const externalChangeEvent = Annotation.define<boolean>();
 
 interface CodeMirrorEditorProps {
@@ -29,7 +98,6 @@ interface CodeMirrorEditorProps {
     placeholder?: string;
     readOnly?: boolean;
     onBlur?: () => void;
-    onFocus?: () => void; // Added onFocus prop
 }
 
 export interface CodeMirrorEditorRef {
@@ -38,34 +106,20 @@ export interface CodeMirrorEditorRef {
 }
 
 const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
-    ({
-         value,
-         onChange,
-         className,
-         placeholder,
-         readOnly = false,
-         onBlur,
-         onFocus, // Added onFocus
-     }, ref) => {
-        const editorContainerRef = useRef<HTMLDivElement>(null); // Ref for the outer container
+    ({value, onChange, className, placeholder, readOnly = false, onBlur,}, ref) => {
+        const editorRef = useRef<HTMLDivElement>(null);
         const viewRef = useRef<EditorView | null>(null);
         const onChangeRef = useRef(onChange);
         const onBlurRef = useRef(onBlur);
-        const onFocusRef = useRef(onFocus); // Ref for onFocus
-
         const prevReadOnlyRef = useRef(readOnly);
         const prevPlaceholderRef = useRef(placeholder);
 
-        // Update callback refs
         useEffect(() => {
             onChangeRef.current = onChange;
         }, [onChange]);
         useEffect(() => {
             onBlurRef.current = onBlur;
         }, [onBlur]);
-        useEffect(() => {
-            onFocusRef.current = onFocus;
-        }, [onFocus]); // Update onFocus ref
 
         useImperativeHandle(ref, () => ({
             focus: () => {
@@ -76,54 +130,39 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
 
         // Effect for Editor Setup and Teardown
         useEffect(() => {
-            if (!editorContainerRef.current) return;
+            if (!editorRef.current) return;
 
             const createExtensions = (currentPlaceholder?: string, currentReadOnly?: boolean) => [
-                history(),
-                drawSelection(),
-                dropCursor(),
-                EditorState.allowMultipleSelections.of(true),
-                indentOnInput(),
-                bracketMatching(),
-                closeBrackets(),
-                autocompletion(),
-                rectangularSelection(),
-                highlightSelectionMatches(),
+                history(), drawSelection(), dropCursor(), EditorState.allowMultipleSelections.of(true), indentOnInput(),
+                bracketMatching(), closeBrackets(), autocompletion(), rectangularSelection(), highlightSelectionMatches(),
+                // --- FIX: Ensure defaultKeymap (including Enter/newline handling) is present ---
                 keymap.of([
                     ...closeBracketsKeymap,
-                    ...defaultKeymap, // Includes Enter key handling for new lines
+                    ...defaultKeymap, // <<<< This includes Enter key behavior
                     ...searchKeymap,
                     ...historyKeymap,
                     ...foldKeymap,
                     ...completionKeymap,
                     ...lintKeymap,
-                    indentWithTab, // Allow Tab/Shift+Tab for indentation
+                    indentWithTab,
+                    // Optional: Explicitly bind Enter if default isn't working (usually not needed)
+                    // { key: "Enter", run: insertNewline }
                 ]),
                 markdown({base: markdownLanguage, codeLanguages: languages, addKeymap: true}),
-                EditorView.lineWrapping, // Ensure lines wrap
-                EditorView.contentAttributes.of({'aria-label': 'Markdown editor content', 'role': 'textbox'}),
+                EditorView.lineWrapping, // <<< Ensure line wrapping is enabled
+                EditorView.contentAttributes.of({'aria-label': 'Markdown editor content'}),
                 EditorView.updateListener.of((update) => {
                     const isExternal = update.transactions.some(tr => tr.annotation(externalChangeEvent));
                     if (update.docChanged && !isExternal) {
                         onChangeRef.current(update.state.doc.toString());
                     }
-                    if (update.focusChanged) {
-                        if (update.view.hasFocus) {
-                            onFocusRef.current?.(); // Call onFocus
-                        } else {
-                            onBlurRef.current?.(); // Call onBlur
-                        }
+                    if (update.focusChanged && !update.view.hasFocus) {
+                        onBlurRef.current?.();
                     }
                 }),
                 EditorState.readOnly.of(currentReadOnly ?? false),
                 ...(currentPlaceholder ? [viewPlaceholder(currentPlaceholder)] : []),
-                // Apply custom theme via class defined in index.css
-                EditorView.theme({}, {dark: document.documentElement.classList.contains('dark')}), // Basic theme, rely on index.css for specifics
-                EditorView.baseTheme({ // Ensure basic editor structure styles are applied
-                    "&": {height: "100%"},
-                    ".cm-scroller": {overflow: "auto", height: "100%"}, // Crucial for scrolling
-                    ".cm-content": {whiteSpace: "pre-wrap", wordWrap: "break-word"} // Crucial for line breaks/wrapping
-                })
+                editorTheme, // Apply custom theme
             ];
 
             const startState = EditorState.create({
@@ -133,7 +172,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
 
             const view = new EditorView({
                 state: startState,
-                parent: editorContainerRef.current,
+                parent: editorRef.current,
             });
             viewRef.current = view;
 
@@ -145,10 +184,10 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
                 viewRef.current = null;
             };
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, []); // Mount only
+        }, []); // Empty dependency array ensures this runs only once on mount
 
-        // Effect to handle EXTERNAL value changes
-        useEffect(() => {
+        // Effect to handle EXTERNAL value changes (No changes needed)
+        useEffect(() => { /* ... */
             const view = viewRef.current;
             if (view && value !== view.state.doc.toString()) {
                 view.dispatch({
@@ -158,13 +197,11 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             }
         }, [value]);
 
-        // Effect to handle dynamic prop changes
-        useEffect(() => {
+        // Effect to handle dynamic readOnly and placeholder props changes (No changes needed)
+        useEffect(() => { /* ... */
             const view = viewRef.current;
             if (!view) return;
-
             const effects: StateEffect<unknown>[] = [];
-
             if (readOnly !== prevReadOnlyRef.current) {
                 effects.push(StateEffect.reconfigure.of(EditorState.readOnly.of(readOnly)));
                 prevReadOnlyRef.current = readOnly;
@@ -173,7 +210,6 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
                 effects.push(StateEffect.reconfigure.of(placeholder ? [viewPlaceholder(placeholder)] : []));
                 prevPlaceholderRef.current = placeholder;
             }
-
             if (effects.length > 0) {
                 view.dispatch({effects});
             }
@@ -181,13 +217,13 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
 
 
         return (
-            // Apply the theme class and other layout classes to the container
+            // Container: Ensure it allows the editor view to fill its height
             <div
-                ref={editorContainerRef}
+                ref={editorRef}
                 className={twMerge(
-                    'cm-editor-container cm-theme-custom relative h-full w-full overflow-hidden rounded-md', // Apply theme class
-                    'bg-glass-inset-100 dark:bg-neutral-700/30 backdrop-blur-sm border border-black/10 dark:border-white/10 shadow-inner', // Base appearance
-                    'focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/60', // Focus styling on container
+                    'cm-editor-container relative h-full w-full overflow-hidden rounded-md', // `overflow-hidden` here prevents container scrollbars
+                    'bg-glass-inset-100 backdrop-blur-lg border border-black/10 shadow-inner',
+                    'focus-within:ring-1 focus-within:ring-primary/50 focus-within:border-primary/80',
                     className
                 )}
             />

@@ -3,195 +3,140 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Define base styles and custom properties */
 @layer base {
     :root {
-        /* Define CSS variables from Tailwind config for potential use in JS or complex scenarios */
-        --primary: hsl(210 100% 50%);
-        --primary-foreground: hsl(0 0% 100%);
+        /* Define HSL variables for primary color (matching tailwind.config.ts) */
         --primary-h: 210;
         --primary-s: 100%;
         --primary-l: 50%;
+        --primary-foreground-h: 0;
+        --primary-foreground-s: 0%;
+        --primary-foreground-l: 100%;
 
-        --canvas: hsl(220 40% 98%);
-        --border: hsl(215 20% 85%);
-        --muted: hsl(215 10% 55%);
-        --muted-foreground: hsl(215 10% 65%);
-        --destructive: hsl(0 75% 55%);
+        /* Font variables */
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        --font-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
-        /* Default border radius */
-        --radius: 6px;
+        /* Other potential CSS variables */
+        --canvas-bg: hsl(220, 30%, 98%);
+        --canvas-alt-bg: hsl(220, 25%, 96%);
+        --muted-fg: hsl(210, 10%, 55%);
+
+        /* Define border radius - can be overridden by Tailwind utilities */
+        --radius: 0.375rem; /* 6px */
     }
 
-    /* Optional: Apply dark mode based on system preference or class */
-    /* .dark { ... } */
-
+    /* Optional: Apply base font */
     body {
-        @apply bg-canvas text-gray-900 font-sans antialiased overflow-hidden;
+        @apply font-sans bg-canvas text-gray-800 antialiased;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Ensure focus outlines are visible but styled subtly */
+    /* Basic focus outline style (can be customized) */
     *:focus-visible {
         @apply outline-none ring-1 ring-primary/60 ring-offset-1 ring-offset-canvas;
     }
 
-    /* Remove default button focus outline if :focus-visible is supported */
+    /* Remove default button outline */
     button:focus {
         outline: none;
     }
-    button:focus:not(:focus-visible) {
-        outline: none;
-    }
 
-    /* Style selection */
-    ::selection {
-        @apply bg-primary/30 text-gray-900;
+    /* Input placeholder styling */
+    input::placeholder,
+    textarea::placeholder {
+        @apply text-muted/80; /* Use muted color with some opacity */
     }
 }
 
-@layer utilities {
-    /* Default Scrollbar Styling */
-    .styled-scrollbar {
-        scrollbar-width: thin; /* Firefox */
-        scrollbar-color: theme('colors.border') transparent; /* Firefox */
-    }
-
-    /* Webkit browsers */
-    .styled-scrollbar::-webkit-scrollbar {
-        width: 8px; /* Width of the scrollbar */
-        height: 8px; /* Height for horizontal scrollbar */
-    }
-
-    .styled-scrollbar::-webkit-scrollbar-track {
-        background: transparent; /* Track background */
-        border-radius: 4px;
-    }
-
-    .styled-scrollbar::-webkit-scrollbar-thumb {
-        background-color: theme('colors.border-alt'); /* Color of the scroll thumb */
-        border-radius: 4px; /* Roundness of the scroll thumb */
-        border: 2px solid transparent; /* Creates padding around thumb */
-        background-clip: content-box; /* Ensures border creates padding */
-    }
-
-    .styled-scrollbar::-webkit-scrollbar-thumb:hover {
-        background-color: theme('colors.border'); /* Color on hover */
-    }
-
-    /* Thin Scrollbar Variant */
-    .styled-scrollbar-thin {
-        scrollbar-width: thin;
-        scrollbar-color: hsl(215 20% 80% / 0.7) transparent;
-    }
-
-    .styled-scrollbar-thin::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-
+/* Define custom component layers */
+@layer components {
+    /* --- Custom Scrollbar Styles --- */
+    /* Base scrollbar track */
+    .styled-scrollbar::-webkit-scrollbar-track,
     .styled-scrollbar-thin::-webkit-scrollbar-track {
-        background: transparent;
+        @apply bg-transparent; /* Transparent track */
     }
 
+    /* Base scrollbar thumb */
+    .styled-scrollbar::-webkit-scrollbar-thumb,
     .styled-scrollbar-thin::-webkit-scrollbar-thumb {
-        background-color: hsl(215 20% 80% / 0.7);
-        border-radius: 3px;
-        border: 1px solid transparent;
-        background-clip: content-box;
+        @apply bg-black/20 rounded-full border-2 border-transparent bg-clip-content;
+        /* Darker thumb, rounded, slight border for padding */
     }
 
+    /* Hover state for thumb */
+    .styled-scrollbar::-webkit-scrollbar-thumb:hover,
     .styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        background-color: hsl(215 20% 70% / 0.8);
+        @apply bg-black/30; /* Darken thumb on hover */
     }
 
-    /* Class for CodeMirror theme application */
-    .cm-theme-custom {
-        height: 100%;
-        font-size: 13.5px; /* Corresponds to base font size approx */
-        background-color: transparent;
-        border-radius: inherit;
+    /* Standard scrollbar width */
+    .styled-scrollbar::-webkit-scrollbar {
+        @apply w-2 h-2; /* Width/Height for vertical/horizontal */
     }
-    .cm-theme-custom .cm-scroller {
-        font-family: theme('fontFamily.mono');
-        line-height: 1.65;
-        overflow: auto; /* Ensure scrolling */
-        position: relative;
-        background-color: transparent !important;
-        height: 100%;
-        outline: none;
+
+    /* Thin scrollbar width */
+    .styled-scrollbar-thin::-webkit-scrollbar {
+        @apply w-1.5 h-1.5; /* Thinner width/height */
     }
-    .cm-theme-custom .cm-content {
-        padding: 14px 16px;
-        caret-color: theme('colors.primary.DEFAULT');
-        background-color: transparent !important;
-        outline: none;
-        white-space: pre-wrap; /* Ensure wrapping and new lines work */
-        word-wrap: break-word;
+    .styled-scrollbar-thin::-webkit-scrollbar-thumb {
+        @apply border-0; /* No border for thin scrollbar */
     }
-    .cm-theme-custom .cm-gutters {
-        background-color: hsla(220, 40%, 98%, 0.65);
-        border-right: 1px solid hsla(210, 20%, 85%, 0.4);
-        color: theme('colors.muted.foreground');
-        padding-left: 8px;
-        padding-right: 4px;
-        font-size: theme('fontSize.2xs');
-        user-select: none;
-        -webkit-user-select: none;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+
+    /* Firefox scrollbar styling (optional but recommended) */
+    .styled-scrollbar,
+    .styled-scrollbar-thin {
+        scrollbar-width: thin; /* Or 'auto' for standard */
+        scrollbar-color: hsla(0, 0%, 0%, 0.25) transparent; /* thumb color track color */
     }
-    .cm-theme-custom .cm-lineNumbers .cm-gutterElement {
-        min-width: 24px;
-        text-align: right;
+    .styled-scrollbar {
+        scrollbar-width: auto; /* Firefox standard width */
     }
-    .cm-theme-custom .cm-line {
-        padding: 0 4px;
+    .styled-scrollbar-thin {
+        scrollbar-width: thin; /* Firefox thin width */
     }
-    .cm-theme-custom .cm-activeLine {
-        background-color: theme('colors.primary.DEFAULT / 10%');
+    .styled-scrollbar:hover,
+    .styled-scrollbar-thin:hover {
+        scrollbar-color: hsla(0, 0%, 0%, 0.35) transparent; /* Darken thumb on hover */
     }
-    .cm-theme-custom .cm-activeLineGutter {
-        background-color: theme('colors.primary.DEFAULT / 15%');
+
+
+    /* --- Fix for CodeMirror specific overrides if needed --- */
+    /* Example: ensure scrollbar styles apply inside codemirror */
+    .cm-scroller {
+        @apply styled-scrollbar;
     }
-    .cm-theme-custom .cm-placeholder {
-        color: theme('colors.muted.foreground');
-        font-style: italic;
-        pointer-events: none;
-        padding: 14px 16px; /* Match content padding */
-        position: absolute;
-        top: 0;
-        left: 0;
+    /* Example: Ensure padding isn't overridden incorrectly */
+    .cm-content {
+        padding: 14px 16px !important; /* Force padding if necessary */
     }
-    .cm-theme-custom .cm-foldGutter .cm-gutterElement {
-        padding: 0 4px 0 8px;
-        cursor: pointer;
-        text-align: center;
+
+    /* --- Task Item Specific Styles (if any base styles are needed) --- */
+    .task-item {
+        /* Base task item styles if needed */
     }
-    .cm-theme-custom .cm-foldMarker {
-        display: inline-block;
-        color: hsl(210, 10%, 70%);
-    }
-    .cm-theme-custom .cm-foldMarker:hover {
-        color: hsl(210, 10%, 50%);
-    }
-    .cm-theme-custom .cm-searchMatch {
-        background-color: hsla(50, 100%, 50%, 0.35);
-        outline: 1px solid hsla(50, 100%, 50%, 0.5);
-        border-radius: 2px;
-    }
-    .cm-theme-custom .cm-searchMatch-selected {
-        background-color: hsla(50, 100%, 50%, 0.55);
-        outline: 1px solid hsla(50, 100%, 40%, 0.8);
-    }
-    .cm-theme-custom .cm-selectionBackground {
-        background-color: theme('colors.primary.DEFAULT / 25%') !important;
-    }
-    .cm-theme-custom.cm-focused {
-        outline: none !important;
-    }
-    /* Ensure Radix content can have backdrop blur */
-    [data-radix-popper-content-wrapper] {
-        z-index: 50; /* Default z-index */
-    }
+
+    /* --- Glass Background Utility (Example) --- */
+    /* Not strictly needed if using direct hsla() in tailwind.config.ts, */
+    /* but can be useful for complex gradients or common patterns. */
+    /* .bg-glass-gradient {
+        background-image: linear-gradient(to bottom right, hsla(0,0%,100%,0.8), hsla(0,0%,100%,0.5));
+        @apply backdrop-blur-lg;
+    } */
+
+    /* --- Tooltip Styling (if not using Radix Tooltip plugin styling) --- */
+    /* .tooltip {
+        @apply bg-black/80 text-white text-xs px-2 py-1 rounded shadow-md;
+    } */
 }
+
+/* Ensure Radix portal elements are positioned correctly */
+/* Generally not needed unless specific overrides are causing issues */
+/* body > [role="tooltip"],
+body > [role="dialog"],
+body > [role="menu"] {
+    position: fixed !important;
+} */

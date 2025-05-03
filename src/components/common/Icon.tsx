@@ -21,36 +21,23 @@ const IconComponent = React.memo(React.forwardRef<SVGSVGElement, IconProps>(
             if (process.env.NODE_ENV === 'development') { // Only warn in development
                 console.warn(`Icon "${name}" not found in iconMap. Rendering fallback (HelpCircle).`);
             }
-            // Use the imported fallback icon directly
             const FallbackIcon = LucideIcons.HelpCircle;
             return (
                 <FallbackIcon
-                    ref={ref}
-                    size={size}
-                    strokeWidth={strokeWidth}
-                    absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3} // Maintain absolute stroke width logic
-                    className={twMerge(
-                        'inline-block flex-shrink-0 stroke-current text-red-500 animate-pulse', // Fallback styling
-                        className
-                    )}
-                    {...props}
-                />
+                    ref={ref} size={size} strokeWidth={strokeWidth}
+                    absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3}
+                    className={twMerge('inline-block flex-shrink-0 stroke-current text-red-500 animate-pulse', className)}
+                    {...props} />
             );
         }
 
         // Render the requested icon
         return (
             <LucideIcon
-                ref={ref}
-                size={size}
-                strokeWidth={strokeWidth}
+                ref={ref} size={size} strokeWidth={strokeWidth}
                 absoluteStrokeWidth={typeof strokeWidth === 'number' && strokeWidth > 3}
-                className={twMerge(
-                    'inline-block flex-shrink-0 stroke-current', // Base styling: ensures icon doesn't grow/shrink unexpectedly
-                    className // Allow external classes to override or add styles
-                )}
-                {...props} // Pass other SVG attributes (like color, fill, data attributes, etc.)
-            />
+                className={twMerge('inline-block flex-shrink-0 stroke-current', className)}
+                {...props} />
         );
     }
 ));

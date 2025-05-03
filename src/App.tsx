@@ -11,8 +11,8 @@ import {currentFilterAtom, selectedTaskIdAtom, tasksAtom} from './store/atoms';
 import {startOfDay} from "@/utils/dateUtils";
 
 // Route Change Handler Component
-// Updates filter state based on URL, resets selection. Search term is NOT reset here.
-// No UI changes needed here.
+// Updates filter state based on URL, resets selection.
+// No UI changes needed here, logic remains the same.
 const RouteChangeHandler: React.FC = () => {
     const [currentFilterInternal, setCurrentFilter] = useAtom(currentFilterAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
@@ -26,7 +26,7 @@ const RouteChangeHandler: React.FC = () => {
 
         let newFilter: TaskFilter = 'all'; // Default filter
 
-        // Determine filter based on path
+        // Determine filter based on path (logic unchanged)
         if (pathname === '/today') newFilter = 'today';
         else if (pathname === '/next7days') newFilter = 'next7days';
         else if (pathname === '/completed') newFilter = 'completed';
@@ -39,7 +39,6 @@ const RouteChangeHandler: React.FC = () => {
 
         // Update filter only if it has actually changed
         if (currentFilterInternal !== newFilter) {
-            // console.log(`Route Change: Filter changing from ${currentFilterInternal} to ${newFilter}`);
             setCurrentFilter(newFilter);
             // Reset selection when the main filter context changes
             setSelectedTaskId(null);
@@ -48,10 +47,9 @@ const RouteChangeHandler: React.FC = () => {
 
     return <Outlet/>; // Renders the matched child route component
 };
-RouteChangeHandler.displayName = 'RouteChangeHandler';
 
 // List Page Wrapper Component
-// No UI changes needed here.
+// Logic remains the same.
 const ListPageWrapper: React.FC = () => {
     const {listName} = useParams<{ listName: string }>();
     const decodedListName = listName ? decodeURIComponent(listName) : 'Inbox';
@@ -62,7 +60,7 @@ const ListPageWrapper: React.FC = () => {
 ListPageWrapper.displayName = 'ListPageWrapper';
 
 // Tag Page Wrapper Component
-// No UI changes needed here.
+// Logic remains the same.
 const TagPageWrapper: React.FC = () => {
     const {tagName} = useParams<{ tagName: string }>();
     const decodedTagName = tagName ? decodeURIComponent(tagName) : '';
@@ -73,7 +71,7 @@ const TagPageWrapper: React.FC = () => {
 TagPageWrapper.displayName = 'TagPageWrapper';
 
 // Component to trigger task category refresh when the date changes
-// No UI changes needed here.
+// Logic remains the same.
 const DailyTaskRefresh: React.FC = () => {
     const setTasks = useSetAtom(tasksAtom);
     const lastCheckDateRef = useRef<string>(startOfDay(new Date()).toISOString().split('T')[0]);
@@ -83,15 +81,13 @@ const DailyTaskRefresh: React.FC = () => {
             const todayDate = startOfDay(new Date()).toISOString().split('T')[0];
             if (todayDate !== lastCheckDateRef.current) {
                 console.log(`Date changed from ${lastCheckDateRef.current} to ${todayDate}. Triggering task category refresh.`);
-                setTasks(currentTasks => [...currentTasks]);
+                setTasks(currentTasks => [...currentTasks]); // Trigger update
                 lastCheckDateRef.current = todayDate;
             }
         };
-
-        checkDate();
-        const intervalId = setInterval(checkDate, 60 * 1000);
-        window.addEventListener('focus', checkDate);
-
+        checkDate(); // Check on mount
+        const intervalId = setInterval(checkDate, 60 * 1000); // Check every minute
+        window.addEventListener('focus', checkDate); // Check on focus
         return () => {
             clearInterval(intervalId);
             window.removeEventListener('focus', checkDate);
@@ -103,34 +99,26 @@ const DailyTaskRefresh: React.FC = () => {
 DailyTaskRefresh.displayName = 'DailyTaskRefresh';
 
 // Main Application Component
-// Structure remains the same, routing handles the page views.
+// Structure remains the same.
 const App: React.FC = () => {
     return (
         <>
             <DailyTaskRefresh/>
             <Routes>
-                {/* MainLayout provides the core structure */}
                 <Route path="/" element={<MainLayout/>}>
-                    {/* RouteChangeHandler manages filter state globally */}
                     <Route element={<RouteChangeHandler/>}>
-                        {/* Index route redirects */}
                         <Route index element={<Navigate to="/all" replace/>}/>
-                        {/* Standard filter views rendered within MainPage */}
                         <Route path="all" element={<MainPage title="All Tasks" filter="all"/>}/>
                         <Route path="today" element={<MainPage title="Today" filter="today"/>}/>
                         <Route path="next7days" element={<MainPage title="Next 7 Days" filter="next7days"/>}/>
                         <Route path="completed" element={<MainPage title="Completed" filter="completed"/>}/>
                         <Route path="trash" element={<MainPage title="Trash" filter="trash"/>}/>
-                        {/* Dedicated views */}
                         <Route path="summary" element={<SummaryPage/>}/>
                         <Route path="calendar" element={<CalendarPage/>}/>
-                        {/* Dynamic list view */}
                         <Route path="list/:listName" element={<ListPageWrapper/>}/>
                         <Route path="list/" element={<Navigate to="/list/Inbox" replace/>}/>
-                        {/* Dynamic tag view */}
                         <Route path="tag/:tagName" element={<TagPageWrapper/>}/>
                         <Route path="tag/" element={<Navigate to="/all" replace/>}/>
-                        {/* Catch-all route */}
                         <Route path="*" element={<Navigate to="/all" replace/>}/>
                     </Route>
                 </Route>

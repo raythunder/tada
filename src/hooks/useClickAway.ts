@@ -1,52 +1,50 @@
 // src/hooks/useClickAway.ts
 import {RefObject, useEffect} from 'react';
 
+type Event = MouseEvent | TouchEvent;
+
 /**
  * Custom hook to detect clicks outside a specified element (or multiple elements).
- * @param refs RefObject(s) of the element(s) to monitor. Can be a single ref or an array of refs.
+ * Handles nested elements marked with 'ignore-click-away'.
+ * @param refs RefObject(s) of the element(s) to monitor.
  * @param handler Callback function to execute when a click outside occurs.
  */
 function useClickAway(
-    refs: RefObject<HTMLElement | null> | RefObject<HTMLElement | null>[], // Accept null refs
-    handler: (event: MouseEvent | TouchEvent) => void
-) {
+    refs: RefObject<HTMLElement | null> | RefObject<HTMLElement | null>[],
+    handler: (event: Event) => void
+): void {
     useEffect(() => {
-        const listener = (event: MouseEvent | TouchEvent) => {
+        const listener = (event: Event) => {
             const target = event.target as Node;
+
+            // Ensure refs is always an array
             const refsArray = Array.isArray(refs) ? refs : [refs];
 
-            // Check if the click is inside any of the provided refs or an element marked to be ignored
+            // Check if the click target is inside any of the refs or a designated ignored element
             const isInside = refsArray.some(ref => {
-                const el = ref?.current; // Safely access current
-                // Do nothing if clicking ref's element or descendent elements
-                // Also check if the target or its ancestor has the ignore class
-                return el && (el.contains(target) || (target instanceof Element && !!target.closest('.ignore-click-away')));
+                const element = ref.current;
+                // Check if the element exists and contains the target
+                // OR if the target or any of its parents has the 'ignore-click-away' class
+                return element && (element.contains(target) || (target instanceof Element && !!target.closest('.ignore-click-away')));
             });
 
-            // If the click is not inside any ref element or ignored element, call the handler
             if (!isInside) {
                 handler(event);
             }
         };
 
-        // Use a small timeout to prevent the handler from firing immediately
-        // if the click that opened the element is also considered "outside".
+        // Use a small timeout to ensure the listener is added after the event that might have triggered the element to open
         const timerId = setTimeout(() => {
             document.addEventListener('mousedown', listener);
             document.addEventListener('touchstart', listener);
         }, 0);
-
 
         return () => {
             clearTimeout(timerId);
             document.removeEventListener('mousedown', listener);
             document.removeEventListener('touchstart', listener);
         };
-        // Ensure refs array itself is stable or properly included in dependencies if it can change identity
-        // Using JSON.stringify is a quick way but might have performance implications if refs change often.
-        // If refs array identity is stable, just [handler] might be enough, or explicitly list stable refs if possible.
-        // For simplicity here, assuming refs array identity is stable or changes infrequently.
-    }, [refs, handler]);
+    }, [refs, handler]); // Re-run effect if refs or handler changes
 }
 
 export default useClickAway;

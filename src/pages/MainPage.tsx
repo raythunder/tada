@@ -16,26 +16,22 @@ interface MainPageProps {
 const MainPage: React.FC<MainPageProps> = ({title}) => {
     const selectedTaskId = useAtomValue(selectedTaskIdAtom);
 
-    // Use transition on max-width/flex-basis for smoother resize
+    // TaskList container class calculation (remains the same)
     const taskListContainerClass = useMemo(() => twMerge(
-        "h-full transition-[max-width,flex-basis] duration-300 ease-apple", // Target flex-basis and max-width
-        selectedTaskId
-            ? "flex-basis-[calc(100%-420px)] max-w-[calc(100%-420px)]" // Shrink when detail is open
-            : "flex-basis-full max-w-full", // Full width when detail is closed
-        "flex-shrink-0" // Prevent shrinking beyond basis
+        "flex-1 h-full min-w-0 transition-[flex-basis] duration-300 ease-apple", // Apply transition specifically to flex-basis
+        selectedTaskId ? "border-r border-black/10" : ""
     ), [selectedTaskId]);
 
     return (
         <div className="h-full flex flex-1 overflow-hidden">
             {/* TaskList Container */}
             <div className={taskListContainerClass}>
-                {/* TaskList uses global filter, title is for display */}
-                <TaskList title={title}/>
+                <TaskList title={title}/> {/* Uses Radix components internally */}
             </div>
 
-            {/* TaskDetail - Animated presence */}
+            {/* TaskDetail - Animated presence (remains the same) */}
             <AnimatePresence initial={false}>
-                {selectedTaskId && <TaskDetail key="taskDetail"/>}
+                {selectedTaskId && <TaskDetail key="taskDetail"/>} {/* Uses Radix components internally */}
             </AnimatePresence>
         </div>
     );

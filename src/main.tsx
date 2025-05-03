@@ -4,9 +4,11 @@ import ReactDOM from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
 import {Provider as JotaiProvider} from 'jotai';
 import App from './App';
-import 'react-tooltip/dist/react-tooltip.css'; // Keep if using react-tooltip externally
-import {TooltipProvider} from '@radix-ui/react-tooltip'; // Import Radix Tooltip Provider
-import './styles/index.css'; // Import Tailwind CSS
+// Import Radix UI Tooltip Provider - Wrap your app or relevant part
+import * as Tooltip from '@radix-ui/react-tooltip';
+
+// Import base styles LAST to ensure Tailwind utilities override defaults
+import './styles/index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -19,13 +21,13 @@ root.render(
     <React.StrictMode>
         {/* Jotai Provider for global state */}
         <JotaiProvider>
-            {/* Radix Tooltip Provider at the root for global tooltip management */}
-            <TooltipProvider delayDuration={300}>
+            {/* Radix Tooltip Provider */}
+            <Tooltip.Provider delayDuration={300}> {/* Adjust delay as needed */}
                 {/* BrowserRouter for routing */}
                 <BrowserRouter>
                     <App/>
                 </BrowserRouter>
-            </TooltipProvider>
+            </Tooltip.Provider>
         </JotaiProvider>
     </React.StrictMode>
 );

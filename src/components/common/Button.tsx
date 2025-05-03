@@ -6,7 +6,7 @@ import Icon from './Icon';
 import {IconName} from "@/components/common/IconMap";
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'link' | 'danger' | 'glass';
-type ButtonSize = 'sm' | 'md' | 'lg' | 'icon'; // Consistent sizes
+type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 // Use React.ButtonHTMLAttributes for standard button props
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -18,7 +18,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     loading?: boolean;
     children?: React.ReactNode;
     className?: string;
-    'aria-label'?: string; // Keep aria-label
+    'aria-label'?: string;
 }
 
 // Performance: ForwardRef allows memoization if parent component uses it
@@ -26,7 +26,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     (
         {
             children,
-            variant = 'secondary', // Default to secondary for less emphasis
+            variant = 'primary',
             size = 'md',
             icon,
             iconPosition = 'left',
@@ -35,7 +35,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             loading = false,
             disabled,
             type = 'button',
-            'aria-label': ariaLabel, // Capture aria-label
+            'aria-label': ariaLabel,
             ...props // Spread remaining standard button attributes
         },
         ref
@@ -45,60 +45,35 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         // Use clsx for conditional classes, twMerge handles overrides
         const baseClasses = clsx(
             'inline-flex items-center justify-center font-medium whitespace-nowrap select-none outline-none relative',
-            'focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas', // Adjusted focus ring
-            'transition-all duration-150 ease-apple', // Faster transition for buttons
-            isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+            'focus-visible:ring-1 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas', // Updated offset color
+            'transition-colors duration-30 ease-apple', // Keep color transition
+            isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             fullWidth && 'w-full',
-            'rounded-md' // Default radius
+            'rounded-md' // Use theme border radius
         );
 
-        // Refined Variant styles for Apple-like feel
+        // Variant styles defined using clsx for readability
         const variantClasses: Record<ButtonVariant, string> = {
-            primary: clsx(
-                'bg-primary text-primary-foreground border border-transparent shadow-subtle', // Subtle shadow
-                !isDisabled && 'hover:bg-primary-dark active:bg-primary/90'
-            ),
-            secondary: clsx(
-                'bg-neutral-200/70 dark:bg-neutral-700/50 text-neutral-800 dark:text-neutral-100 border border-black/10 dark:border-white/10 shadow-sm', // Less contrast
-                !isDisabled && 'hover:bg-neutral-300/70 dark:hover:bg-neutral-600/60 active:bg-neutral-300/80 dark:active:bg-neutral-600/70'
-            ),
-            outline: clsx(
-                'border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 bg-transparent', // Simple outline
-                !isDisabled && 'hover:bg-neutral-100/50 dark:hover:bg-neutral-800/40 active:bg-neutral-100/70 dark:active:bg-neutral-800/60'
-            ),
-            ghost: clsx(
-                'text-neutral-600 dark:text-neutral-400 border border-transparent bg-transparent', // No background
-                !isDisabled && 'hover:bg-black/10 dark:hover:bg-white/10 hover:text-neutral-800 dark:hover:text-neutral-100 active:bg-black/15 dark:active:bg-white/15'
-            ),
-            link: clsx(
-                'text-primary underline-offset-4 h-auto px-0 py-0 rounded-none border-none bg-transparent shadow-none backdrop-filter-none font-normal text-sm', // Specific link styling
-                !isDisabled && 'hover:underline hover:text-primary-dark'
-            ),
-            danger: clsx(
-                'bg-destructive text-destructive-foreground border border-transparent shadow-subtle',
-                !isDisabled && 'hover:bg-destructive-dark active:bg-destructive/90'
-            ),
-            glass: clsx( // Refined glass for Apple feel
-                'border border-black/5 dark:border-white/5 text-neutral-700 dark:text-neutral-200 shadow-sm',
-                'bg-white/40 dark:bg-neutral-700/30 backdrop-blur-md',
-                !isDisabled && 'hover:bg-white/60 dark:hover:bg-neutral-700/50 active:bg-white/70 dark:active:bg-neutral-700/60'
-            ),
+            primary: clsx('bg-primary text-primary-foreground shadow-subtle border border-primary/90', !isDisabled && 'hover:bg-primary-dark active:bg-primary/95'),
+            secondary: clsx('bg-glass-alt-100 text-gray-700 border border-black/10 shadow-subtle backdrop-blur-md', !isDisabled && 'hover:bg-glass-alt/80 active:bg-glass-alt/70'),
+            outline: clsx('border border-black/10 text-gray-700 bg-glass/50 backdrop-blur-sm shadow-subtle', !isDisabled && 'hover:bg-glass-alt/50 active:bg-glass-alt/60'),
+            ghost: clsx('text-gray-600 border border-transparent', !isDisabled && 'hover:bg-black/15 hover:text-gray-800 active:bg-black/20'),
+            link: clsx('text-primary underline-offset-4 h-auto px-0 py-0 rounded-none border-none bg-transparent shadow-none backdrop-filter-none', !isDisabled && 'hover:underline hover:text-primary-dark'),
+            danger: clsx('bg-red-500 text-white shadow-subtle border border-red-500/90', !isDisabled && 'hover:bg-red-600 active:bg-red-700'),
+            glass: clsx('border border-black/10 text-gray-700 shadow-subtle', 'bg-glass-100 backdrop-blur-lg', !isDisabled && 'hover:bg-glass-alt-100 active:bg-glass-alt-200'),
         };
 
-        // Adjusted Size styles for typical Apple UI scale
+        // Size styles
         const sizeClasses: Record<ButtonSize, string> = {
-            sm: 'text-xs px-2 h-[28px]', // Slightly smaller
-            md: 'text-sm px-3 h-[32px]', // Standard
-            lg: 'text-base px-3.5 h-[36px]', // Larger actions
-            icon: 'h-8 w-8 p-0', // Keep consistent icon size
+            sm: 'text-xs px-2.5 h-[30px]',
+            md: 'text-sm px-3 h-[32px]',
+            lg: 'text-base px-3.5 h-[36px]',
+            icon: 'h-8 w-8 p-0', // Standard icon button size
         };
 
-        // Consistent Icon sizes
+        // Icon size styles
         const iconSizeClasses: Record<ButtonSize, number> = {
-            sm: 14,
-            md: 15, // Slightly smaller for md
-            lg: 16,
-            icon: 16, // Keep consistent icon size
+            sm: 14, md: 16, lg: 18, icon: 18,
         };
 
         // Helper for icon margin
@@ -108,54 +83,29 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
             return pos === 'left' ? 'mr-1.5' : 'ml-1.5';
         };
 
-        // Determine aria-label, warn if missing for icon-only buttons
+        // Determine aria-label
         const finalAriaLabel = ariaLabel || (size === 'icon' && !children ? undefined : (typeof children === 'string' ? children : undefined));
         if (size === 'icon' && !finalAriaLabel && !loading && !children && process.env.NODE_ENV === 'development') {
-            console.warn(`Icon-only button without children is missing an 'aria-label' prop. Icon: ${icon || 'N/A'}`);
+            console.warn(`Icon-only button without children is missing an 'aria-label' prop for accessibility. Icon: ${icon || 'N/A'}`);
         }
 
         return (
             <button
-                ref={ref}
-                type={type}
-                className={twMerge(
-                    baseClasses,
-                    variant !== 'link' && sizeClasses[size], // Don't apply sizing for link variant
-                    variantClasses[variant],
-                    className // Allow external overrides
-                )}
-                disabled={isDisabled}
-                aria-label={finalAriaLabel}
-                {...props} // Pass standard button props like onClick, etc.
-            >
+                ref={ref} type={type}
+                className={twMerge(baseClasses, variant !== 'link' && sizeClasses[size], variantClasses[variant], className)}
+                disabled={isDisabled} aria-label={finalAriaLabel} {...props} >
                 {loading ? (
-                    // Use dedicated loader icon
                     <Icon name="loader" size={iconSizeClasses[size]} className="animate-spin"/>
                 ) : (
                     <>
                         {icon && iconPosition === 'left' && (
-                            <Icon
-                                name={icon}
-                                size={iconSizeClasses[size]}
-                                className={twMerge(getIconMargin('left'), 'flex-shrink-0')} // Prevent icon shrinking
-                                aria-hidden="true" // Icon is decorative if text/aria-label is present
-                            />
-                        )}
-                        {/* Render children, make sr-only if it's an icon-only button with label */}
-                        <span className={clsx(
-                            (size === 'icon' && !children && finalAriaLabel) && 'sr-only',
-                            'leading-none' // Helps vertical alignment
-                        )}>
-                            {children}
-                        </span>
+                            <Icon name={icon} size={iconSizeClasses[size]} className={twMerge(getIconMargin('left'))}
+                                  aria-hidden="true"/>)}
+                        <span
+                            className={clsx(size === 'icon' && !children && finalAriaLabel ? 'sr-only' : 'flex-shrink-0')}>{children}</span>
                         {icon && iconPosition === 'right' && (
-                            <Icon
-                                name={icon}
-                                size={iconSizeClasses[size]}
-                                className={twMerge(getIconMargin('right'), 'flex-shrink-0')} // Prevent icon shrinking
-                                aria-hidden="true"
-                            />
-                        )}
+                            <Icon name={icon} size={iconSizeClasses[size]} className={twMerge(getIconMargin('right'))}
+                                  aria-hidden="true"/>)}
                     </>
                 )}
             </button>

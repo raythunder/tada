@@ -26,6 +26,8 @@ export const TaskItemMenuProvider: React.FC<{ children: React.ReactNode }> = ({c
         </TaskItemMenuContext.Provider>
     );
 };
+TaskItemMenuProvider.displayName = 'TaskItemMenuProvider';
+
 
 // Custom hook to consume the context, ensures it's used within a provider
 export const useTaskItemMenu = (): TaskItemMenuContextType => {
@@ -35,5 +37,3 @@ export const useTaskItemMenu = (): TaskItemMenuContextType => {
     }
     return context;
 };
-
-TaskItemMenuProvider.displayName = 'TaskItemMenuProvider';

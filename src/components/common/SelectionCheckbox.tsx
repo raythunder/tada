@@ -1,82 +1,99 @@
 // src/components/common/SelectionCheckbox.tsx
-import React, { memo, useMemo } from 'react';
-import { twMerge } from 'tailwind-merge';
-import * as CheckboxPrimitive from '@radix-ui/react-checkbox';
+import React, {memo, useMemo} from 'react';
+import {twMerge} from 'tailwind-merge';
 import Icon from './Icon';
+// Import Radix Checkbox components
+import * as Checkbox from '@radix-ui/react-checkbox';
 
 interface SelectionCheckboxProps {
     id: string;
-    checked: CheckboxPrimitive.CheckboxProps['checked']; // Use Radix type ('indeterminate' | boolean)
-    onCheckedChange: (checked: boolean | 'indeterminate') => void; // Use Radix handler prop name
+    checked: boolean; // Keep this as boolean for external control clarity
+    indeterminate?: boolean;
+    onChange: (checked: boolean) => void; // Radix onCheckedChange gives boolean | 'indeterminate', convert back for consistency if needed or adjust parent
     'aria-label': string;
     size?: number;
     className?: string;
     disabled?: boolean;
 }
 
-const SelectionCheckbox: React.FC<SelectionCheckboxProps> = memo(({
-                                                                      id,
-                                                                      checked,
-                                                                      onCheckedChange,
-                                                                      'aria-label': ariaLabel,
-                                                                      size = 16,
-                                                                      className,
-                                                                      disabled = false,
-                                                                  }) => {
-    const state = useMemo(() => {
-        if (checked === 'indeterminate') return 'indeterminate';
-        return checked ? 'checked' : 'unchecked';
-    }, [checked]);
+const SelectionCheckboxRadix: React.FC<SelectionCheckboxProps> = memo(({
+                                                                           id,
+                                                                           checked,
+                                                                           indeterminate = false,
+                                                                           onChange,
+                                                                           'aria-label': ariaLabel,
+                                                                           size = 16,
+                                                                           className,
+                                                                           disabled = false,
+                                                                       }) => {
+    // State for Radix Checkbox (checked can be boolean or 'indeterminate')
+    const checkboxState = useMemo((): Checkbox.CheckedState => {
+        if (indeterminate) return 'indeterminate';
+        return checked; // Directly use the boolean checked prop
+    }, [checked, indeterminate]);
 
+    // Wrapper classes based on Radix state (using data-state)
     const wrapperClasses = useMemo(() => twMerge(
-        // Base styles for the Root element
-        "relative inline-flex items-center justify-center flex-shrink-0 rounded-full border transition-all duration-150 ease-apple focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-1 focus-visible:ring-offset-canvas",
-        // Disabled state
-        "data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed data-[disabled]:bg-gray-200/50 data-[disabled]:border-gray-300",
-        // State-based styling
-        state === 'checked' && "bg-primary border-primary hover:bg-primary/90",
-        state === 'indeterminate' && "bg-primary/80 border-primary/80 hover:bg-primary/90", // Slightly different for indeterminate
-        state === 'unchecked' && "bg-white/40 border-gray-400/80 hover:border-primary/60",
-        className // Allow external classes
-    ), [state, className]);
+        "relative inline-flex items-center justify-center flex-shrink-0 rounded-full border transition-all duration-200 ease-apple focus-within:ring-1 focus-within:ring-primary/50 focus-within:ring-offset-1",
+        "data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed",
+        !disabled && "cursor-pointer",
+        // Styling based on data-state attribute provided by Radix
+        "data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:hover:bg-primary/90 data-[state=checked]:hover:border-primary/90",
+        "data-[state=indeterminate]:bg-primary/50 data-[state=indeterminate]:border-primary/50 data-[state=indeterminate]:hover:bg-primary/60 data-[state=indeterminate]:hover:border-primary/60",
+        "data-[state=unchecked]:bg-white/40 data-[state=unchecked]:border-gray-400/80 data-[state=unchecked]:hover:border-primary/60",
+        className
+    ), [disabled, className]);
 
+    // --- FIX: Correct iconName and iconColor logic ---
     const iconName = useMemo(() => {
-        if (state === 'checked') return 'check';
-        if (state === 'indeterminate') return 'minus';
+        // Check the 'indeterminate' prop first for the minus icon
+        if (indeterminate) return 'minus';
+        // Then check the boolean 'checked' prop for the check icon
+        if (checked) return 'check';
+        // Otherwise, no icon
         return undefined;
-    }, [state]);
+    }, [checked, indeterminate]);
 
     const iconColor = useMemo(() => {
-        if (state === 'checked' || state === 'indeterminate') return 'text-white';
+        // Icon is white if checked or indeterminate
+        if (checked || indeterminate) return 'text-white';
+        // Otherwise, transparent (effectively hidden)
         return 'text-transparent';
-    }, [state]);
+    }, [checked, indeterminate]);
+
+    // Adapt Radix onChange to match the expected boolean signature
+    const handleCheckedChange = (radixChecked: Checkbox.CheckedState) => {
+        // Convert 'indeterminate' back to false for the parent onChange,
+        // as the parent usually deals with boolean checked state.
+        // The visual indeterminate state is handled by the 'indeterminate' prop.
+        onChange(radixChecked === true);
+    };
+
 
     return (
-        // Use Radix Checkbox Root
-        <CheckboxPrimitive.Root
+        <Checkbox.Root
             id={id}
-            checked={checked}
-            onCheckedChange={onCheckedChange}
+            checked={checkboxState}
+            onCheckedChange={handleCheckedChange} // Use the adapted handler
             disabled={disabled}
             aria-label={ariaLabel}
             className={wrapperClasses}
-            style={{ width: size, height: size }}
+            style={{width: size, height: size}}
         >
-            {/* Radix Checkbox Indicator for the checkmark/minus */}
-            <CheckboxPrimitive.Indicator className="flex items-center justify-center w-full h-full">
+            <Checkbox.Indicator className="absolute inset-0 flex items-center justify-center">
                 {iconName && (
                     <Icon
                         name={iconName}
-                        size={size * 0.65} // Adjust icon size
+                        size={size * 0.65}
                         className={twMerge("transition-colors duration-100 ease-apple", iconColor)}
-                        strokeWidth={3} // Make icon bolder
+                        strokeWidth={3}
                         aria-hidden="true"
                     />
                 )}
-            </CheckboxPrimitive.Indicator>
-        </CheckboxPrimitive.Root>
+            </Checkbox.Indicator>
+        </Checkbox.Root>
     );
 });
-SelectionCheckbox.displayName = 'SelectionCheckbox';
+SelectionCheckboxRadix.displayName = 'SelectionCheckboxRadix';
 
-export default SelectionCheckbox;
+export default SelectionCheckboxRadix;

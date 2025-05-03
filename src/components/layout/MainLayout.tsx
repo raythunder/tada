@@ -3,16 +3,16 @@ import React, {Suspense, useMemo} from 'react';
 import {Outlet, useLocation} from 'react-router-dom';
 import IconBar from './IconBar';
 import Sidebar from './Sidebar';
-import SettingsModal from '../settings/SettingsModal'; // Radix-based modal
+// Keep SettingsModal import, it uses Radix Dialog internally now
+import SettingsModal from '../settings/SettingsModal';
 import {useAtomValue} from 'jotai';
 import {searchTermAtom} from '@/store/atoms';
 import Icon from "@/components/common/Icon";
 import {twMerge} from 'tailwind-merge';
 
-// Loading spinner component (keep as is or refine style)
+// Simple loading spinner component (No changes)
 const LoadingSpinner: React.FC = () => (
-    <div
-        className="absolute inset-0 flex items-center justify-center bg-canvas/50 dark:bg-neutral-900/50 backdrop-blur-sm z-50">
+    <div className="absolute inset-0 flex items-center justify-center bg-glass/70 backdrop-blur-md z-50">
         <Icon name="loader" size={32} className="text-primary animate-spin"/>
     </div>
 );
@@ -22,21 +22,20 @@ const MainLayout: React.FC = () => {
     const searchTerm = useAtomValue(searchTermAtom);
     const location = useLocation();
 
-    // Sidebar visibility logic (remains the same)
+    // Sidebar visibility logic (No changes)
     const hideSidebar = useMemo(() => {
         const isSearching = searchTerm.trim().length > 0;
         return !isSearching && ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
     }, [searchTerm, location.pathname]);
 
     return (
-        // Main container with base background
-        <div className="flex h-screen bg-canvas dark:bg-neutral-900 overflow-hidden font-sans">
+        // Overall layout structure remains the same
+        <div className="flex h-screen bg-canvas-alt overflow-hidden font-sans">
             <IconBar/>
 
             {/* Conditional Sidebar rendering */}
             {!hideSidebar && (
-                // Use relative positioning for potential absolute elements inside
-                <div className="w-56 flex-shrink-0 h-full relative shadow-md z-10"> {/* Added shadow */}
+                <div className="w-56 flex-shrink-0 h-full relative"> {/* Fixed width */}
                     <Sidebar/>
                 </div>
             )}
@@ -44,8 +43,7 @@ const MainLayout: React.FC = () => {
             {/* Main Content Area */}
             <main className={twMerge(
                 "flex-1 overflow-hidden relative flex flex-col min-w-0",
-                // Use a slightly different background for the main content area for depth
-                "bg-canvas-alt dark:bg-neutral-900"
+                "bg-glass/30 backdrop-blur-lg" // Background styling
             )}>
                 {/* Suspense for lazy-loaded route components */}
                 <Suspense fallback={<LoadingSpinner/>}>
@@ -53,10 +51,11 @@ const MainLayout: React.FC = () => {
                 </Suspense>
             </main>
 
-            {/* Settings Modal (Radix Dialog, already portal-based) */}
-            {/* No need to conditionally render here, Radix handles visibility */}
+            {/* Settings Modal (Radix Dialog) - renders conditionally */}
+            {/* No need for explicit key if Radix handles state reset well */}
             <SettingsModal/>
-            {/* AddListModal is now part of Sidebar and uses Radix Dialog */}
+
+            {/* AddListModal is rendered within Sidebar using Radix Dialog */}
         </div>
     );
 };

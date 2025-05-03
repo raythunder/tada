@@ -3,7 +3,7 @@ import React, {useCallback} from 'react';
 import Button from './Button';
 import Icon from './Icon';
 import {twMerge} from 'tailwind-merge';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
+import * as Dialog from '@radix-ui/react-dialog';
 
 interface ConfirmDeleteModalProps {
     isOpen: boolean;
@@ -12,65 +12,70 @@ interface ConfirmDeleteModalProps {
     taskTitle: string;
 }
 
-const ConfirmDeleteModal: React.FC<ConfirmDeleteModalProps> = ({
-                                                                   isOpen,
-                                                                   onClose, // Will be called by Radix onOpenChange
-                                                                   onConfirm,
-                                                                   taskTitle
-                                                               }) => {
+// Define fixed IDs for accessibility linking
+const TITLE_ID = 'confirm-delete-title';
+const DESCRIPTION_ID = 'confirm-delete-description';
+
+const ConfirmDeleteModalRadix: React.FC<ConfirmDeleteModalProps> = ({
+                                                                        isOpen,
+                                                                        onClose,
+                                                                        onConfirm,
+                                                                        taskTitle
+                                                                    }) => {
+    const handleOpenChange = useCallback((open: boolean) => {
+        if (!open) {
+            onClose();
+        }
+    }, [onClose]);
 
     const handleConfirmClick = useCallback(() => {
         onConfirm();
-        // No need to call onClose here, Radix handles it if button is wrapped in DialogClose
+        // Dialog closes automatically via Dialog.Close
     }, [onConfirm]);
 
     return (
-        <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogPrimitive.Portal>
-                {/* Overlay */}
-                <DialogPrimitive.Overlay
-                    className="fixed inset-0 z-50 bg-black/65 data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out"/>
-                {/* Content */}
-                <DialogPrimitive.Content
+        <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
+            <Dialog.Portal>
+                <Dialog.Overlay
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut"/>
+                <Dialog.Content
                     className={twMerge(
-                        // Base styling using Tailwind and Radix data attributes
-                        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 border border-black/10 bg-glass-100 backdrop-blur-xl p-6 shadow-strong duration-200 data-[state=open]:animate-scale-in data-[state=closed]:animate-scale-out rounded-xl"
+                        "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[55]",
+                        "bg-glass-100 dark:bg-neutral-800/95 backdrop-blur-xl w-full max-w-sm rounded-xl shadow-strong overflow-hidden border border-black/10 dark:border-white/10",
+                        "flex flex-col p-5",
+                        "data-[state=open]:animate-contentShow", "data-[state=closed]:animate-contentHide"
                     )}
-                    onEscapeKeyDown={onClose} // Ensure ESC closes
-                    onPointerDownOutside={onClose} // Ensure click outside closes
+                    onEscapeKeyDown={onClose}
+                    aria-labelledby={TITLE_ID} // Explicitly link title ID
+                    aria-describedby={DESCRIPTION_ID} // Explicitly link description ID
                 >
-                    {/* Icon and Title */}
-                    <div className="flex flex-col items-center text-center space-y-3">
-                        <div
-                            className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                            <Icon name="trash" size={24} className="text-red-600 dark:text-red-500"/>
+                    {/* Icon and Title/Description */}
+                    <div className="flex flex-col items-center text-center mb-4">
+                        <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-3">
+                            <Icon name="trash" size={24} className="text-red-600 dark:text-red-400"/>
                         </div>
-                        <div className="space-y-1">
-                            <DialogPrimitive.Title className="text-lg font-semibold text-gray-900 dark:text-gray-50">
-                                Move to Trash?
-                            </DialogPrimitive.Title>
-                            <DialogPrimitive.Description className="text-sm text-muted-foreground px-2">
-                                Are you sure you want to move the task "{taskTitle || 'Untitled Task'}" to the Trash?
-                            </DialogPrimitive.Description>
-                        </div>
+                        <Dialog.Title id={TITLE_ID} // Assign ID
+                                      className="text-lg font-semibold text-gray-800 dark:text-neutral-100 mb-1">
+                            Move to Trash?
+                        </Dialog.Title>
+                        <Dialog.Description id={DESCRIPTION_ID} // Assign ID
+                                            className="text-sm text-muted-foreground dark:text-neutral-400 px-4">
+                            Are you sure you want to move the task "{taskTitle || 'Untitled Task'}" to the Trash?
+                        </Dialog.Description>
                     </div>
-
                     {/* Actions */}
-                    <div className="flex justify-center space-x-3 mt-2">
-                        <DialogPrimitive.Close asChild>
-                            <Button variant="outline" size="md" className="flex-1">
-                                Cancel
-                            </Button>
-                        </DialogPrimitive.Close>
-                        {/* Confirm button closes the dialog via its own logic */}
-                        <Button variant="danger" size="md" onClick={handleConfirmClick} className="flex-1">
-                            Move to Trash
-                        </Button>
+                    <div className="flex justify-center space-x-3 mt-4">
+                        <Dialog.Close asChild>
+                            <Button variant="glass" size="md" className="flex-1"> Cancel </Button>
+                        </Dialog.Close>
+                        {/* Removed Dialog.Close wrapping confirm button - onConfirm handles closing via state */}
+                        <Button variant="danger" size="md" onClick={handleConfirmClick} className="flex-1"
+                                autoFocus> Move to Trash </Button>
                     </div>
-                </DialogPrimitive.Content>
-            </DialogPrimitive.Portal>
-        </DialogPrimitive.Root>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 };
-ConfirmDeleteModal.displayName = 'ConfirmDeleteModal';
-export default ConfirmDeleteModal;
+ConfirmDeleteModalRadix.displayName = 'ConfirmDeleteModalRadix';
+export default ConfirmDeleteModalRadix;

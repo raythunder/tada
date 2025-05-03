@@ -1,201 +1,161 @@
 // tailwind.config.ts
-import type { Config } from 'tailwindcss';
-import plugin from 'tailwindcss/plugin'; // Import the 'plugin' function
+import type {Config} from 'tailwindcss';
+import radixPlugin from 'tailwindcss-radix'; // Import the Radix plugin
 
 const config: Config = {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {
-      colors: {
-        // Base Palette (Apple HIG Inspired)
-        canvas: 'hsl(220 40% 98%)',        // Light background
-        'canvas-alt': 'hsl(220 30% 96%)', // Slightly darker bg
-        'canvas-deep': 'hsl(220 30% 92%)', // Even darker
+    content: [
+        './index.html',
+        './src/**/*.{js,ts,jsx,tsx}',
+    ],
+    darkMode: 'class', // Optional: Add dark mode support if needed
+    theme: {
+        extend: {
+            // Define Apple-like colors (adjust saturation/lightness as needed)
+            colors: {
+                // Primary accent color (e.g., Blue)
+                primary: {
+                    DEFAULT: 'hsl(210, 100%, 50%)', // Brighter blue
+                    dark: 'hsl(210, 100%, 45%)', // Slightly darker for hover/active
+                    foreground: 'hsl(0, 0%, 100%)', // White text on primary
+                    // Define shades for states (optional but helpful)
+                    // Use HSL for easier adjustments
+                    '50': 'hsl(210, 100%, 97%)',
+                    '100': 'hsl(210, 100%, 94%)',
+                    '200': 'hsl(210, 100%, 88%)',
+                    '300': 'hsl(210, 100%, 80%)',
+                    '400': 'hsl(210, 100%, 65%)',
+                    '500': 'hsl(210, 100%, 50%)', // DEFAULT
+                    '600': 'hsl(210, 100%, 45%)', // dark
+                    '700': 'hsl(210, 100%, 40%)',
+                    '800': 'hsl(210, 100%, 35%)',
+                    '900': 'hsl(210, 100%, 30%)',
+                    '950': 'hsl(210, 100%, 20%)',
+                },
+                // Neutral grays (cool gray is often used by Apple)
+                gray: {
+                    '50': 'hsl(210, 20%, 98%)',
+                    '100': 'hsl(210, 20%, 96%)',
+                    '200': 'hsl(210, 16%, 93%)',
+                    '300': 'hsl(210, 14%, 89%)',
+                    '400': 'hsl(210, 12%, 80%)',
+                    '500': 'hsl(210, 10%, 71%)', // Muted foreground often near here
+                    '600': 'hsl(210, 8%, 56%)',
+                    '700': 'hsl(210, 9%, 44%)', // Primary text often near here
+                    '800': 'hsl(210, 10%, 30%)',
+                    '900': 'hsl(210, 12%, 21%)',
+                    '950': 'hsl(210, 15%, 15%)',
+                },
+                // Specific UI element colors
+                canvas: { // General page background
+                    DEFAULT: 'hsl(220, 30%, 98%)',
+                    alt: 'hsl(220, 25%, 96%)',
+                },
+                muted: {
+                    DEFAULT: 'hsl(210, 10%, 55%)', // Muted text, icons
+                    foreground: 'hsl(210, 9%, 48%)', // Slightly darker muted text
+                },
+                // Glass effect backgrounds (use with backdrop-blur)
+                glass: {
+                    DEFAULT: 'hsla(0, 0%, 100%, 0.6)', // Base glass
+                    '100': 'hsla(0, 0%, 100%, 0.75)', // Slightly more opaque
+                    alt: { // Sidebar/alternate glass areas
+                        '100': 'hsla(220, 30%, 97%, 0.8)',
+                        '200': 'hsla(220, 30%, 97%, 0.6)',
+                    },
+                    inset: { // Input backgrounds
+                        '100': 'hsla(210, 15%, 50%, 0.08)',
+                        '200': 'hsla(210, 15%, 50%, 0.12)',
+                    }
+                },
+                // Semantic colors
+                danger: {
+                    DEFAULT: 'hsl(0, 84%, 60%)',
+                    foreground: 'hsl(0, 0%, 100%)',
+                },
+                warning: {
+                    DEFAULT: 'hsl(45, 93%, 47%)',
+                    foreground: 'hsl(45, 100%, 5%)',
+                },
+                success: {
+                    DEFAULT: 'hsl(140, 75%, 40%)',
+                    foreground: 'hsl(0, 0%, 100%)',
+                },
+                info: {
+                    DEFAULT: 'hsl(190, 80%, 50%)',
+                    foreground: 'hsl(0, 0%, 100%)',
+                },
 
-        primary: {
-          DEFAULT: 'hsl(210 100% 50%)', // Vibrant Blue
-          foreground: 'hsl(0 0% 100%)',   // White text on primary
-          dark: 'hsl(210 100% 45%)',     // Slightly darker for hover/active
+            },
+            // Apple-like font stack
+            fontFamily: {
+                sans: [
+                    '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', '"Helvetica Neue"',
+                    'Arial', '"Noto Sans"', 'sans-serif', '"Apple Color Emoji"', '"Segoe UI Emoji"',
+                    '"Segoe UI Symbol"', '"Noto Color Emoji"',
+                ],
+                mono: [
+                    'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"',
+                    '"Courier New"', 'monospace',
+                ],
+            },
+            // Subtle shadows
+            boxShadow: {
+                subtle: '0 1px 2px 0 hsla(0, 0%, 0%, 0.03), 0 1px 3px 0 hsla(0, 0%, 0%, 0.03)',
+                medium: '0 4px 6px -1px hsla(0, 0%, 0%, 0.05), 0 2px 4px -2px hsla(0, 0%, 0%, 0.05)',
+                strong: '0 10px 15px -3px hsla(0, 0%, 0%, 0.07), 0 4px 6px -4px hsla(0, 0%, 0%, 0.07)',
+                inner: 'inset 0 1px 2px 0 hsla(0, 0%, 0%, 0.05)',
+            },
+            // Apple-like easing function (approximation)
+            transitionTimingFunction: {
+                'apple': 'cubic-bezier(0.25, 0.1, 0.25, 1.0)',
+                'apple-fast': 'cubic-bezier(0.32, 0.72, 0, 1)', // Faster variant
+            },
+            transitionDuration: {
+                'apple': '350ms',
+                'apple-fast': '200ms',
+                'apple-micro': '150ms',
+            },
+            // Define keyframes for animations
+            keyframes: {
+                // Radix UI animations (fade, slide, scale)
+                fadeIn: {'0%': {opacity: '0'}, '100%': {opacity: '1'}},
+                fadeOut: {'0%': {opacity: '1'}, '100%': {opacity: '0'}},
+                slideUpAndFade: {
+                    '0%': {opacity: '0', transform: 'translateY(6px) scale(0.98)'},
+                    '100%': {opacity: '1', transform: 'translateY(0) scale(1)'},
+                },
+                slideDownAndFade: {
+                    '0%': {opacity: '1', transform: 'translateY(0) scale(1)'},
+                    '100%': {opacity: '0', transform: 'translateY(6px) scale(0.98)'},
+                },
+                // Modal Content specific animation
+                contentShow: {
+                    '0%': {opacity: '0', transform: 'translate(-50%, -48%) scale(0.97)'},
+                    '100%': {opacity: '1', transform: 'translate(-50%, -50%) scale(1)'},
+                },
+                contentHide: {
+                    '0%': {opacity: '1', transform: 'translate(-50%, -50%) scale(1)'},
+                    '100%': {opacity: '0', transform: 'translate(-50%, -48%) scale(0.97)'},
+                },
+            },
+            // Define animation utilities using the keyframes
+            animation: {
+                // General purpose
+                fadeIn: 'fadeIn 150ms cubic-bezier(0.16, 1, 0.3, 1)', // Faster curve for fade-in
+                fadeOut: 'fadeOut 150ms cubic-bezier(0.16, 1, 0.3, 1)',
+                // Radix Dropdown/Popover/Tooltip Content
+                slideUpAndFade: 'slideUpAndFade 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+                slideDownAndFade: 'slideDownAndFade 150ms cubic-bezier(0.16, 1, 0.3, 1)',
+                // Radix Dialog Content
+                contentShow: 'contentShow 250ms cubic-bezier(0.16, 1, 0.3, 1)',
+                contentHide: 'contentHide 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+            },
         },
-        secondary: { // Typically a gray or subdued color
-          DEFAULT: 'hsl(215 15% 92%)',
-          foreground: 'hsl(215 10% 35%)',
-        },
-        muted: {
-          DEFAULT: 'hsl(215 10% 55%)',
-          foreground: 'hsl(215 10% 65%)', // Often used for placeholder text
-        },
-        accent: { // Example accent (e.g., for notifications, highlights)
-          DEFAULT: 'hsl(45 100% 50%)',
-          foreground: 'hsl(45 100% 5%)',
-        },
-        destructive: { // Red for danger/delete
-          DEFAULT: 'hsl(0 75% 55%)',
-          foreground: 'hsl(0 0% 100%)',
-          dark: 'hsl(0 70% 50%)',
-        },
-        border: 'hsl(215 20% 85%)', // Default border color
-        'border-alt': 'hsl(215 20% 90%)', // Lighter border
-
-        // Glassmorphism Backgrounds (with transparency)
-        'glass': 'hsla(0, 0%, 100%, 0.3)',           // Base white glass
-        'glass-alt': 'hsla(220, 30%, 97%, 0.6)',      // Lighter, less transparent
-        'glass-alt-100': 'hsla(220, 40%, 98%, 0.75)', // Sidebar/IconBar like
-        'glass-alt-200': 'hsla(220, 30%, 96%, 0.85)', // Header/Footer like
-        'glass-inset-100': 'hsla(210, 30%, 90%, 0.5)', // Input/Editor bg
-        'glass-inset-200': 'hsla(210, 30%, 90%, 0.7)', // Input/Editor bg focus
-
-        'black': 'hsl(0, 0%, 0%)',
-        'white': 'hsl(0, 0%, 100%)',
-      },
-      fontFamily: {
-        // Use system fonts for native feel
-        sans: [
-          'system-ui',
-          '-apple-system',
-          'BlinkMacSystemFont',
-          '"Segoe UI"',
-          'Roboto',
-          '"Helvetica Neue"',
-          'Arial',
-          '"Noto Sans"',
-          'sans-serif',
-          '"Apple Color Emoji"',
-          '"Segoe UI Emoji"',
-          '"Segoe UI Symbol"',
-          '"Noto Color Emoji"',
-        ],
-        mono: [
-          'ui-monospace',
-          'SFMono-Regular', // Apple's monospace
-          'Menlo',
-          'Monaco',
-          'Consolas',
-          '"Liberation Mono"',
-          '"Courier New"',
-          'monospace',
-        ],
-      },
-      fontSize: {
-        // Fine-tune sizes for refinement
-        '2xs': '0.625rem', // 10px
-        'xs': '0.75rem',   // 12px
-        'sm': '0.8125rem', // 13px
-        'base': '0.875rem',// 14px
-        'md': '0.9375rem', // 15px
-        'lg': '1rem',      // 16px
-        'xl': '1.125rem',  // 18px
-        '2xl': '1.25rem',  // 20px
-      },
-      borderRadius: {
-        sm: '4px',
-        md: '6px', // Default
-        lg: '8px',
-        xl: '12px',
-        full: '9999px',
-      },
-      boxShadow: {
-        subtle: '0 1px 2px 0 hsla(0, 0%, 0%, 0.03), 0 1px 3px 0 hsla(210, 40%, 50%, 0.05)',
-        DEFAULT: '0 1px 3px 0 hsla(0, 0%, 0%, 0.06), 0 1px 2px -1px hsla(210, 40%, 50%, 0.06)',
-        md: '0 4px 6px -1px hsla(0, 0%, 0%, 0.08), 0 2px 4px -2px hsla(210, 40%, 50%, 0.08)',
-        lg: '0 10px 15px -3px hsla(0, 0%, 0%, 0.08), 0 4px 6px -4px hsla(210, 40%, 50%, 0.08)',
-        xl: '0 20px 25px -5px hsla(0, 0%, 0%, 0.1), 0 8px 10px -6px hsla(210, 40%, 50%, 0.1)',
-        '2xl': '0 25px 50px -12px hsla(0, 0%, 0%, 0.15)',
-        inner: 'inset 0 1px 3px 0 hsla(0, 0%, 0%, 0.06)',
-        strong: '0 8px 24px hsla(210, 60%, 50%, 0.15), 0 2px 8px hsla(0, 0%, 0%, 0.08)',
-      },
-      transitionTimingFunction: {
-        // Apple-like ease-out curve
-        'apple': 'cubic-bezier(0.25, 0.1, 0.25, 1)',
-      },
-      transitionDuration: {
-        '30': '30ms',
-        '50': '50ms',
-        '100': '100ms',
-        '150': '150ms',
-        '200': '200ms',
-        '250': '250ms',
-        '300': '300ms',
-        '400': '400ms',
-        '500': '500ms',
-      },
-      keyframes: {
-        'fade-in': {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        'fade-out': {
-          '0%': { opacity: '1' },
-          '100%': { opacity: '0' },
-        },
-        'slide-in-from-top': {
-          '0%': { transform: 'translateY(-10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        'slide-out-to-top': {
-          '0%': { transform: 'translateY(0)', opacity: '1' },
-          '100%': { transform: 'translateY(-10px)', opacity: '0' },
-        },
-        'slide-in-from-bottom': {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        'slide-out-to-bottom': {
-          '0%': { transform: 'translateY(0)', opacity: '1' },
-          '100%': { transform: 'translateY(10px)', opacity: '0' },
-        },
-        'scale-in': {
-          '0%': { transform: 'scale(0.95)', opacity: '0' },
-          '100%': { transform: 'scale(1)', opacity: '1' },
-        },
-        'scale-out': {
-          '0%': { transform: 'scale(1)', opacity: '1' },
-          '100%': { transform: 'scale(0.95)', opacity: '0' },
-        },
-      },
-      animation: {
-        'fade-in': 'fade-in 150ms ease-apple',
-        'fade-out': 'fade-out 100ms ease-apple forwards', // Use forwards to keep final state
-        'slide-in-from-top': 'slide-in-from-top 150ms ease-apple',
-        'slide-out-to-top': 'slide-out-to-top 100ms ease-apple forwards',
-        'slide-in-from-bottom': 'slide-in-from-bottom 150ms ease-apple',
-        'slide-out-to-bottom': 'slide-out-to-bottom 100ms ease-apple forwards',
-        'scale-in': 'scale-in 150ms ease-apple',
-        'scale-out': 'scale-out 100ms ease-apple forwards',
-      },
-      backdropBlur: {
-        xs: '2px',
-        sm: '4px',
-        DEFAULT: '8px',
-        md: '12px',
-        lg: '16px',
-        xl: '24px',
-        '2xl': '40px',
-        '3xl': '64px',
-      },
     },
-  },
-  plugins: [
-    require('@tailwindcss/forms')({ strategy: 'class' }), // Use class strategy
-    require('tailwindcss-radix')(), // Add Radix plugin
-    plugin(function ({ addUtilities, theme }) {
-      // Add glass utilities
-      addUtilities({
-        '.bg-glass-100': {
-          '@apply bg-white/70 dark:bg-neutral-800/70 backdrop-blur-lg border border-white/10 dark:border-white/5': {}
-        },
-        '.bg-glass-200': {
-          '@apply bg-neutral-50/70 dark:bg-neutral-900/70 backdrop-blur-lg border border-white/10 dark:border-white/5': {}
-        },
-        '.bg-glass-alt-100': {
-          '@apply bg-neutral-100/75 dark:bg-neutral-800/75 backdrop-blur-xl border border-black/5 dark:border-white/5': {}
-        },
-      })
-    }),
-  ],
+    plugins: [
+        radixPlugin(), // Use the Radix plugin for data-* variants
+        require('@tailwindcss/forms'), // Optional: if you need form reset styles
+    ],
 };
 
 export default config;
