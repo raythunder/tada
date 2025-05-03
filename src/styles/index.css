@@ -3,140 +3,145 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Define base styles and custom properties */
+/* Define CSS Variables for Theming */
 @layer base {
     :root {
-        /* Define HSL variables for primary color (matching tailwind.config.ts) */
-        --primary-h: 210;
-        --primary-s: 100%;
-        --primary-l: 50%;
-        --primary-foreground-h: 0;
-        --primary-foreground-s: 0%;
-        --primary-foreground-l: 100%;
+        /* Light Theme Colors (Example HSL Values) */
+        --canvas-h: 0; --canvas-s: 0%; --canvas-l: 100%; /* White */
+        --canvas-alt-h: 220; --canvas-alt-s: 30%; --canvas-alt-l: 96%; /* Very light blue-gray */
+        --foreground-h: 220; --foreground-s: 10%; --foreground-l: 10%; /* Dark gray */
+        --muted-h: 220; --muted-s: 10%; --muted-l: 50%; /* Mid gray */
+        --muted-foreground-h: 220; --muted-foreground-s: 8%; --muted-foreground-l: 40%; /* Darker mid gray */
+        --primary-h: 222; --primary-s: 84%; --primary-l: 60%; /* Primary blue */
+        --primary-l-light: 65%; /* Lighter primary */
+        --primary-l-dark: 55%; /* Darker primary */
+        --primary-foreground-h: 0; --primary-foreground-s: 0%; --primary-foreground-l: 100%; /* White */
+        --destructive-h: 0; --destructive-s: 84%; --destructive-l: 60%; /* Red */
+        --destructive-foreground-h: 0; --destructive-foreground-s: 0%; --destructive-foreground-l: 100%; /* White */
+        --border-h: 220; --border-s: 15%; --border-l: 88%; /* Light gray border */
+        --ring-h: 222; --ring-s: 84%; --ring-l: 60%; /* Primary blue for rings */
+        --radius: 0.5rem; /* Default border radius */
 
-        /* Font variables */
-        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-        --font-mono: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        /* Glass Effect Variables (Light Theme Example) */
+        --glass-h: 0; --glass-s: 0%; --glass-l: 100%; /* Base white for glass */
+        --glass-a: 0.3;
+        --glass-a-100: 0.75;
+        --glass-alt-h: 220; --glass-alt-s: 40%; --glass-alt-l: 98%; /* Light blue-gray */
+        --glass-alt-a: 0.6;
+        --glass-alt-a-100: 0.85;
+        --glass-alt-a-200: 0.95;
+        --glass-inset-h: 220; --glass-inset-s: 20%; --glass-inset-l: 95%; /* Inset background */
+        --glass-inset-a-100: 0.6;
+        --glass-inset-a-200: 0.7;
 
-        /* Other potential CSS variables */
-        --canvas-bg: hsl(220, 30%, 98%);
-        --canvas-alt-bg: hsl(220, 25%, 96%);
-        --muted-fg: hsl(210, 10%, 55%);
-
-        /* Define border radius - can be overridden by Tailwind utilities */
-        --radius: 0.375rem; /* 6px */
+        /* Font Variables (Example) */
+        --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
 
-    /* Optional: Apply base font */
+    .dark {
+        /* Dark Theme Colors (Example HSL Values) */
+        --canvas-h: 220; --canvas-s: 10%; --canvas-l: 10%; /* Very dark blue-gray */
+        --canvas-alt-h: 220; --canvas-alt-s: 12%; --canvas-alt-l: 15%; /* Darker blue-gray */
+        --foreground-h: 0; --foreground-s: 0%; --foreground-l: 95%; /* Light gray */
+        --muted-h: 220; --muted-s: 8%; --muted-l: 50%; /* Mid gray */
+        --muted-foreground-h: 220; --muted-foreground-s: 10%; --muted-foreground-l: 65%; /* Lighter mid gray */
+        --primary-h: 218; --primary-s: 80%; --primary-l: 68%; /* Adjusted primary blue for dark */
+        --primary-l-light: 72%; /* Lighter primary */
+        --primary-l-dark: 64%; /* Darker primary */
+        --primary-foreground-h: 220; --primary-foreground-s: 10%; --primary-foreground-l: 10%; /* Dark for contrast */
+        --destructive-h: 0; --destructive-s: 70%; --destructive-l: 65%; /* Adjusted red */
+        --destructive-foreground-h: 0; --destructive-foreground-s: 0%; --destructive-foreground-l: 95%; /* Light gray */
+        --border-h: 220; --border-s: 15%; --border-l: 25%; /* Dark gray border */
+        --ring-h: 218; --ring-s: 80%; --ring-l: 68%; /* Adjusted primary for rings */
+        --radius: 0.5rem;
+
+        /* Glass Effect Variables (Dark Theme Example) */
+        --glass-h: 220; --glass-s: 10%; --glass-l: 10%; /* Base dark for glass */
+        --glass-a: 0.3;
+        --glass-a-100: 0.8;
+        --glass-alt-h: 220; --glass-alt-s: 12%; --glass-alt-l: 18%; /* Darker blue-gray */
+        --glass-alt-a: 0.7;
+        --glass-alt-a-100: 0.9;
+        --glass-alt-a-200: 0.95;
+        --glass-inset-h: 220; --glass-inset-s: 15%; --glass-inset-l: 25%; /* Inset background */
+        --glass-inset-a-100: 0.5;
+        --glass-inset-a-200: 0.6;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border; /* Apply base border color */
+    }
     body {
-        @apply font-sans bg-canvas text-gray-800 antialiased;
+        @apply bg-canvas text-foreground;
+        font-family: var(--font-sans);
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
-
-    /* Basic focus outline style (can be customized) */
-    *:focus-visible {
-        @apply outline-none ring-1 ring-primary/60 ring-offset-1 ring-offset-canvas;
+    /* Ensure CodeMirror uses monospace */
+    .cm-editor {
+        font-family: var(--font-mono) !important;
     }
-
-    /* Remove default button outline */
-    button:focus {
+    /* Remove default button focus outline if using custom rings */
+    button:focus, input:focus, select:focus, textarea:focus {
         outline: none;
     }
-
-    /* Input placeholder styling */
-    input::placeholder,
-    textarea::placeholder {
-        @apply text-muted/80; /* Use muted color with some opacity */
+    /* Optional: Smooth scrolling */
+    html {
+        scroll-behavior: smooth;
     }
 }
 
-/* Define custom component layers */
-@layer components {
-    /* --- Custom Scrollbar Styles --- */
-    /* Base scrollbar track */
-    .styled-scrollbar::-webkit-scrollbar-track,
-    .styled-scrollbar-thin::-webkit-scrollbar-track {
-        @apply bg-transparent; /* Transparent track */
-    }
-
-    /* Base scrollbar thumb */
-    .styled-scrollbar::-webkit-scrollbar-thumb,
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb {
-        @apply bg-black/20 rounded-full border-2 border-transparent bg-clip-content;
-        /* Darker thumb, rounded, slight border for padding */
-    }
-
-    /* Hover state for thumb */
-    .styled-scrollbar::-webkit-scrollbar-thumb:hover,
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        @apply bg-black/30; /* Darken thumb on hover */
-    }
-
-    /* Standard scrollbar width */
-    .styled-scrollbar::-webkit-scrollbar {
-        @apply w-2 h-2; /* Width/Height for vertical/horizontal */
-    }
-
-    /* Thin scrollbar width */
-    .styled-scrollbar-thin::-webkit-scrollbar {
-        @apply w-1.5 h-1.5; /* Thinner width/height */
-    }
-    .styled-scrollbar-thin::-webkit-scrollbar-thumb {
-        @apply border-0; /* No border for thin scrollbar */
-    }
-
-    /* Firefox scrollbar styling (optional but recommended) */
-    .styled-scrollbar,
-    .styled-scrollbar-thin {
-        scrollbar-width: thin; /* Or 'auto' for standard */
-        scrollbar-color: hsla(0, 0%, 0%, 0.25) transparent; /* thumb color track color */
-    }
-    .styled-scrollbar {
-        scrollbar-width: auto; /* Firefox standard width */
-    }
-    .styled-scrollbar-thin {
-        scrollbar-width: thin; /* Firefox thin width */
-    }
-    .styled-scrollbar:hover,
-    .styled-scrollbar-thin:hover {
-        scrollbar-color: hsla(0, 0%, 0%, 0.35) transparent; /* Darken thumb on hover */
-    }
-
-
-    /* --- Fix for CodeMirror specific overrides if needed --- */
-    /* Example: ensure scrollbar styles apply inside codemirror */
-    .cm-scroller {
-        @apply styled-scrollbar;
-    }
-    /* Example: Ensure padding isn't overridden incorrectly */
-    .cm-content {
-        padding: 14px 16px !important; /* Force padding if necessary */
-    }
-
-    /* --- Task Item Specific Styles (if any base styles are needed) --- */
-    .task-item {
-        /* Base task item styles if needed */
-    }
-
-    /* --- Glass Background Utility (Example) --- */
-    /* Not strictly needed if using direct hsla() in tailwind.config.ts, */
-    /* but can be useful for complex gradients or common patterns. */
-    /* .bg-glass-gradient {
-        background-image: linear-gradient(to bottom right, hsla(0,0%,100%,0.8), hsla(0,0%,100%,0.5));
-        @apply backdrop-blur-lg;
-    } */
-
-    /* --- Tooltip Styling (if not using Radix Tooltip plugin styling) --- */
-    /* .tooltip {
-        @apply bg-black/80 text-white text-xs px-2 py-1 rounded shadow-md;
-    } */
+/* Custom Scrollbar Styles */
+/* Standard Width */
+.styled-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.styled-scrollbar::-webkit-scrollbar-track {
+    background-color: transparent;
+    border-radius: 10px;
+}
+.styled-scrollbar::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-h) var(--muted-s) var(--muted-l) / 0.3);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+.styled-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-h) var(--muted-s) var(--muted-l) / 0.5);
+}
+.styled-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
 }
 
-/* Ensure Radix portal elements are positioned correctly */
-/* Generally not needed unless specific overrides are causing issues */
-/* body > [role="tooltip"],
-body > [role="dialog"],
-body > [role="menu"] {
-    position: fixed !important;
-} */
+/* Thin Width */
+.styled-scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.styled-scrollbar-thin::-webkit-scrollbar-track {
+    background-color: transparent;
+    border-radius: 10px;
+}
+.styled-scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-h) var(--muted-s) var(--muted-l) / 0.3);
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    background-clip: content-box;
+}
+.styled-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-h) var(--muted-s) var(--muted-l) / 0.5);
+}
+.styled-scrollbar-thin::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+
+/* Fix potential Radix content positioning issues */
+.radix-popover-content, .radix-dropdown-content {
+    /* Defaults are usually okay, but ensure transform-origin if needed */
+    /* transform-origin: var(--radix-popper-transform-origin); */
+}

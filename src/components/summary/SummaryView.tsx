@@ -67,7 +67,9 @@ async function generateAiSummary(tasks: Task[]): Promise<string> {
         } else if (overdue) {
             summary += `Overdue task **"${overdue.title}"** requires action. `;
         } else {
-            summary += `Continue progress on **"${tasks.find(t => !t.completed)?.title ?? 'current tasks'}"**. `;
+            // Find the first non-completed task as an example focus
+            const firstInProgress = tasks.find(t => !t.completed);
+            summary += `Continue progress on **"${firstInProgress?.title ?? 'current tasks'}"**. `;
         }
     } else {
         summary += "- All selected tasks are complete. Well done!";
@@ -123,11 +125,11 @@ const SummaryView: React.FC = () => {
         const summaryText = summaryToLoad?.summaryText ?? '';
         const currentEditorText = editorRef.current?.getView()?.state.doc.toString();
 
+        // Only update if the text actually differs, prevents unnecessary updates
         if (summaryText !== currentEditorText) {
             isInternalEditorUpdate.current = true; // Mark as internal update
             setSummaryEditorContent(summaryText);
             hasUnsavedChangesRef.current = false; // Reset unsaved flag when loading new content
-            // No need to focus editor here, let user interact naturally
         }
         // Make sure dropdowns close if summary changes
         setIsRefTasksDropdownOpen(false);
@@ -172,7 +174,7 @@ const SummaryView: React.FC = () => {
             }, 0);
         } else {
             setPeriod(selectedValue as SummaryPeriodOption);
-            setIsRangePickerOpen(false);
+            setIsRangePickerOpen(false); // Ensure picker is closed if selecting predefined
         }
     }, [setPeriod, setIsRangePickerOpen, forceSaveCurrentSummary]); // Added forceSave
 
@@ -182,27 +184,45 @@ const SummaryView: React.FC = () => {
         setListFilter(newList);
     }, [setListFilter, forceSaveCurrentSummary]); // Added forceSave
 
+    // Task selection handler used by TaskItemMiniInline
     const handleTaskSelectionChange = useCallback((taskId: string, isSelected: boolean | 'indeterminate') => {
-        if (isSelected === 'indeterminate') return; // Ignore clicks on indeterminate state itself
-        setSelectedTaskIds(prev => {
-            const newSet = new Set(prev);
-            if (isSelected) newSet.add(taskId); else newSet.delete(taskId);
-            return newSet;
-        });
+        // Parent component handles the actual Set update based on the boolean state
+        if (typeof isSelected === 'boolean') {
+            setSelectedTaskIds(prev => {
+                const newSet = new Set(prev);
+                if (isSelected) newSet.add(taskId); else newSet.delete(taskId);
+                return newSet;
+            });
+        }
+        // Ignore clicks on the 'indeterminate' state itself if that case arises
     }, [setSelectedTaskIds]);
 
+    // Handler for the "Select All" checkbox
     const handleSelectAllTasks = useCallback(() => {
-        setSelectedTaskIds(new Set(filteredTasks.map(t => t.id)));
+        // Select only non-trashed tasks
+        const nonTrashedTaskIds = filteredTasks.filter(t => t.list !== 'Trash').map(t => t.id);
+        setSelectedTaskIds(new Set(nonTrashedTaskIds));
     }, [filteredTasks, setSelectedTaskIds]);
 
     const handleDeselectAllTasks = useCallback(() => {
         setSelectedTaskIds(new Set());
     }, [setSelectedTaskIds]);
 
+    const handleSelectAllToggle = useCallback((isChecked: boolean | 'indeterminate') => {
+        // When clicking the select-all checkbox, treat indeterminate as unchecking all
+        if (isChecked === true) {
+            handleSelectAllTasks();
+        } else { // Handles false and 'indeterminate' clicks
+            handleDeselectAllTasks();
+        }
+    }, [handleSelectAllTasks, handleDeselectAllTasks]);
+
+
     const handleGenerateClick = useCallback(async () => {
         forceSaveCurrentSummary(); // Save any pending edits before generating
         setIsGenerating(true);
-        const tasksToSummarize = allTasks.filter(t => selectedTaskIds.has(t.id));
+        // Ensure only non-trashed selected tasks are included
+        const tasksToSummarize = allTasks.filter(t => selectedTaskIds.has(t.id) && t.list !== 'Trash');
         try {
             const newSummaryText = await generateAiSummary(tasksToSummarize);
             const [periodKey, listKey] = filterKey.split('__');
@@ -219,18 +239,17 @@ const SummaryView: React.FC = () => {
             // Set index to 0 to view the newly generated summary
             setCurrentIndex(0);
             // The useEffect listening to [currentIndex, relevantSummaries] will handle loading the editor
-            // No need to set editor content directly here anymore
+            hasUnsavedChangesRef.current = false; // New summary loaded, no unsaved changes
         } catch (error) {
             console.error("Error generating summary:", error);
             // Optionally, show an error message to the user
-            // Maybe update editor content with error temporarily?
             isInternalEditorUpdate.current = true;
             setSummaryEditorContent(`Error generating summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
             hasUnsavedChangesRef.current = false;
         } finally {
             setIsGenerating(false);
         }
-        // Deselect tasks after generation? Optional, based on desired UX.
+        // Optional: Deselect tasks after generation based on desired UX.
         // handleDeselectAllTasks();
     }, [selectedTaskIds, allTasks, filterKey, setIsGenerating, setStoredSummaries, setCurrentIndex, forceSaveCurrentSummary]); // Added forceSave
 
@@ -278,7 +297,7 @@ const SummaryView: React.FC = () => {
 
     const listOptions = useMemo(() => [
         {label: 'All Lists', value: 'all'},
-        ...availableLists.map(listName => ({label: listName, value: listName}))
+        ...availableLists.filter(name => name !== 'Trash').map(listName => ({label: listName, value: listName})) // Exclude Trash
     ], [availableLists]);
 
     const selectedPeriodLabel = useMemo(() => {
@@ -308,22 +327,35 @@ const SummaryView: React.FC = () => {
 
     const selectedListLabel = useMemo(() => {
         const option = listOptions.find(l => l.value === listFilter);
-        return option ? option.label : 'Unknown List';
+        return option ? option.label : 'Select List'; // Default text if filter is somehow invalid
     }, [listFilter, listOptions]);
 
-    const isGenerateDisabled = useMemo(() => isGenerating || selectedTaskIds.size === 0, [isGenerating, selectedTaskIds]);
+    // Generate button is disabled if generating or no non-trashed tasks are selected
+    const isGenerateDisabled = useMemo(() => {
+        if (isGenerating) return true;
+        if (selectedTaskIds.size === 0) return true;
+        // Check if *any* selected task is not in Trash
+        const selectedTasks = allTasks.filter(t => selectedTaskIds.has(t.id));
+        return !selectedTasks.some(t => t.list !== 'Trash');
+    }, [isGenerating, selectedTaskIds, allTasks]);
+
     const tasksUsedCount = useMemo(() => currentSummary?.taskIds.length ?? 0, [currentSummary]);
     const summaryTimestamp = useMemo(() => currentSummary ? formatDateTime(currentSummary.createdAt) : null, [currentSummary]);
-    const allTasksSelected = useMemo(() => filteredTasks.length > 0 && filteredTasks.every(task => selectedTaskIds.has(task.id)), [filteredTasks, selectedTaskIds]);
-    const someTasksSelected = useMemo(() => selectedTaskIds.size > 0 && !allTasksSelected, [selectedTaskIds, allTasksSelected]);
-    const totalRelevantSummaries = useMemo(() => relevantSummaries.length, [relevantSummaries]);
-    const displayedIndex = useMemo(() => totalRelevantSummaries > 0 ? (currentIndex + 1) : 0, [totalRelevantSummaries, currentIndex]);
+
+    // Calculate selectAllState considering only non-trashed tasks
+    const selectableTasks = useMemo(() => filteredTasks.filter(t => t.list !== 'Trash'), [filteredTasks]);
+    const allSelectableTasksSelected = useMemo(() => selectableTasks.length > 0 && selectableTasks.every(task => selectedTaskIds.has(task.id)), [selectableTasks, selectedTaskIds]);
+    const someSelectableTasksSelected = useMemo(() => selectableTasks.some(task => selectedTaskIds.has(task.id)) && !allSelectableTasksSelected, [selectedTaskIds, allSelectableTasksSelected, selectableTasks]);
 
     const selectAllState = useMemo(() => {
-        if (allTasksSelected) return true;
-        if (someTasksSelected) return 'indeterminate';
+        if (allSelectableTasksSelected) return true;
+        if (someSelectableTasksSelected) return 'indeterminate';
         return false;
-    }, [allTasksSelected, someTasksSelected]);
+    }, [allSelectableTasksSelected, someSelectableTasksSelected]);
+
+
+    const totalRelevantSummaries = useMemo(() => relevantSummaries.length, [relevantSummaries]);
+    const displayedIndex = useMemo(() => totalRelevantSummaries > 0 ? (currentIndex + 1) : 0, [totalRelevantSummaries, currentIndex]);
 
     const dropdownContentClasses = "min-w-[160px] z-50 bg-glass-100 dark:bg-neutral-800/95 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10 p-1 data-[state=open]:animate-slideUpAndFade data-[state=closed]:animate-slideDownAndFade";
 
@@ -342,14 +374,15 @@ const SummaryView: React.FC = () => {
                             className="flex items-start p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 transition-colors duration-100 ease-apple"
                             title={task.title}>
                             <div className={twMerge(
-                                "flex-shrink-0 w-4 h-4 rounded-full border mt-[1px] mr-2.5 flex items-center justify-center",
+                                "flex-shrink-0 w-4 h-4 rounded-full border mt-[1px] mr-2.5 flex items-center justify-center", // Increased margin
                                 task.completed
                                     ? "bg-primary/90 border-primary/90"
                                     : task.completionPercentage && task.completionPercentage > 0
-                                        ? "border-primary/70 dark:border-primary/60"
-                                        : "bg-white/40 dark:bg-neutral-700/30 border-gray-400/80 dark:border-neutral-500"
+                                        ? "border-primary/70 dark:border-primary/60" // Indicate progress with border
+                                        : "bg-white/40 dark:bg-neutral-700/30 border-gray-400/80 dark:border-neutral-500" // Default unchecked
                             )}>
                                 {task.completed && <Icon name="check" size={9} className="text-white" strokeWidth={3}/>}
+                                {/* Show dot for in-progress */}
                                 {task.completionPercentage && task.completionPercentage > 0 && !task.completed && (
                                     <div className="w-1.5 h-1.5 bg-primary/80 dark:bg-primary/70 rounded-full"></div>
                                 )}
@@ -395,7 +428,7 @@ const SummaryView: React.FC = () => {
     );
 
 
-    // --- Task Item Mini Component (Inline) ---
+    // --- UPDATED Task Item Mini Component (Inline) ---
     const TaskItemMiniInline: React.FC<{
         task: Task;
         isSelected: boolean;
@@ -404,24 +437,44 @@ const SummaryView: React.FC = () => {
         const parsedDueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
         const overdue = useMemo(() => parsedDueDate != null && isValid(parsedDueDate) && isBefore(startOfDay(parsedDueDate), startOfDay(new Date())) && !task.completed, [parsedDueDate, task.completed]);
         const uniqueId = `summary-task-${task.id}`;
-        const isDisabled = task.list === 'Trash';
+        const isDisabled = task.list === 'Trash'; // Disable selection for trashed tasks
+
+        // Handler for the label click
+        const handleLabelClick = (e: React.MouseEvent<HTMLLabelElement>) => {
+            // Prevent default label behavior if the click is directly on the checkbox input itself
+            if ((e.target as HTMLElement).closest('input[type="checkbox"]')) {
+                return;
+            }
+            // If not disabled, toggle the selection state
+            if (!isDisabled) {
+                onSelectionChange(task.id, !isSelected);
+            }
+        };
+
 
         return (
-            <div className={twMerge(
-                "flex items-center p-1.5 rounded-md transition-colors duration-150 ease-apple",
-                isSelected && !isDisabled ? "bg-primary/15 dark:bg-primary/25" : "hover:bg-black/10 dark:hover:bg-white/5",
-                isDisabled && "opacity-60 cursor-not-allowed"
-            )}>
+            // Use a label to make the whole item clickable
+            // Clicking the label will toggle the associated checkbox input
+            <label
+                htmlFor={uniqueId}
+                className={twMerge(
+                    "flex items-center p-1.5 rounded-md transition-colors duration-150 ease-apple cursor-pointer", // Use cursor-pointer
+                    isSelected && !isDisabled ? "bg-primary/15 dark:bg-primary/25" : "hover:bg-black/10 dark:hover:bg-white/5",
+                    isDisabled && "opacity-60 cursor-not-allowed" // Apply disabled styles
+                )}
+                onClick={handleLabelClick} // Use onClick for the label
+            >
                 <SelectionCheckboxRadix
                     id={uniqueId}
                     checked={isSelected}
-                    onChange={(checkedState) => onSelectionChange(task.id, checkedState)}
+                    onChange={(checkedState) => onSelectionChange(task.id, checkedState)} // Pass state directly
                     aria-label={`Select task: ${task.title || 'Untitled'}`}
-                    className="mr-2.5 flex-shrink-0"
+                    className="mr-2.5 flex-shrink-0 pointer-events-none" // Make checkbox visually part of label, but label handles click
                     size={16}
                     disabled={isDisabled}
                 />
                 <div className="flex-1 overflow-hidden">
+                    {/* Task Title */}
                     <span className={twMerge(
                         "text-sm text-gray-800 dark:text-neutral-100 block truncate",
                         task.completed && !isDisabled && "line-through text-muted-foreground dark:text-neutral-500",
@@ -429,12 +482,15 @@ const SummaryView: React.FC = () => {
                     )}>
                         {task.title || <span className="italic">Untitled Task</span>}
                     </span>
+                    {/* Task Metadata */}
                     <div
                         className="text-xs text-muted-foreground dark:text-neutral-400 flex items-center space-x-2 mt-0.5 flex-wrap gap-y-0.5">
+                        {/* Progress Percentage */}
                         {task.completionPercentage && task.completionPercentage < 100 && !isDisabled && (
                             <span
                                 className="text-primary/90 dark:text-primary-light/80 font-medium">[{task.completionPercentage}%]</span>
                         )}
+                        {/* Due Date */}
                         {parsedDueDate && isValid(parsedDueDate) && (
                             <span className={twMerge(
                                 "flex items-center whitespace-nowrap",
@@ -445,6 +501,7 @@ const SummaryView: React.FC = () => {
                                 {formatRelativeDate(parsedDueDate)}
                             </span>
                         )}
+                        {/* List Name */}
                         {task.list && task.list !== 'Inbox' && (
                             <span
                                 className="flex items-center bg-black/10 dark:bg-white/10 px-1 rounded text-[10px] max-w-[70px] truncate"
@@ -454,6 +511,7 @@ const SummaryView: React.FC = () => {
                                 <span className="truncate">{task.list}</span>
                             </span>
                         )}
+                        {/* Tags */}
                         {task.tags && task.tags.length > 0 && (
                             <span className="flex items-center space-x-1">
                                 {task.tags.slice(0, 1).map(tag => (
@@ -466,7 +524,7 @@ const SummaryView: React.FC = () => {
                         )}
                     </div>
                 </div>
-            </div>
+            </label>
         );
     });
     TaskItemMiniInline.displayName = 'TaskItemMiniInline';
@@ -480,21 +538,23 @@ const SummaryView: React.FC = () => {
                 {/* Left Section: Title + History */}
                 <div className="w-1/3 flex items-center space-x-2">
                     <h1 className="text-base font-semibold text-gray-800 dark:text-neutral-100 truncate">AI Summary</h1>
-                    <Tooltip.Root delayDuration={200}>
-                        <Tooltip.Trigger asChild>
-                            <Button variant="ghost" size="icon" icon="history" onClick={openHistoryModal}
-                                    className="w-7 h-7 text-muted-foreground dark:text-neutral-400 hover:bg-black/15 dark:hover:bg-white/10"
-                                    aria-label="View Summary History"/>
-                        </Tooltip.Trigger>
-                        <Tooltip.Portal>
-                            <Tooltip.Content
-                                className="text-xs bg-black/80 text-white px-2 py-1 rounded shadow-md select-none z-[70]"
-                                sideOffset={4}>
-                                View All Generated Summaries
-                                <Tooltip.Arrow className="fill-black/80"/>
-                            </Tooltip.Content>
-                        </Tooltip.Portal>
-                    </Tooltip.Root>
+                    <Tooltip.Provider>
+                        <Tooltip.Root delayDuration={200}>
+                            <Tooltip.Trigger asChild>
+                                <Button variant="ghost" size="icon" icon="history" onClick={openHistoryModal}
+                                        className="w-7 h-7 text-muted-foreground dark:text-neutral-400 hover:bg-black/15 dark:hover:bg-white/10"
+                                        aria-label="View Summary History"/>
+                            </Tooltip.Trigger>
+                            <Tooltip.Portal>
+                                <Tooltip.Content
+                                    className="text-xs bg-black/80 dark:bg-neutral-900/90 text-white dark:text-neutral-100 px-2 py-1 rounded shadow-md select-none z-[70]"
+                                    sideOffset={4}>
+                                    View All Generated Summaries
+                                    <Tooltip.Arrow className="fill-black/80 dark:fill-neutral-900/90"/>
+                                </Tooltip.Content>
+                            </Tooltip.Portal>
+                        </Tooltip.Root>
+                    </Tooltip.Provider>
                 </div>
 
                 {/* Center Section: Filters */}
@@ -502,6 +562,7 @@ const SummaryView: React.FC = () => {
                     {/* Popover Root for the Date Range Picker */}
                     <Popover.Root modal={true} open={isRangePickerOpen} onOpenChange={setIsRangePickerOpen}>
                         <DropdownMenu.Root open={isPeriodDropdownOpen} onOpenChange={setIsPeriodDropdownOpen}>
+                            {/* Anchor the Popover to the Dropdown Trigger */}
                             <Popover.Anchor asChild>
                                 <DropdownMenu.Trigger asChild>
                                     <Button variant="ghost" size="sm"
@@ -513,25 +574,30 @@ const SummaryView: React.FC = () => {
                                 </DropdownMenu.Trigger>
                             </Popover.Anchor>
                             <DropdownMenu.Portal>
-                                <DropdownMenu.Content className={dropdownContentClasses} sideOffset={5} align="center">
+                                <DropdownMenu.Content className={dropdownContentClasses} sideOffset={5} align="center"
+                                                      onCloseAutoFocus={e => e.preventDefault()}>
                                     <DropdownMenu.RadioGroup
                                         value={typeof period === 'string' ? period : 'custom'}
                                         onValueChange={handlePeriodValueChange}
                                     >
                                         {periodOptions.map(p => {
+                                            // Determine value for Radix item, 'custom' for the object type
                                             const itemValue = typeof p.value === 'string' ? p.value : 'custom';
-                                            const itemKey = p.label;
+                                            const itemKey = p.label; // Use label as key since value can be object or string
                                             return (
                                                 <DropdownMenu.RadioItem
                                                     key={itemKey}
-                                                    value={itemValue}
+                                                    value={itemValue} // Use the string representation for value
                                                     className={twMerge(
                                                         "relative flex cursor-pointer select-none items-center rounded-[3px] px-2.5 py-1 text-sm outline-none transition-colors data-[disabled]:pointer-events-none h-7",
                                                         "focus:bg-black/15 data-[highlighted]:bg-black/15 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10",
-                                                        "data-[state=checked]:bg-primary/20 data-[state=checked]:text-primary data-[state=checked]:font-medium data-[highlighted]:bg-primary/25 dark:data-[state=checked]:bg-primary/30 dark:data-[state=checked]:text-primary-light dark:data-[highlighted]:bg-primary/40",
-                                                        "text-gray-700 data-[highlighted]:text-gray-800 dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100",
+                                                        // Checked state logic
+                                                        (typeof period === 'string' && period === itemValue) || (typeof period === 'object' && itemValue === 'custom')
+                                                            ? "bg-primary/20 text-primary dark:bg-primary/30 dark:text-primary-light font-medium data-[highlighted]:bg-primary/25 dark:data-[highlighted]:bg-primary/40"
+                                                            : "text-gray-700 data-[highlighted]:text-gray-800 dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100",
                                                         "data-[disabled]:opacity-50"
                                                     )}
+                                                    // onSelect handles the logic, including opening Popover for 'custom'
                                                 >
                                                     {p.label}
                                                 </DropdownMenu.RadioItem>
@@ -549,13 +615,13 @@ const SummaryView: React.FC = () => {
                                 align="center"
                                 sideOffset={5}
                                 className={twMerge(
-                                    "z-[60] radix-popover-content",
+                                    "z-[60] radix-popover-content", // Ensure high z-index
                                     "data-[state=open]:animate-slideUpAndFade",
                                     "data-[state=closed]:animate-slideDownAndFade"
                                 )}
-                                onOpenAutoFocus={(e) => e.preventDefault()}
-                                onCloseAutoFocus={(e) => e.preventDefault()}
-                                // No onInteractOutside needed for modal
+                                onOpenAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing
+                                onCloseAutoFocus={(e) => e.preventDefault()} // Keep focus on trigger
+                                // Modal popover handles outside interaction automatically
                             >
                                 <CustomDateRangePickerContent
                                     initialStartDate={typeof period === 'object' ? new Date(period.start) : undefined}
@@ -565,7 +631,7 @@ const SummaryView: React.FC = () => {
                                 />
                             </Popover.Content>
                         </Popover.Portal>
-                    </Popover.Root> {/* End Popover Root */}
+                    </Popover.Root> {/* End Popover Root for Date Range */}
 
 
                     {/* List Dropdown */}
@@ -581,7 +647,7 @@ const SummaryView: React.FC = () => {
                         <DropdownMenu.Portal>
                             <DropdownMenu.Content
                                 className={twMerge(dropdownContentClasses, "max-h-60 overflow-y-auto styled-scrollbar-thin")}
-                                sideOffset={5} align="center">
+                                sideOffset={5} align="center" onCloseAutoFocus={e => e.preventDefault()}>
                                 <DropdownMenu.RadioGroup value={listFilter} onValueChange={handleListChange}>
                                     {listOptions.map(l => (
                                         <DropdownMenu.RadioItem
@@ -589,8 +655,8 @@ const SummaryView: React.FC = () => {
                                             className={twMerge(
                                                 "relative flex cursor-pointer select-none items-center rounded-[3px] px-2.5 py-1 text-sm outline-none transition-colors data-[disabled]:pointer-events-none h-7",
                                                 "focus:bg-black/15 data-[highlighted]:bg-black/15 dark:focus:bg-white/10 dark:data-[highlighted]:bg-white/10",
-                                                "data-[state=checked]:bg-primary/20 data-[state=checked]:text-primary data-[state=checked]:font-medium data-[highlighted]:bg-primary/25 dark:data-[state=checked]:bg-primary/30 dark:data-[state=checked]:text-primary-light dark:data-[highlighted]:bg-primary/40",
-                                                "text-gray-700 data-[highlighted]:text-gray-800 dark:text-neutral-300 dark:data-[highlighted]:text-neutral-100",
+                                                "data-[state=checked]:bg-primary/20 data-[state=checked]:text-primary data-[state=checked]:font-medium data-[highlighted]:data-[state=checked]:bg-primary/25 dark:data-[state=checked]:bg-primary/30 dark:data-[state=checked]:text-primary-light dark:data-[highlighted]:data-[state=checked]:bg-primary/40",
+                                                "data-[state=unchecked]:text-gray-700 data-[highlighted]:data-[state=unchecked]:text-gray-800 dark:data-[state=unchecked]:text-neutral-300 dark:data-[highlighted]:data-[state=unchecked]:text-neutral-100",
                                                 "data-[disabled]:opacity-50"
                                             )}>
                                             {l.label}
@@ -617,39 +683,39 @@ const SummaryView: React.FC = () => {
                 {/* Left Pane: Task List */}
                 <div
                     className="w-full md:w-[320px] h-1/2 md:h-full flex flex-col bg-glass-alt-100 dark:bg-neutral-800/60 backdrop-blur-xl rounded-lg shadow-lg border border-black/10 dark:border-white/10 overflow-hidden flex-shrink-0">
+                    {/* Task List Header */}
                     <div
                         className="px-3 py-2 border-b border-black/10 dark:border-white/10 flex justify-between items-center flex-shrink-0 h-11">
                         <h2 className="text-base font-semibold text-gray-800 dark:text-neutral-100 truncate">Tasks
-                            ({filteredTasks.length})</h2>
+                            ({selectableTasks.length})</h2> {/* Show count of selectable tasks */}
+                        {/* Select All Checkbox */}
                         <SelectionCheckboxRadix
                             id="select-all-summary-tasks"
                             checked={selectAllState === true}
                             indeterminate={selectAllState === 'indeterminate'}
-                            onChange={() => {
-                                if (allTasksSelected || someTasksSelected) {
-                                    handleDeselectAllTasks();
-                                } else {
-                                    handleSelectAllTasks();
-                                }
-                            }}
-                            aria-label={allTasksSelected ? "Deselect all tasks" : (someTasksSelected ? "Deselect all tasks" : "Select all tasks")}
+                            // Use the combined toggle handler
+                            onChange={handleSelectAllToggle}
+                            aria-label={allSelectableTasksSelected ? "Deselect all tasks" : (someSelectableTasksSelected ? "Deselect some tasks" : "Select all tasks")}
                             className="mr-1"
                             size={18}
-                            disabled={filteredTasks.length === 0} // Disable if no tasks to select
+                            disabled={selectableTasks.length === 0} // Disable if no selectable tasks
                         />
                     </div>
+                    {/* Scrollable Task List */}
                     <div className="flex-1 overflow-y-auto styled-scrollbar p-2 space-y-1">
                         {filteredTasks.length === 0 ? (
+                            // Empty state when filters match no tasks
                             <div
                                 className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-neutral-500 px-4 text-center pt-10">
                                 <Icon name="archive" size={36}
                                       className="mb-3 text-gray-300 dark:text-neutral-600 opacity-80"/>
-                                <p className="text-sm font-medium text-gray-500 dark:text-neutral-400">No tasks match
-                                    criteria</p>
+                                <p className="text-sm font-medium text-gray-500 dark:text-neutral-400">No relevant tasks
+                                    found</p>
                                 <p className="text-xs mt-1 text-muted dark:text-neutral-500">Adjust filters or check
-                                    task status.</p>
+                                    task status/progress.</p>
                             </div>
                         ) : (
+                            // Render task items
                             filteredTasks.map(task => (
                                 <TaskItemMiniInline key={task.id} task={task} isSelected={selectedTaskIds.has(task.id)}
                                                     onSelectionChange={handleTaskSelectionChange}/>
@@ -661,14 +727,16 @@ const SummaryView: React.FC = () => {
                 {/* Right Pane: Summary */}
                 <div
                     className="flex-1 h-1/2 md:h-full flex flex-col bg-glass-100 dark:bg-neutral-800/80 backdrop-blur-xl rounded-lg shadow-lg border border-black/10 dark:border-white/10 overflow-hidden">
-                    <div className="flex-1 flex flex-col overflow-hidden p-3">
+                    <div className="flex-1 flex flex-col overflow-hidden p-3 min-h-0"> {/* Allow content to scroll */}
                         {totalRelevantSummaries > 0 || isGenerating ? (
                             <>
                                 {/* Summary Header */}
                                 <div className="flex justify-between items-center mb-2 flex-shrink-0 h-6">
+                                    {/* Timestamp */}
                                     <span className="text-xs text-muted-foreground dark:text-neutral-400">
                                          {isGenerating ? 'Generating summary...' : (summaryTimestamp ? `Generated: ${summaryTimestamp}` : 'Unsaved Summary')}
                                     </span>
+                                    {/* Controls: Referenced Tasks + Navigation */}
                                     <div className="flex items-center space-x-2">
                                         {/* Referenced Tasks Dropdown */}
                                         <DropdownMenu.Root open={isRefTasksDropdownOpen}
@@ -690,11 +758,12 @@ const SummaryView: React.FC = () => {
                                             </DropdownMenu.Trigger>
                                             <DropdownMenu.Portal>
                                                 <DropdownMenu.Content
-                                                    className={twMerge("z-[55] radix-dropdown-content")}
+                                                    className={twMerge("z-[55] radix-dropdown-content p-0")} // Remove padding for custom content
                                                     sideOffset={4} align="end"
                                                     // Keep dropdown open on interaction inside
                                                     onInteractOutside={e => e.preventDefault()}
                                                     onFocusOutside={e => e.preventDefault()}
+                                                    onCloseAutoFocus={e => e.preventDefault()}
                                                 >
                                                     {renderReferencedTasksDropdown()}
                                                 </DropdownMenu.Content>
@@ -721,29 +790,26 @@ const SummaryView: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
-                                {/* CodeMirror Editor - ADD KEY PROP */}
+                                {/* CodeMirror Editor Container */}
                                 <div
                                     className="flex-1 min-h-0 border border-black/10 dark:border-white/10 rounded-md overflow-hidden bg-glass-inset-100 dark:bg-neutral-700/30 shadow-inner relative">
                                     <CodeMirrorEditor
-                                        // --- FIX: Add key prop ---
-                                        // This key forces React to unmount and remount the component when the
-                                        // displayed summary ID changes, ensuring a fresh CodeMirror instance.
-                                        // We use a placeholder key during generation or when no summary is selected.
                                         key={isGenerating ? 'generating' : (currentSummary?.id ?? 'no-summary')}
-                                        // --- End FIX ---
                                         ref={editorRef}
                                         value={summaryEditorContent}
                                         onChange={handleEditorChange}
                                         placeholder={isGenerating ? "Generating..." : "AI generated summary will appear here..."}
                                         className="!h-full !bg-transparent"
-                                        readOnly={isGenerating || !currentSummary}
+                                        readOnly={isGenerating || !currentSummary} // Read-only during generation or if no summary selected
                                     />
+                                    {/* Saving Indicator */}
                                     {hasUnsavedChangesRef.current && !isGenerating && currentSummary && (
                                         <span
                                             className="absolute bottom-2 right-2 text-[10px] text-muted-foreground/70 dark:text-neutral-400/70 italic animate-pulse">
                                             saving...
                                         </span>
                                     )}
+                                    {/* Loading Overlay */}
                                     {isGenerating && (
                                         <div
                                             className="absolute inset-0 bg-glass-alt/30 backdrop-blur-sm flex items-center justify-center z-10">
@@ -753,14 +819,16 @@ const SummaryView: React.FC = () => {
                                 </div>
                             </>
                         ) : (
+                            // Empty state when no summaries match filters
                             <div
                                 className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-neutral-500 px-6 text-center">
                                 <Icon name="sparkles" size={40}
                                       className="mb-3 text-gray-300 dark:text-neutral-600 opacity-80"/>
-                                <p className="text-sm font-medium text-gray-500 dark:text-neutral-400">Generate Your
-                                    First Summary</p>
-                                <p className="text-xs mt-1 text-muted dark:text-neutral-500">Select tasks and click
-                                    'Generate'.</p>
+                                <p className="text-sm font-medium text-gray-500 dark:text-neutral-400">No Summary
+                                    Available</p>
+                                <p className="text-xs mt-1 text-muted dark:text-neutral-500">
+                                    Select tasks and click 'Generate' or adjust filters.
+                                </p>
                             </div>
                         )}
                     </div>
