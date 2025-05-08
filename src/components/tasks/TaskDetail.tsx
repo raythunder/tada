@@ -438,13 +438,14 @@ const TaskDetail: React.FC = () => {
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const userLists = useAtomValue(userListNamesAtom);
 
+    // Local state...
     const [localTitle, setLocalTitle] = useState('');
     const [localContent, setLocalContent] = useState('');
     const [localDueDate, setLocalDueDate] = useState<Date | undefined>(undefined);
     const [localTagsString, setLocalTagsString] = useState('');
     const [tagInputValue, setTagInputValue] = useState('');
 
-    // State for modals and popovers
+    // Modal/Popover states...
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [isListDropdownOpen, setIsListDropdownOpen] = useState(false);
@@ -454,6 +455,7 @@ const TaskDetail: React.FC = () => {
     const [isProgressDropdownOpen, setIsProgressDropdownOpen] = useState(false);
     const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState(false);
 
+    // Tooltip states...
     const [isProgressTooltipOpen, setIsProgressTooltipOpen] = useState(false);
     const [isDateTooltipOpen, setIsDateTooltipOpen] = useState(false);
     const [isListTooltipOpen, setIsListTooltipOpen] = useState(false);
@@ -461,11 +463,13 @@ const TaskDetail: React.FC = () => {
     const [isTagsTooltipOpen, setIsTagsTooltipOpen] = useState(false);
     const [isInfoTooltipOpen, setIsInfoTooltipOpen] = useState(false);
 
+    // Subtask related states...
     const [editingSubtaskContentId, setEditingSubtaskContentId] = useState<string | null>(null);
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
     const newSubtaskInputRef = useRef<HTMLInputElement>(null);
     const [draggingSubtaskId, setDraggingSubtaskId] = useState<UniqueIdentifier | null>(null);
 
+    // Refs...
     const titleInputRef = useRef<HTMLInputElement>(null);
     const tagInputElementRef = useRef<HTMLInputElement>(null);
     const editorRef = useRef<CodeMirrorEditorRef>(null);
@@ -970,40 +974,46 @@ const TaskDetail: React.FC = () => {
                     <div
                         className={twMerge(
                             "px-5 pt-4 pb-5 border-t border-neutral-200/50 dark:border-neutral-700/50",
-                            "flex-shrink-0 flex flex-col max-h-[45vh]"
+                            "flex-shrink-0 flex flex-col",
+                            // Only apply max-height if there are subtasks to display, otherwise let input determine height
+                            sortedSubtasks.length > 0 ? "max-h-[45vh]" : ""
                         )}
                     >
-                        <div className="flex justify-between items-center mb-3 flex-shrink-0">
-                            <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
-                                Subtasks
-                                {sortedSubtasks.length > 0 && (
+                        {/* --- MODIFIED: Conditional Rendering for Subtask List Area --- */}
+                        {sortedSubtasks.length > 0 && (
+                            <>
+                            {/* Subtasks Header */}
+                            <div className="flex justify-between items-center mb-3 flex-shrink-0">
+                                <h3 className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
+                                    Subtasks
+                                    {/* Count display remains */}
                                     <span
                                         className="ml-2 font-normal text-xs text-muted-foreground dark:text-neutral-400">
-                                        ({sortedSubtasks.filter(s => s.completed).length} of {sortedSubtasks.length} completed)
-                                    </span>
-                                )}
-                            </h3>
-                        </div>
+                                            ({sortedSubtasks.filter(s => s.completed).length} of {sortedSubtasks.length} completed)
+                                        </span>
+                                </h3>
+                            </div>
 
-                        <div
-                            className="flex-1 overflow-y-auto styled-scrollbar-thin -mx-2 pr-2 mb-3 min-h-[80px]">
-                            <DndContext sensors={sensors} collisionDetection={closestCenter}
-                                        onDragStart={handleSubtaskDragStart} onDragEnd={handleSubtaskDragEnd}
-                                        measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
-                                <SortableContext items={sortedSubtasks.map(s => `subtask-detail-${s.id}`)}
-                                                 strategy={verticalListSortingStrategy}>
-                                    <div className="space-y-0.5">
-                                        {sortedSubtasks.map(subtask => (
-                                            <SubtaskItemDetail
-                                                key={subtask.id} subtask={subtask} onUpdate={handleUpdateSubtask}
-                                                onDelete={handleDeleteSubtask}
-                                                isEditingContentForThis={editingSubtaskContentId === subtask.id}
-                                                onToggleEditContent={handleToggleEditSubtaskContent}
-                                                isTaskCompletedOrTrashed={isInteractiveDisabled}
-                                            />
-                                        ))}
-                                    </div>
-                                </SortableContext>
+                            {/* Subtasks List Area */}
+                            <div
+                                className="flex-1 overflow-y-auto styled-scrollbar-thin -mx-2 pr-2 mb-3 min-h-[80px]">
+                                <DndContext sensors={sensors} collisionDetection={closestCenter}
+                                            onDragStart={handleSubtaskDragStart} onDragEnd={handleSubtaskDragEnd}
+                                            measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
+                                    <SortableContext items={sortedSubtasks.map(s => `subtask-detail-${s.id}`)}
+                                                     strategy={verticalListSortingStrategy}>
+                                        <div className="space-y-0.5">
+                                            {sortedSubtasks.map(subtask => (
+                                                <SubtaskItemDetail
+                                                    key={subtask.id} subtask={subtask} onUpdate={handleUpdateSubtask}
+                                                    onDelete={handleDeleteSubtask}
+                                                    isEditingContentForThis={editingSubtaskContentId === subtask.id}
+                                                    onToggleEditContent={handleToggleEditSubtaskContent}
+                                                    isTaskCompletedOrTrashed={isInteractiveDisabled}
+                                                />
+                                            ))}
+                                        </div>
+                                    </SortableContext>
                                 <DragOverlay dropAnimation={null}>
                                     {draggingSubtaskId && selectedTask.subtasks?.find(s => s.id === draggingSubtaskId) ? (
                                         <SubtaskItemDetail
@@ -1020,12 +1030,18 @@ const TaskDetail: React.FC = () => {
                                         />
                                     ) : null}
                                 </DragOverlay>
-                            </DndContext>
-                        </div>
+                                </DndContext>
+                            </div>
+                            </>
+                        )}
 
                         {!isInteractiveDisabled && (
                             <div
-                                className="mt-auto flex items-center flex-shrink-0 h-10 border-t border-neutral-200/40 dark:border-neutral-700/30 pt-2.5">
+                                className={twMerge(
+                                    "flex items-center flex-shrink-0 h-10 pt-2.5",
+                                    // Add top border only if there are subtasks shown above it
+                                    sortedSubtasks.length > 0 ? "border-t border-neutral-200/40 dark:border-neutral-700/30 mt-auto" : "mt-1" // Use smaller margin if no list
+                                )}>
                                 <input
                                     ref={newSubtaskInputRef} type="text" value={newSubtaskTitle}
                                     onChange={(e) => setNewSubtaskTitle(e.target.value)}
