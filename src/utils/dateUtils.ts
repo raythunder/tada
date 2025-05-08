@@ -80,16 +80,20 @@ export const isValid = (dateInput: Date | number | null | undefined): boolean =>
 /**
  * Formats a date using a specified format string.
  */
-export const formatDate = (dateInput: Date | number | null | undefined, formatString: string = 'MMM d, yyyy'): string => {
-    const date = safeParseDate(dateInput);
-    if (!date) return '';
+export const formatDate = (
+    dateInput: Date | number | null | undefined,
+    formatString: string = 'MMM d, yyyy'
+): string => {
+    const date = safeParseDate(dateInput)
+    if (!date) return ''
     try {
-        return formatFns(date, formatString, {locale: currentLocale});
-    } catch (e) {
-        console.error("Error formatting date:", dateInput, e);
-        return "Invalid Date";
+        const fixedFormat = formatString.replace(/A/g, 'a')
+        return formatFns(date, fixedFormat, { locale: currentLocale })
+    } catch (e: any) {
+        console.error('Error formatting date:', dateInput, e)
+        return 'Invalid Date'
     }
-};
+}
 
 /**
  * Formats a date and time. If time is midnight, it's considered "All day".
