@@ -21,7 +21,6 @@ import {
     DragEndEvent,
     DragOverlay,
     DragStartEvent,
-    // DropAnimation, // Not strictly needed if always null, but can be kept for type clarity
     KeyboardSensor,
     MeasuringStrategy,
     PointerSensor,
@@ -30,7 +29,7 @@ import {
     useSensors
 } from '@dnd-kit/core';
 import {arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy} from '@dnd-kit/sortable';
-import {AnimatePresence} from 'framer-motion'; // Kept for potential future use if TaskItem becomes a motion component
+import {AnimatePresence} from 'framer-motion';
 import {
     addDays,
     isBefore,
@@ -384,12 +383,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const closeBulkReschedulePopover = useCallback(() => setIsBulkRescheduleOpen(false), []);
 
     const renderTaskGroup = useCallback((groupTasks: Task[], groupKey: TaskGroupCategory | 'flat-list' | string) => (
-        // If TaskItem is not a motion component, AnimatePresence won't animate its mount/unmount.
-        // This is an accepted trade-off for matching the drag animation.
         <AnimatePresence initial={false} mode="sync">
             {groupTasks.map((task: Task) => (
                 <TaskItem
-                    key={task.id} // React key for reconciliation
+                    key={task.id}
                     task={task}
                     groupCategory={isGroupedView && groupKey !== 'flat-list' ? groupKey as TaskGroupCategory : undefined}
                     scrollContainerRef={scrollContainerRef}
@@ -494,7 +491,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                             )}
                         </div>
                     </div>
-                    <DragOverlay dropAnimation={null}> {/* Ensures no overlay animation */}
+                    <DragOverlay dropAnimation={null}>
                         {draggingTask ? (
                             <TaskItem task={draggingTask} isOverlay={true} scrollContainerRef={scrollContainerRef}/>
                         ) : null}
