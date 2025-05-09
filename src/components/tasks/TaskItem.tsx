@@ -608,7 +608,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                 )}
             </div>
             <ConfirmDeleteModalRadix isOpen={isDeleteDialogOpen} onClose={closeDeleteConfirm}
-                                     onConfirm={confirmDeleteTask} taskTitle={task.title || 'Untitled Task'}/>
+                                     onConfirm={confirmDeleteTask} itemTitle={task.title || 'Untitled Task'}/>
         </>
     );
 });
