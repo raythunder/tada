@@ -17,12 +17,11 @@ import {CustomDatePickerContent} from '../common/CustomDatePickerPopover';
 import {Task, TaskGroupCategory} from '@/types';
 import {
     closestCenter,
-    defaultDropAnimationSideEffects,
     DndContext,
     DragEndEvent,
     DragOverlay,
     DragStartEvent,
-    DropAnimation,
+    // DropAnimation, // Not strictly needed if always null, but can be kept for type clarity
     KeyboardSensor,
     MeasuringStrategy,
     PointerSensor,
@@ -31,7 +30,7 @@ import {
     useSensors
 } from '@dnd-kit/core';
 import {arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy} from '@dnd-kit/sortable';
-import {AnimatePresence, motion} from 'framer-motion';
+import {AnimatePresence} from 'framer-motion'; // Kept for potential future use if TaskItem becomes a motion component
 import {
     addDays,
     isBefore,
@@ -82,8 +81,6 @@ const TaskGroupHeader: React.FC<{
 ));
 TaskGroupHeader.displayName = 'TaskGroupHeader';
 
-
-const dropAnimationConfig: DropAnimation = {sideEffects: defaultDropAnimationSideEffects({styles: {active: {opacity: '0.4'}}}),};
 const groupTitles: Record<TaskGroupCategory, string> = {
     overdue: 'Overdue', today: 'Today', next7days: 'Next 7 Days', later: 'Later', nodate: 'No Date',
 };
@@ -365,7 +362,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             setIsBulkRescheduleOpen(false);
             return;
         }
-        const newDueDateTimestamp = date.getTime(); // Use the full date-time from picker
+        const newDueDateTimestamp = date.getTime();
 
         setTasks(currentTasks =>
             currentTasks.map((task: Task) => {
@@ -381,29 +378,22 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                 return task;
             })
         );
+        setIsBulkRescheduleOpen(false);
     }, [setTasks]);
 
     const closeBulkReschedulePopover = useCallback(() => setIsBulkRescheduleOpen(false), []);
 
     const renderTaskGroup = useCallback((groupTasks: Task[], groupKey: TaskGroupCategory | 'flat-list' | string) => (
+        // If TaskItem is not a motion component, AnimatePresence won't animate its mount/unmount.
+        // This is an accepted trade-off for matching the drag animation.
         <AnimatePresence initial={false} mode="sync">
             {groupTasks.map((task: Task) => (
-                <motion.div
-                    key={task.id}
-                    layout="position"
-                    initial={{opacity: 0, y: -5}}
-                    animate={{opacity: 1, y: 0}}
-                    exit={{opacity: 0, x: -10, transition: {duration: 0.2}}}
-                    transition={{duration: 0.25, ease: "easeOut"}}
-                    className="task-motion-wrapper"
-                    id={`task-item-${task.id}`}
-                >
-                    <TaskItem
-                        task={task}
-                        groupCategory={isGroupedView && groupKey !== 'flat-list' ? groupKey as TaskGroupCategory : undefined}
-                        scrollContainerRef={scrollContainerRef}
-                    />
-                </motion.div>
+                <TaskItem
+                    key={task.id} // React key for reconciliation
+                    task={task}
+                    groupCategory={isGroupedView && groupKey !== 'flat-list' ? groupKey as TaskGroupCategory : undefined}
+                    scrollContainerRef={scrollContainerRef}
+                />
             ))}
         </AnimatePresence>
     ), [isGroupedView, scrollContainerRef]);
@@ -504,7 +494,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                             )}
                         </div>
                     </div>
-                    <DragOverlay dropAnimation={dropAnimationConfig}>
+                    <DragOverlay dropAnimation={null}> {/* Ensures no overlay animation */}
                         {draggingTask ? (
                             <TaskItem task={draggingTask} isOverlay={true} scrollContainerRef={scrollContainerRef}/>
                         ) : null}
@@ -513,7 +503,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                         <Popover.Content
                             sideOffset={5}
                             align="end"
-                            className={datePickerPopoverWrapperClasses} // Applied corrected classes
+                            className={datePickerPopoverWrapperClasses}
                             onOpenAutoFocus={(e) => e.preventDefault()}
                             onCloseAutoFocus={(e) => e.preventDefault()}
                         >
