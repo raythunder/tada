@@ -18,10 +18,10 @@ import {CustomDatePickerContent} from "@/components/common/CustomDatePickerPopov
 import {useTaskItemMenu} from '@/context/TaskItemMenuContext';
 import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 import * as Tooltip from '@radix-ui/react-tooltip';
-import SelectionCheckboxRadix from '../common/SelectionCheckbox';
+// import SelectionCheckboxRadix from '../common/SelectionCheckbox'; // Not used if ProgressIndicator is the checkbox
 import {useAtomValue} from "jotai/index";
 
-
+// Re-exporting ProgressIndicator here as it's tightly coupled with TaskItem's design
 export const ProgressIndicator: React.FC<{
     percentage: number | null; isTrash: boolean; size?: number; className?: string;
     onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -29,48 +29,62 @@ export const ProgressIndicator: React.FC<{
     ariaLabelledby?: string;
 }> = React.memo(({percentage, isTrash, size = 16, className, onClick, onKeyDown, ariaLabelledby}) => {
     const normalizedPercentage = percentage ?? 0;
-    const radius = size / 2 - 1.25;
+    const radius = size / 2 - 1;
     const circumference = 2 * Math.PI * radius;
-    const strokeWidth = 2.5;
+    const strokeWidth = 1;
     const offset = circumference - (normalizedPercentage / 100) * circumference;
-    const checkPath = `M ${size * 0.3} ${size * 0.55} L ${size * 0.45} ${size * 0.7} L ${size * 0.75} ${size * 0.4}`;
-    const indicatorClasses = useMemo(() => twMerge("relative flex-shrink-0 rounded-full transition-all duration-200 ease-apple focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:ring-offset-1 focus-visible:ring-offset-current/50", !isTrash && "cursor-pointer", isTrash && "opacity-50 cursor-not-allowed", className), [isTrash, className]);
-    const buttonBgColor = useMemo(() => {
-        if (isTrash) return "bg-gray-200/50 dark:bg-gray-700/40 border-gray-300 dark:border-gray-600";
-        if (normalizedPercentage === 100) return "bg-primary/80 hover:bg-primary/90 border-primary/80";
-        return "bg-white/40 dark:bg-gray-800/30 hover:border-primary/60 dark:hover:border-primary/50 border-gray-400/80 dark:border-gray-500/70";
+    const checkPath = `M ${size * 0.32} ${size * 0.5} L ${size * 0.45} ${size * 0.65} L ${size * 0.7} ${size * 0.4}`;
+
+    const indicatorClasses = useMemo(() => twMerge(
+        "relative flex-shrink-0 rounded-full transition-all duration-200 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary",
+        !isTrash && "cursor-pointer",
+        isTrash && "opacity-50 cursor-not-allowed",
+        className
+    ), [isTrash, className]);
+
+    const stateStyles = useMemo(() => {
+        if (isTrash) return "border-grey-light";
+        if (normalizedPercentage === 100) return "bg-primary border-primary";
+        return "border-grey-light hover:border-primary-dark";
     }, [isTrash, normalizedPercentage]);
+
     const progressStrokeColor = useMemo(() => {
-        if (isTrash) return "stroke-gray-400 dark:stroke-gray-500";
+        if (isTrash) return "stroke-grey-medium";
         if (normalizedPercentage === 100) return "stroke-white";
-        if (normalizedPercentage >= 80) return "stroke-primary/90";
-        if (normalizedPercentage >= 50) return "stroke-primary/80";
-        if (normalizedPercentage > 0) return "stroke-primary/70";
-        return "stroke-transparent";
+        return "stroke-primary";
     }, [isTrash, normalizedPercentage]);
-    const progressLabel = normalizedPercentage === 100 ? "Completed" : `${normalizedPercentage}% done`;
-    return (<button type="button" onClick={onClick} onKeyDown={onKeyDown} disabled={isTrash}
-                    aria-labelledby={ariaLabelledby} aria-label={`Task progress: ${progressLabel}`}
-                    aria-pressed={normalizedPercentage === 100}
-                    className={twMerge(indicatorClasses, buttonBgColor, "border")} style={{width: size, height: size}}>
+
+    const progressLabel = normalizedPercentage === 100 ? "Completed" : (normalizedPercentage > 0 ? `${normalizedPercentage}% done` : "Not started");
+
+    return (
+        <button type="button" onClick={onClick} onKeyDown={onKeyDown} disabled={isTrash}
+                aria-labelledby={ariaLabelledby} aria-label={`Task progress: ${progressLabel}`}
+                aria-pressed={normalizedPercentage === 100}
+                className={twMerge(indicatorClasses, stateStyles, "border")}
+                style={{width: size, height: size}}>
             <svg viewBox={`0 0 ${size} ${size}`}
-                 className="absolute inset-0 w-full h-full transition-opacity duration-200 ease-apple"
-                 style={{opacity: normalizedPercentage > 0 ? 1 : 0}} aria-hidden="true">
+                 className="absolute inset-0 w-full h-full transition-opacity duration-200 ease-in-out"
+                 style={{opacity: (normalizedPercentage > 0 && normalizedPercentage < 100) || normalizedPercentage === 100 ? 1 : 0}}
+                 aria-hidden="true">
                 {normalizedPercentage > 0 && normalizedPercentage < 100 && (
                     <circle cx={size / 2} cy={size / 2} r={radius} fill="none" strokeWidth={strokeWidth}
                             className={progressStrokeColor} strokeDasharray={circumference} strokeDashoffset={offset}
                             transform={`rotate(-90 ${size / 2} ${size / 2})`} strokeLinecap="round"
-                            style={{transition: 'stroke-dashoffset 0.3s ease-out'}}/>)}
+                            style={{transition: 'stroke-dashoffset 0.3s ease-out'}}/>
+                )}
                 {normalizedPercentage === 100 && (
-                    <path d={checkPath} fill="none" strokeWidth={strokeWidth * 0.9} className={progressStrokeColor}
+                    <path d={checkPath} fill="none" strokeWidth={strokeWidth + 0.5}
+                          className={progressStrokeColor}
                           strokeLinecap="round" strokeLinejoin="round"
-                          style={{transition: 'opacity 0.2s ease-in 0.1s'}}/>)}
+                          style={{transition: 'opacity 0.2s ease-in 0.1s'}}/>
+                )}
             </svg>
         </button>
     );
 });
 ProgressIndicator.displayName = 'ProgressIndicator';
 
+// ... (generateContentSnippet, priorityMap, TaskItemRadixMenuItem - logic unchanged)
 function generateContentSnippet(content: string, term: string, length: number = 35): string {
     if (!content || !term) return '';
     const lowerContent = content.toLowerCase();
@@ -94,11 +108,15 @@ function generateContentSnippet(content: string, term: string, length: number = 
     return snippet;
 }
 
-const priorityMap: Record<number, { label: string; iconColor: string; shortLabel: string }> = {
-    1: {label: 'High Priority', iconColor: 'text-red-500 dark:text-red-400', shortLabel: 'P1'},
-    2: {label: 'Medium Priority', iconColor: 'text-orange-500 dark:text-orange-400', shortLabel: 'P2'},
-    3: {label: 'Low Priority', iconColor: 'text-blue-500 dark:text-blue-400', shortLabel: 'P3'},
-    4: {label: 'Lowest Priority', iconColor: 'text-gray-500 dark:text-neutral-400', shortLabel: 'P4'},
+const priorityMap: Record<number, {
+    label: string;
+    iconColor: string;
+    shortLabel: string
+}> = {
+    1: {label: 'High Priority', iconColor: 'text-error', shortLabel: 'P1'},
+    2: {label: 'Medium Priority', iconColor: 'text-warning', shortLabel: 'P2'},
+    3: {label: 'Low Priority', iconColor: 'text-info', shortLabel: 'P3'},
+    4: {label: 'Lowest Priority', iconColor: 'text-grey-medium', shortLabel: 'P4'},
 };
 
 interface RadixMenuItemProps extends DropdownMenu.DropdownMenuItemProps {
@@ -116,14 +134,12 @@ const TaskItemRadixMenuItem: React.FC<RadixMenuItemProps> = React.memo(({
                                                                             className,
                                                                             isDanger = false,
                                                                             ...props
-                                                                        }) => (
-    <DropdownMenu.Item
-        className={twMerge("relative flex cursor-pointer select-none items-center rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8", isDanger ? "text-red-600 data-[highlighted]:bg-red-500/10 data-[highlighted]:text-red-700 dark:text-red-400 dark:data-[highlighted]:bg-red-500/15 dark:data-[highlighted]:text-red-300" : "focus:bg-black/[.07] data-[highlighted]:bg-black/[.07] dark:focus:bg-white/[.07] dark:data-[highlighted]:bg-white/[.07]", selected && !isDanger && "bg-primary/15 text-primary data-[highlighted]:bg-primary/20 dark:bg-primary/25 dark:text-primary-light dark:data-[highlighted]:bg-primary/30", !selected && !isDanger && "text-gray-700 data-[highlighted]:text-gray-800 dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50", "data-[disabled]:opacity-50", className)} {...props}>
-        {icon && (<Icon name={icon} size={15} className={twMerge("mr-2 flex-shrink-0 opacity-70", iconColor)}
-                        aria-hidden="true"/>)} {children}
-    </DropdownMenu.Item>
-));
+                                                                        }) => (<DropdownMenu.Item
+    className={twMerge("relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 font-normal", isDanger ? "text-error data-[highlighted]:bg-error/10 data-[highlighted]:text-error" : "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light", selected && !isDanger && "bg-primary-light text-primary data-[highlighted]:bg-primary-light", !selected && !isDanger && "text-grey-dark data-[highlighted]:text-grey-dark", "data-[disabled]:opacity-50", className)} {...props}> {icon && (
+    <Icon name={icon} size={16} strokeWidth={1} className={twMerge("mr-2 flex-shrink-0 opacity-70", iconColor)}
+          aria-hidden="true"/>)} <span className="flex-grow">{children}</span> </DropdownMenu.Item>));
 TaskItemRadixMenuItem.displayName = 'TaskItemRadixMenuItem';
+
 
 interface TaskItemProps {
     task: Task;
@@ -134,25 +150,23 @@ interface TaskItemProps {
 }
 
 const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay = false, style: overlayStyle}) => {
+    // ... (state and hooks - logic mostly unchanged)
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
     const userLists = useAtomValue(userListNamesAtom);
     const {openItemId, setOpenItemId} = useTaskItemMenu();
     const isSelected = useMemo(() => selectedTaskId === task.id, [selectedTaskId, task.id]);
-
     const [isMenuDatePickerOpen, setIsMenuDatePickerOpen] = useState(false);
     const [isDateClickPickerOpen, setIsDateClickPickerOpen] = useState(false);
     const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const moreActionsButtonRef = useRef<HTMLButtonElement>(null);
     const dateDisplayRef = useRef<HTMLButtonElement>(null);
-
     const isTrashItem = useMemo(() => task.list === 'Trash', [task.list]);
     const isCompleted = useMemo(() => (task.completionPercentage ?? 0) === 100 && !isTrashItem, [task.completionPercentage, isTrashItem]);
     const isSortable = useMemo(() => !isCompleted && !isTrashItem && !isOverlay, [isCompleted, isTrashItem, isOverlay]);
     const isInteractive = useMemo(() => !isOverlay && !isCompleted && !isTrashItem, [isOverlay, isCompleted, isTrashItem]);
-
     const {
         attributes,
         listeners,
@@ -165,34 +179,37 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
         disabled: !isSortable,
         data: {task, type: 'task-item', groupCategory: groupCategory ?? task.groupCategory}
     });
+
+    // DND Style: subtle shadow for dragging, primary line for target
     const style = useMemo(() => {
         const baseTransform = CSS.Transform.toString(transform);
-        const calculatedTransition = dndTransition;
+        const calculatedTransition = dndTransition || 'background-color 0.2s ease-in-out'; // Default transition
         if (isDragging && !isOverlay) return {
             transform: baseTransform,
             transition: calculatedTransition,
-            opacity: 0.4,
+            opacity: 0.7,
             cursor: 'grabbing',
-            backgroundColor: 'hsla(210, 40%, 98%, 0.3)',
-            boxShadow: 'none',
-            border: '1px dashed hsla(0, 0%, 0%, 0.15)',
-            zIndex: 1,
-        };
+            boxShadow: 'var(--shadow-subtle)',
+            zIndex: 10,
+            background: 'hsl(var(--color-white))'
+        }; // Add white bg for dragging
         if (isOverlay) return {
             ...overlayStyle,
             transform: baseTransform,
             transition: calculatedTransition,
             cursor: 'grabbing',
-            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+            boxShadow: 'var(--shadow-subtle)',
             zIndex: 1000,
+            background: 'hsl(var(--color-white))'
         };
         return {
             ...overlayStyle,
             transform: baseTransform,
-            transition: calculatedTransition || 'background-color 0.2s ease-apple, border-color 0.2s ease-apple',
+            transition: calculatedTransition,
             zIndex: isSelected ? 2 : 1,
         };
     }, [overlayStyle, transform, dndTransition, isDragging, isOverlay, isSelected]);
+
     useEffect(() => {
         if (openItemId !== task.id) {
             if (isMoreActionsOpen) setIsMoreActionsOpen(false);
@@ -211,7 +228,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
         setOpenItemId(null);
     }, [setSelectedTaskId, task.id, isDragging, setOpenItemId]);
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks'>>) => {
-        setTasks(prevTasks => prevTasks.map(t => (t.id === task.id ? {...t, ...updates} : t)));
+        setTasks(prevTasks => prevTasks.map(t => (t.id === task.id ? {...t, ...updates, updatedAt: Date.now()} : t)));
     }, [setTasks, task.id]);
     const cycleCompletionPercentage = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
         event?.stopPropagation();
@@ -302,7 +319,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     const overdue = useMemo(() => isValidDueDate && !isCompleted && !isTrashItem && isOverdue(dueDate!), [isValidDueDate, isCompleted, isTrashItem, dueDate]);
     const searchWords = useMemo(() => searchTerm ? searchTerm.trim().toLowerCase().split(' ').filter(Boolean) : [], [searchTerm]);
     const highlighterProps = useMemo(() => ({
-        highlightClassName: "bg-yellow-300/70 font-semibold rounded-[2px] px-0.5 mx-[-0.5px] backdrop-blur-xs",
+        highlightClassName: "bg-primary-light text-primary font-normal rounded-[1px] px-0",
         searchWords: searchWords,
         autoEscape: true,
     }), [searchWords]);
@@ -335,39 +352,54 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
         const mainContentMatch = searchWords.some(w => lc.includes(w)) && !searchWords.every(w => lt.includes(w));
         return mainContentMatch && (!subtaskSearchMatch || subtaskSearchMatch.type !== 'content');
     }, [searchWords, task.content, task.title, subtaskSearchMatch]);
-    const baseClasses = useMemo(() => twMerge('task-item flex items-start px-3 py-2.5 border-b border-black/5 dark:border-white/[.03] group relative min-h-[56px]', isOverlay ? 'bg-glass-100 dark:bg-neutral-800 backdrop-blur-lg border rounded-md shadow-strong' : isSelected && !isDragging ? 'bg-primary/15 dark:bg-primary/25 backdrop-blur-sm' : isTrashItem ? 'bg-glass-alt/30 dark:bg-neutral-700/20 backdrop-blur-xs opacity-60 hover:bg-black/5 dark:hover:bg-white/[.02]' : isCompleted ? 'bg-glass-alt/30 dark:bg-neutral-700/20 backdrop-blur-xs opacity-60 hover:bg-black/5 dark:hover:bg-white/[.02]' : 'bg-transparent hover:bg-black/[.03] dark:hover:bg-white/[.015] hover:backdrop-blur-sm', isDragging ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-default')), [isOverlay, isSelected, isDragging, isTrashItem, isCompleted, isSortable]);
-    const titleClasses = useMemo(() => twMerge("text-[13.5px] text-neutral-800 dark:text-neutral-100 leading-tight block font-medium", (isCompleted || isTrashItem) && "line-through text-muted-foreground dark:text-neutral-500 font-normal"), [isCompleted, isTrashItem]);
+
+    // TaskItem Container: height 40px, padding L16px R12px. No border/shadow by default.
+    const baseClasses = useMemo(() => twMerge(
+        'task-item flex items-start px-4 pr-3 h-[40px]', // L/R padding
+        'group relative',
+        isOverlay ? 'bg-white shadow-subtle rounded-base border border-grey-light'
+            : isSelected && !isDragging ? 'bg-grey-ultra-light'
+                : isTrashItem || isCompleted ? 'bg-white opacity-60'
+                    : 'bg-white hover:bg-grey-ultra-light',
+        isDragging ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-default')
+    ), [isOverlay, isSelected, isDragging, isTrashItem, isCompleted, isSortable]);
+
+    // Task Text: Inter Light 13px, #545466. Completed: strike-through, #C2C2CC
+    const titleClasses = useMemo(() => twMerge(
+        "text-[13px] text-grey-dark leading-tight block font-normal", // Use font-normal for better readability
+        (isCompleted || isTrashItem) && "line-through text-grey-medium font-light" // Completed/trashed can be light
+    ), [isCompleted, isTrashItem]);
+
     const listIcon: IconName = useMemo(() => task.list === 'Inbox' ? 'inbox' : (task.list === 'Trash' ? 'trash' : 'list'), [task.list]);
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
-    const actionsMenuContentClasses = useMemo(() => twMerge('z-[55] min-w-[200px] p-1.5 w-52 bg-glass-menu dark:bg-neutral-800/90 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10 data-[state=open]:animate-slideUpAndFade data-[state=closed]:animate-slideDownAndFade'), []);
-
-    const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
-        "z-[60] p-0 bg-glass-100 dark:bg-neutral-800/95 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10",
-        "data-[state=open]:animate-slideUpAndFade",
-        "data-[state=closed]:animate-slideDownAndFade"
-    ), []);
-
+    const actionsMenuContentClasses = useMemo(() => twMerge('z-[55] min-w-[200px] p-1 w-52 bg-white rounded-base shadow-modal data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide'), []);
+    const datePickerPopoverWrapperClasses = useMemo(() => twMerge("z-[60] p-0 bg-white rounded-base shadow-modal data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"), []);
     const progressMenuItems = useMemo(() => [{
         label: 'Not Started',
         value: null,
         icon: 'circle' as IconName
-    }, {label: 'Started (20%)', value: 20, icon: 'circle-dot-dashed' as IconName}, {
-        label: 'Halfway (50%)',
+    }, {label: '20%', value: 20, icon: 'circle-dot-dashed' as IconName}, {
+        label: '50%',
         value: 50,
         icon: 'circle-dot' as IconName
-    }, {label: 'Almost Done (80%)', value: 80, icon: 'circle-slash' as IconName}, {
-        label: 'Completed (100%)',
+    }, {label: '80%', value: 80, icon: 'circle-slash' as IconName}, {
+        label: '100% (Completed)',
         value: 100,
         icon: 'circle-check' as IconName
     },], []);
     const isDateClickable = isValidDueDate && isInteractive;
-    const dueDateClasses = useMemo(() => twMerge('flex items-center whitespace-nowrap rounded-md transition-colors duration-150 ease-apple outline-none text-[11px] font-medium', overdue && 'text-red-500 dark:text-red-500', (isCompleted || isTrashItem) && 'line-through opacity-70', isDateClickable && 'cursor-pointer hover:bg-black/[.08] dark:hover:bg-white/[.08] px-1.5 mx-[-6px] py-1 my-[-4px] focus-visible:ring-1 focus-visible:ring-primary/50', !isDateClickable && 'px-0 py-0', !overdue && 'text-muted-foreground dark:text-neutral-400/80'), [overdue, isCompleted, isTrashItem, isDateClickable]);
 
-    const MAX_VISIBLE_SUBTASKS_IN_LIST = 2;
-    const subtasksToDisplayInList = useMemo(() => task.subtasks?.slice(0, MAX_VISIBLE_SUBTASKS_IN_LIST) || [], [task.subtasks]);
-    const hiddenSubtasksCount = useMemo(() => Math.max(0, (task.subtasks?.length || 0) - MAX_VISIBLE_SUBTASKS_IN_LIST), [task.subtasks]);
+    const dueDateClasses = useMemo(() => twMerge(
+        'flex items-center whitespace-nowrap rounded-base transition-colors duration-150 ease-in-out outline-none',
+        'text-[11px] font-light',
+        overdue && 'text-error',
+        (isCompleted || isTrashItem) && 'line-through opacity-70',
+        isDateClickable && 'cursor-pointer hover:bg-grey-ultra-light px-1 py-0.5 mx-[-4px] my-[-2px] focus-visible:ring-1 focus-visible:ring-primary', // Adjusted padding for hover effect
+        !isDateClickable && 'px-0 py-0',
+        !overdue && 'text-grey-medium'
+    ), [overdue, isCompleted, isTrashItem, isDateClickable]);
 
-    const tooltipContentClass = "text-xs bg-black/80 dark:bg-neutral-900/90 text-white dark:text-neutral-100 px-2 py-1 rounded shadow-md select-none z-[70] data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
+    const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[70] data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
 
     return (
         <>
@@ -383,132 +415,99 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                          e.preventDefault();
                          handleDateClickPickerOpenChange(true);
                      }
-                 }} aria-selected={isSelected} aria-labelledby={`task-title-${task.id}`}>
-                <div className="flex-shrink-0 mr-3 pt-0.5">
+                 }}
+                 aria-selected={isSelected} aria-labelledby={`task-title-${task.id}`}>
+
+                <div className="flex-shrink-0 mr-3 pt-[1px]">
                     <ProgressIndicator percentage={task.completionPercentage} isTrash={isTrashItem}
                                        onClick={cycleCompletionPercentage} onKeyDown={handleProgressIndicatorKeyDown}
-                                       ariaLabelledby={`task-title-${task.id}`} size={18}/>
+                                       ariaLabelledby={`task-title-${task.id}`} size={16}/>
                 </div>
-                <div className="flex-1 min-w-0 pt-0.5 pb-0.5 flex flex-col">
+
+                <div className="flex-1 min-w-0 pt-[1px] pb-[1px] flex flex-col justify-center">
                     <div className="flex items-baseline">
                         <Highlighter {...highlighterProps} textToHighlight={task.title || 'Untitled Task'}
                                      id={`task-title-${task.id}`} className={titleClasses}/>
-                    </div>
-                    <div
-                        className={twMerge("flex items-center flex-wrap text-muted-foreground dark:text-neutral-400 mt-1 leading-tight gap-x-2.5 gap-y-1 min-h-[18px]")}>
-                        {!!task.priority && task.priority <= 4 && !isCompleted && !isTrashItem && (
-                            <Tooltip.Provider delayDuration={200}><Tooltip.Root><Tooltip.Trigger asChild>
-                                <span
-                                    className={clsx("flex items-center font-semibold text-[10.5px]", priorityMap[task.priority]?.iconColor)}>
-                                    <Icon name="flag" size={10} strokeWidth={3} className="mr-0.5"/>
-                                    {priorityMap[task.priority]?.shortLabel}
-                                </span>
-                            </Tooltip.Trigger><Tooltip.Portal><Tooltip.Content className={tooltipContentClass}
-                                                                               side="bottom"
-                                                                               sideOffset={4}>{priorityMap[task.priority]?.label}<Tooltip.Arrow
-                                className="fill-black/80 dark:fill-neutral-900/90"/></Tooltip.Content></Tooltip.Portal></Tooltip.Root></Tooltip.Provider>
-                        )}
-                        {isValidDueDate && (
-                            <Popover.Root modal={true} open={isDateClickPickerOpen}
-                                          onOpenChange={handleDateClickPickerOpenChange}>
-                                <Popover.Trigger asChild disabled={!isDateClickable}>
-                                    <button ref={dateDisplayRef} className={dueDateClasses} title={formatDate(dueDate!)}
-                                            onClick={isDateClickable ? (e) => e.stopPropagation() : undefined}
-                                            onKeyDown={isDateClickable ? (e) => {
-                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    handleDateClickPickerOpenChange(true);
-                                                }
-                                            } : undefined}
-                                            aria-label={isDateClickable ? `Change due date, currently ${formatRelativeDate(dueDate!, true)}` : undefined}
-                                            data-date-picker-trigger={isDateClickable ? "true" : "false"}>
-                                        <Icon name="calendar" size={10} className="mr-1 opacity-80 flex-shrink-0"/>
-                                        {formatRelativeDate(dueDate!, true)}
-                                    </button>
-                                </Popover.Trigger>
-                                {isDateClickable && (
-                                    <Popover.Portal><Popover.Content side="bottom" align="start" sideOffset={5}
-                                                                     className={datePickerPopoverWrapperClasses} // Applied corrected classes
-                                                                     onCloseAutoFocus={(e) => {
-                                                                         e.preventDefault();
-                                                                         dateDisplayRef.current?.focus();
-                                                                     }}><CustomDatePickerContent
-                                        initialDate={dueDate ?? undefined} onSelect={handleDateSelect}
-                                        closePopover={closeDateClickPopover}/></Popover.Content></Popover.Portal>)}
-                            </Popover.Root>
-                        )}
-                        {task.list && task.list !== 'Inbox' && (
-                            <span
-                                className={clsx("flex items-center whitespace-nowrap bg-black/[.04] dark:bg-white/[.04] text-muted-foreground dark:text-neutral-400/80 px-1.5 py-[2px] rounded-md text-[10px] backdrop-blur-sm", (isCompleted || isTrashItem) && 'line-through opacity-60')}
-                                title={task.list}>
-                                <Icon name={listIcon} size={9} className="mr-1 opacity-70 flex-shrink-0"/> <span
-                                className="truncate">{task.list}</span>
-                            </span>
-                        )}
-                        {task.tags && task.tags.length > 0 && (
+                        {task.completionPercentage && task.completionPercentage > 0 && task.completionPercentage < 100 && !isCompleted && !isTrashItem && (
                             <Tooltip.Provider delayDuration={200}><Tooltip.Root>
                                 <Tooltip.Trigger asChild>
-                                <span
-                                    className={clsx("flex items-center bg-black/[.04] dark:bg-white/[.04] text-muted-foreground dark:text-neutral-400/80 px-1.5 py-[2px] rounded-md text-[10px] backdrop-blur-sm cursor-default", (isCompleted || isTrashItem) && 'line-through opacity-60')}>
-                                    <Icon name="tag" size={9} className="mr-1 opacity-70"/>
-                                    <span className="truncate max-w-[60px]">{task.tags[0]}</span>
-                                    {task.tags.length > 1 &&
-                                        <span className="ml-1 opacity-70">+{task.tags.length - 1}</span>}
-                                </span>
+                                    <span className="ml-1.5 w-2 h-2 rounded-full bg-primary"
+                                          style={{opacity: (task.completionPercentage || 0) / 100 + 0.2}}></span>
                                 </Tooltip.Trigger>
                                 <Tooltip.Portal><Tooltip.Content className={tooltipContentClass} side="bottom"
                                                                  sideOffset={4}>
-                                    Tags: {task.tags.join(', ')}
-                                    <Tooltip.Arrow
-                                        className="fill-black/80 dark:fill-neutral-900/90"/></Tooltip.Content></Tooltip.Portal>
+                                    {task.completionPercentage}% Complete <Tooltip.Arrow
+                                    className="fill-grey-dark"/></Tooltip.Content></Tooltip.Portal>
                             </Tooltip.Root></Tooltip.Provider>
                         )}
-                        {showContentHighlight && (<Highlighter {...highlighterProps}
-                                                               textToHighlight={generateContentSnippet(task.content!, searchTerm)}
-                                                               className={clsx("block truncate text-[10.5px] text-muted-foreground/70 dark:text-neutral-500/70 italic w-full", (isCompleted || isTrashItem) && 'line-through')}/>)}
-                        {subtaskSearchMatch && (<div
-                            className={clsx("block truncate text-[10.5px] text-muted-foreground/70 dark:text-neutral-500/70 italic w-full flex items-center", (isCompleted || isTrashItem) && 'line-through')}>
-                            <Icon name="git-fork" size={10}
-                                  className="mr-1 opacity-60 flex-shrink-0"/>Sub: <Highlighter {...highlighterProps}
-                                                                                               textToHighlight={subtaskSearchMatch.text}
-                                                                                               className="ml-1"/>
-                        </div>)}
                     </div>
-                    {task.subtasks && task.subtasks.length > 0 && !isTrashItem && !isCompleted && (
-                        <div className="mt-1.5 pt-1.5 border-t border-black/5 dark:border-white/[.02] -mx-1 px-1">
-                            {subtasksToDisplayInList.map(sub => (
-                                <div key={sub.id} className="flex items-center text-xs mb-0.5">
-                                    <SelectionCheckboxRadix
-                                        id={`subtask-list-item-check-${sub.id}`}
-                                        checked={sub.completed}
-                                        onChange={() => {
-                                        }}
-                                        aria-label={`Subtask: ${sub.title} status`}
-                                        className="mr-1.5 flex-shrink-0 pointer-events-none"
-                                        size={12}
-                                        disabled={true}
-                                    />
-                                    <span className={twMerge(
-                                        "truncate text-muted-foreground dark:text-neutral-400/90",
-                                        sub.completed && "line-through opacity-70"
-                                    )}>
-                                        {sub.title}
+                    {(isValidDueDate || (task.tags && task.tags.length > 0)) && !showContentHighlight && !subtaskSearchMatch && (
+                        <div
+                            className={twMerge("flex items-center flex-wrap text-grey-medium mt-0.5 leading-tight gap-x-1.5 gap-y-0.5 min-h-[17px]")}> {/* Reduced gap-x */}
+                            {isValidDueDate && (
+                                <Popover.Root modal={true} open={isDateClickPickerOpen}
+                                              onOpenChange={handleDateClickPickerOpenChange}>
+                                    <Popover.Trigger asChild disabled={!isDateClickable}>
+                                        <button ref={dateDisplayRef} className={dueDateClasses}
+                                                title={formatDate(dueDate!)}
+                                                onClick={isDateClickable ? (e) => e.stopPropagation() : undefined}
+                                                onKeyDown={isDateClickable ? (e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleDateClickPickerOpenChange(true);
+                                                    }
+                                                } : undefined}
+                                                aria-label={isDateClickable ? `Change due date, currently ${formatRelativeDate(dueDate!, false)}` : undefined}
+                                                data-date-picker-trigger={isDateClickable ? "true" : "false"}>
+                                            <Icon name="calendar" size={10} strokeWidth={1}
+                                                  className="mr-0.5 opacity-70 flex-shrink-0"/>
+                                            {formatRelativeDate(dueDate!, false)}
+                                        </button>
+                                    </Popover.Trigger>
+                                    {isDateClickable && (
+                                        <Popover.Portal><Popover.Content side="bottom" align="start" sideOffset={5}
+                                                                         className={datePickerPopoverWrapperClasses}
+                                                                         onCloseAutoFocus={(e) => {
+                                                                             e.preventDefault();
+                                                                             dateDisplayRef.current?.focus();
+                                                                         }}><CustomDatePickerContent
+                                            initialDate={dueDate ?? undefined} onSelect={handleDateSelect}
+                                            closePopover={closeDateClickPopover}/></Popover.Content></Popover.Portal>)}
+                                </Popover.Root>
+                            )}
+                            {task.tags && task.tags.length > 0 && (
+                                <Tooltip.Provider delayDuration={200}><Tooltip.Root>
+                                    <Tooltip.Trigger asChild>
+                                    <span
+                                        className={clsx("flex items-center bg-grey-ultra-light text-grey-medium px-1.5 py-[1px] rounded-base text-[10px] font-light cursor-default", (isCompleted || isTrashItem) && 'line-through opacity-60')}>
+                                        <Icon name="tag" size={10} strokeWidth={1} className="mr-1 opacity-70"/>
+                                        <span className="truncate max-w-[60px]">{task.tags[0]}</span>
+                                        {task.tags.length > 1 &&
+                                            <span className="ml-0.5 opacity-70">+{task.tags.length - 1}</span>}
                                     </span>
-                                </div>
-                            ))}
-                            {hiddenSubtasksCount > 0 && (
-                                <div
-                                    className="text-xs text-muted-foreground/70 dark:text-neutral-500/70 mt-0.5 ml-[18px]">
-                                    ... +{hiddenSubtasksCount} more subtask{hiddenSubtasksCount > 1 ? 's' : ''}
-                                </div>
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Portal><Tooltip.Content className={tooltipContentClass} side="bottom"
+                                                                     sideOffset={4}>Tags: {task.tags.join(', ')}<Tooltip.Arrow
+                                        className="fill-grey-dark"/></Tooltip.Content></Tooltip.Portal>
+                                </Tooltip.Root></Tooltip.Provider>
                             )}
                         </div>
                     )}
+                    {showContentHighlight && (<Highlighter {...highlighterProps}
+                                                           textToHighlight={generateContentSnippet(task.content!, searchTerm)}
+                                                           className={clsx("block truncate text-[11px] text-grey-medium italic w-full mt-0.5 font-light", (isCompleted || isTrashItem) && 'line-through')}/>)}
+                    {subtaskSearchMatch && (<div
+                        className={clsx("block truncate text-[11px] text-grey-medium italic w-full flex items-center mt-0.5 font-light", (isCompleted || isTrashItem) && 'line-through')}>
+                        <Icon name="git-fork" size={10} strokeWidth={1}
+                              className="mr-1 opacity-60 flex-shrink-0"/>Sub: <Highlighter {...highlighterProps}
+                                                                                           textToHighlight={subtaskSearchMatch.text}
+                                                                                           className="ml-1"/></div>)}
                 </div>
+
                 {isInteractive && (
                     <div
-                        className="task-item-actions absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ease-apple z-10"
+                        className="task-item-actions absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 ease-in-out z-10"
                         onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
                         onTouchStart={(e) => e.stopPropagation()}>
                         <Popover.Root modal={true} open={isMenuDatePickerOpen}
@@ -523,7 +522,8 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                             }}>
                                 <Popover.Anchor asChild><DropdownMenu.Trigger asChild disabled={!isInteractive}><Button
                                     ref={moreActionsButtonRef} variant="ghost" size="icon" icon="more-horizontal"
-                                    className="h-7 w-7 text-muted-foreground/80 dark:text-neutral-400/80 hover:bg-black/10 dark:hover:bg-white/5"
+                                    className="h-7 w-7 text-grey-medium hover:bg-grey-ultra-light"
+                                    iconProps={{size: 16, strokeWidth: 1}}
                                     aria-label={`More actions for ${task.title || 'task'}`}/></DropdownMenu.Trigger></Popover.Anchor>
                                 <DropdownMenu.Portal>
                                     <DropdownMenu.Content className={actionsMenuContentClasses} sideOffset={4}
@@ -533,12 +533,14 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                             if (!isMenuDatePickerOpen && !isDateClickPickerOpen) moreActionsButtonRef.current?.focus();
                                         }
                                     }}>
+                                        {/* Menu items here ... (structure unchanged, styles will be picked up by TaskItemRadixMenuItem) */}
                                         <DropdownMenu.Sub><DropdownMenu.SubTrigger
-                                            className={twMerge("relative flex cursor-pointer select-none items-center rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-black/[.07] data-[highlighted]:bg-black/[.07] data-[state=open]:bg-black/[.07] dark:focus:bg-white/[.07] dark:data-[highlighted]:bg-white/[.07] dark:data-[state=open]:bg-white/[.07] text-gray-700 data-[highlighted]:text-gray-800 data-[state=open]:text-gray-800 dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 dark:data-[state=open]:text-neutral-50 data-[disabled]:opacity-50")}><Icon
-                                            name="circle-gauge" size={15} className="mr-2 flex-shrink-0 opacity-70"/>Set
-                                            Progress
-                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={15}
-                                                                                className="opacity-70"/></div>
+                                            className={twMerge("relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light data-[state=open]:bg-grey-ultra-light text-grey-dark data-[highlighted]:text-grey-dark data-[state=open]:text-grey-dark data-[disabled]:opacity-50")}><Icon
+                                            name="circle-gauge" size={16} strokeWidth={1}
+                                            className="mr-2 flex-shrink-0 opacity-70"/>Set Progress
+                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
+                                                                                strokeWidth={1} className="opacity-70"/>
+                                            </div>
                                         </DropdownMenu.SubTrigger><DropdownMenu.Portal><DropdownMenu.SubContent
                                             className={actionsMenuContentClasses} sideOffset={2}
                                             alignOffset={-5}>{progressMenuItems.map(item => (
@@ -546,46 +548,48 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                                                    selected={task.completionPercentage === item.value || (task.completionPercentage === null && item.value === null)}
                                                                    onSelect={() => handleProgressChange(item.value)}
                                                                    disabled={!isInteractive}>{item.label}</TaskItemRadixMenuItem>))}</DropdownMenu.SubContent></DropdownMenu.Portal></DropdownMenu.Sub>
-                                        <DropdownMenu.Separator className="h-px bg-black/10 dark:bg-white/10 my-1"/>
+                                        <DropdownMenu.Separator className="h-px bg-grey-light my-1"/>
                                         <TaskItemRadixMenuItem icon="calendar-plus" onSelect={(event) => {
                                             event.preventDefault();
                                             handleMenuDatePickerOpenChange(true);
                                         }} disabled={!isInteractive}>Set Due Date...</TaskItemRadixMenuItem>
-                                        <DropdownMenu.Separator className="h-px bg-black/10 dark:bg-white/10 my-1"/>
+                                        <DropdownMenu.Separator className="h-px bg-grey-light my-1"/>
                                         <DropdownMenu.Sub><DropdownMenu.SubTrigger
-                                            className={twMerge("relative flex cursor-pointer select-none items-center rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-black/[.07] data-[highlighted]:bg-black/[.07] data-[state=open]:bg-black/[.07] dark:focus:bg-white/[.07] dark:data-[highlighted]:bg-white/[.07] dark:data-[state=open]:bg-white/[.07] text-gray-700 data-[highlighted]:text-gray-800 data-[state=open]:text-gray-800 dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 dark:data-[state=open]:text-neutral-50 data-[disabled]:opacity-50")}
-                                            disabled={!isInteractive}><Icon name="flag" size={15}
+                                            className={twMerge("relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light data-[state=open]:bg-grey-ultra-light text-grey-dark data-[highlighted]:text-grey-dark data-[state=open]:text-grey-dark data-[disabled]:opacity-50")}
+                                            disabled={!isInteractive}><Icon name="flag" size={16} strokeWidth={1}
                                                                             className="mr-2 flex-shrink-0 opacity-70"/>Priority
-                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={15}
-                                                                                className="opacity-70"/></div>
+                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
+                                                                                strokeWidth={1} className="opacity-70"/>
+                                            </div>
                                         </DropdownMenu.SubTrigger><DropdownMenu.Portal><DropdownMenu.SubContent
                                             className={actionsMenuContentClasses} sideOffset={2}
                                             alignOffset={-5}><DropdownMenu.RadioGroup
                                             value={String(task.priority ?? 'none')}
                                             onValueChange={(value) => handlePriorityChange(value === 'none' ? null : Number(value))}>{[null, 1, 2, 3, 4].map(p => (
                                             <DropdownMenu.RadioItem key={p ?? 'none'} value={String(p ?? 'none')}
-                                                                    className={twMerge("relative flex cursor-pointer select-none items-center rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-black/[.07] data-[highlighted]:bg-black/[.07] dark:focus:bg-white/[.07] dark:data-[highlighted]:bg-white/[.07]", p && priorityMap[p]?.iconColor, "data-[state=checked]:bg-primary/15 data-[state=checked]:text-primary data-[state=checked]:font-medium data-[highlighted]:bg-primary/20 dark:data-[state=checked]:bg-primary/25 dark:data-[state=checked]:text-primary-light dark:data-[highlighted]:bg-primary/30", !p && "text-gray-700 data-[highlighted]:text-gray-800 dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50", "data-[disabled]:opacity-50")}
+                                                                    className={twMerge("relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light", p && priorityMap[p]?.iconColor, "data-[state=checked]:bg-primary-light data-[state=checked]:text-primary data-[highlighted]:bg-primary-light", !p && "text-grey-dark data-[highlighted]:text-grey-dark", "data-[disabled]:opacity-50")}
                                                                     disabled={!isInteractive}> {p &&
-                                                <Icon name="flag" size={15}
+                                                <Icon name="flag" size={16} strokeWidth={1}
                                                       className="mr-2 flex-shrink-0 opacity-70"/>} {p ? `P${p} ${priorityMap[p]?.label}` : 'None'} </DropdownMenu.RadioItem>))}</DropdownMenu.RadioGroup></DropdownMenu.SubContent></DropdownMenu.Portal></DropdownMenu.Sub>
                                         <DropdownMenu.Sub><DropdownMenu.SubTrigger
-                                            className={twMerge("relative flex cursor-pointer select-none items-center rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-black/[.07] data-[highlighted]:bg-black/[.07] data-[state=open]:bg-black/[.07] dark:focus:bg-white/[.07] dark:data-[highlighted]:bg-white/[.07] dark:data-[state=open]:bg-white/[.07] text-gray-700 data-[highlighted]:text-gray-800 data-[state=open]:text-gray-800 dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 dark:data-[state=open]:text-neutral-50 data-[disabled]:opacity-50")}
-                                            disabled={!isInteractive}><Icon name="folder" size={15}
+                                            className={twMerge("relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light data-[state=open]:bg-grey-ultra-light text-grey-dark data-[highlighted]:text-grey-dark data-[state=open]:text-grey-dark data-[disabled]:opacity-50")}
+                                            disabled={!isInteractive}><Icon name="folder" size={16} strokeWidth={1}
                                                                             className="mr-2 flex-shrink-0 opacity-70"/>Move
                                             to List
-                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={15}
-                                                                                className="opacity-70"/></div>
+                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={16}
+                                                                                strokeWidth={1} className="opacity-70"/>
+                                            </div>
                                         </DropdownMenu.SubTrigger><DropdownMenu.Portal><DropdownMenu.SubContent
                                             className={twMerge(actionsMenuContentClasses, "max-h-40 overflow-y-auto styled-scrollbar-thin")}
                                             sideOffset={2} alignOffset={-5}><DropdownMenu.RadioGroup value={task.list}
                                                                                                      onValueChange={handleListChange}>{availableLists.map(list => (
                                             <DropdownMenu.RadioItem key={list} value={list}
-                                                                    className={twMerge("relative flex cursor-pointer select-none items-center rounded-md px-2.5 py-1.5 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-black/[.07] data-[highlighted]:bg-black/[.07] dark:focus:bg-white/[.07] dark:data-[highlighted]:bg-white/[.07] data-[state=checked]:bg-primary/15 data-[state=checked]:text-primary data-[state=checked]:font-medium data-[highlighted]:bg-primary/20 dark:data-[state=checked]:bg-primary/25 dark:data-[state=checked]:text-primary-light dark:data-[highlighted]:bg-primary/30 text-gray-700 data-[highlighted]:text-gray-800 dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 data-[disabled]:opacity-50")}
+                                                                    className={twMerge("relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light data-[state=checked]:bg-primary-light data-[state=checked]:text-primary data-[highlighted]:bg-primary-light text-grey-dark data-[highlighted]:text-grey-dark data-[disabled]:opacity-50")}
                                                                     disabled={!isInteractive}><Icon
-                                                name={list === 'Inbox' ? 'inbox' : 'list'} size={15}
+                                                name={list === 'Inbox' ? 'inbox' : 'list'} size={16} strokeWidth={1}
                                                 className="mr-2 flex-shrink-0 opacity-70"/>{list}
                                             </DropdownMenu.RadioItem>))}</DropdownMenu.RadioGroup></DropdownMenu.SubContent></DropdownMenu.Portal></DropdownMenu.Sub>
-                                        <DropdownMenu.Separator className="h-px bg-black/10 dark:bg-white/10 my-1"/>
+                                        <DropdownMenu.Separator className="h-px bg-grey-light my-1"/>
                                         <TaskItemRadixMenuItem icon="copy-plus" onSelect={handleDuplicateTask}
                                                                disabled={!isInteractive}>Duplicate
                                             Task</TaskItemRadixMenuItem>
@@ -596,7 +600,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                 </DropdownMenu.Portal>
                             </DropdownMenu.Root>
                             <Popover.Portal><Popover.Content side="bottom" align="end" sideOffset={5}
-                                                             className={datePickerPopoverWrapperClasses} // Applied corrected classes
+                                                             className={datePickerPopoverWrapperClasses}
                                                              onCloseAutoFocus={(e) => {
                                                                  e.preventDefault();
                                                                  moreActionsButtonRef.current?.focus();

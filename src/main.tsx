@@ -4,7 +4,6 @@ import ReactDOM from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
 import {Provider as JotaiProvider} from 'jotai';
 import App from './App';
-// Import Radix UI Tooltip Provider - Wrap your app or relevant part
 import * as Tooltip from '@radix-ui/react-tooltip';
 
 // Import base styles LAST to ensure Tailwind utilities override defaults
@@ -19,11 +18,8 @@ const root = ReactDOM.createRoot(rootElement);
 
 root.render(
     <React.StrictMode>
-        {/* Jotai Provider for global state */}
         <JotaiProvider>
-            {/* Radix Tooltip Provider */}
-            <Tooltip.Provider delayDuration={300}> {/* Adjust delay as needed */}
-                {/* BrowserRouter for routing */}
+            <Tooltip.Provider delayDuration={200}> {/* Adjusted delay per spec */}
                 <BrowserRouter>
                     <App/>
                 </BrowserRouter>
@@ -31,5 +27,3 @@ root.render(
         </JotaiProvider>
     </React.StrictMode>
 );
-
-/// <reference types="vite/client" />

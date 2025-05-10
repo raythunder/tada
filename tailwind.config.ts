@@ -3,134 +3,108 @@ import type {Config} from 'tailwindcss';
 
 export default {
     content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-    darkMode: 'class', // Or 'media' if you prefer
+    darkMode: 'class',
     theme: {
         extend: {
-            // Define HSL colors using CSS variables for easy theming
             colors: {
-                // Base Canvas & Text
-                canvas: 'hsl(var(--canvas-h) var(--canvas-s) var(--canvas-l) / <alpha-value>)',
-                'canvas-alt': 'hsl(var(--canvas-alt-h) var(--canvas-alt-s) var(--canvas-alt-l) / <alpha-value>)',
-                foreground: 'hsl(var(--foreground-h) var(--foreground-s) var(--foreground-l) / <alpha-value>)',
-                muted: {
-                    DEFAULT: 'hsl(var(--muted-h) var(--muted-s) var(--muted-l) / <alpha-value>)',
-                    foreground: 'hsl(var(--muted-foreground-h) var(--muted-foreground-s) var(--muted-foreground-l) / <alpha-value>)',
-                },
-                // Primary Colors
-                primary: {
-                    DEFAULT: 'hsl(var(--primary-h) var(--primary-s) var(--primary-l) / <alpha-value>)',
-                    light: 'hsl(var(--primary-h) var(--primary-s) var(--primary-l-light) / <alpha-value>)', // Lighter variant
-                    dark: 'hsl(var(--primary-h) var(--primary-s) var(--primary-l-dark) / <alpha-value>)',  // Darker variant
-                    foreground: 'hsl(var(--primary-foreground-h) var(--primary-foreground-s) var(--primary-foreground-l) / <alpha-value>)',
-                },
-                // Glass Effects (Example - adjust HSL and alpha as needed)
-                glass: {
-                    DEFAULT: 'hsl(var(--glass-h) var(--glass-s) var(--glass-l) / var(--glass-a))',
-                    '100': 'hsl(var(--glass-h) var(--glass-s) var(--glass-l) / var(--glass-a-100))',
-                    alt: {
-                        DEFAULT: 'hsl(var(--glass-alt-h) var(--glass-alt-s) var(--glass-alt-l) / var(--glass-alt-a))',
-                        '100': 'hsl(var(--glass-alt-h) var(--glass-alt-s) var(--glass-alt-l) / var(--glass-alt-a-100))',
-                        '200': 'hsl(var(--glass-alt-h) var(--glass-alt-s) var(--glass-alt-l) / var(--glass-alt-a-200))',
-                    },
-                    inset: {
-                        '100': 'hsl(var(--glass-inset-h) var(--glass-inset-s) var(--glass-inset-l) / var(--glass-inset-a-100))',
-                        '200': 'hsl(var(--glass-inset-h) var(--glass-inset-s) var(--glass-inset-l) / var(--glass-inset-a-200))',
-                    }
-                },
-                // Border & Ring (Optional - often use black/white with alpha)
-                border: 'hsl(var(--border-h) var(--border-s) var(--border-l) / <alpha-value>)',
-                ring: 'hsl(var(--ring-h) var(--ring-s) var(--ring-l) / <alpha-value>)',
-                // Other Semantic Colors
-                destructive: {
-                    DEFAULT: 'hsl(var(--destructive-h) var(--destructive-s) var(--destructive-l) / <alpha-value>)',
-                    foreground: 'hsl(var(--destructive-foreground-h) var(--destructive-foreground-s) var(--destructive-foreground-l) / <alpha-value>)',
-                },
+                'primary': 'hsl(var(--color-primary) / <alpha-value>)',
+                'primary-light': 'hsl(var(--color-primary-light) / <alpha-value>)',
+                'primary-dark': 'hsl(var(--color-primary-dark) / <alpha-value>)',
+                'white': 'hsl(var(--color-white) / <alpha-value>)',
+                'grey-ultra-light': 'hsl(var(--color-grey-ultra-light) / <alpha-value>)',
+                'grey-light': 'hsl(var(--color-grey-light) / <alpha-value>)',
+                'grey-medium': 'hsl(var(--color-grey-medium) / <alpha-value>)',
+                'grey-dark': 'hsl(var(--color-grey-dark) / <alpha-value>)',
+                'success': 'hsl(var(--color-success) / <alpha-value>)',
+                'info': 'hsl(var(--color-info) / <alpha-value>)',
+                'warning': 'hsl(var(--color-warning) / <alpha-value>)',
+                'error': 'hsl(var(--color-error) / <alpha-value>)',
             },
-            // Consistent Border Radius
+            fontFamily: {
+                primary: ['var(--font-primary)', 'sans-serif'],
+            },
+            fontWeight: {
+                light: 'var(--font-primary-light-weight)',
+                normal: 'var(--font-primary-regular-weight)',
+                medium: 'var(--font-primary-medium-weight)',
+            },
             borderRadius: {
-                lg: 'var(--radius)',
-                md: 'calc(var(--radius) - 2px)',
-                sm: 'calc(var(--radius) - 4px)',
+                'base': 'var(--border-radius-base)',
+                'sm': 'var(--border-radius-small)',
             },
-            // Consistent Box Shadows
             boxShadow: {
-                sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
-                DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-                md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-                lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-                xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-                '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
-                inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
-                'inner-lg': 'inset 0 4px 8px 0 rgb(0 0 0 / 0.05)',
-                strong: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 5px 10px -6px rgba(0, 0, 0, 0.1)', // Stronger shadow
-                subtle: '0 2px 5px rgba(0,0,0,0.07)', // Subtle shadow for buttons etc.
+                'subtle': 'var(--shadow-subtle)',
+                'ai-summary': 'var(--shadow-ai-summary)',
+                'modal': 'var(--shadow-modal)',
             },
-            // Animations & Keyframes (Match definitions in index.css)
+            spacing: {
+                '0.5': '2px', '1': '4px', '2': '8px', '3': '12px',
+                '4': '16px', '5': '20px', '6': '24px',
+            },
+            letterSpacing: {
+                tightest: '-.075em', tighter: '-.05em', tight: '-.025em',
+                normal: '0', wide: '.025em', wider: '.05em',
+                widest: '.1em', '0.5px': '0.5px',
+            },
+            lineHeight: {
+                '3': '1.3', 'normal': '1.5', 'tight': '1.2', '6': '1.6',
+            },
             keyframes: {
-                fadeIn: {
-                    from: { opacity: '0' },
-                    to: { opacity: '1' },
+                // --- FADE IN/OUT (Good for general use, including dropdowns/popovers) ---
+                fadeIn: {from: {opacity: '0'}, to: {opacity: '1'}},
+                fadeOut: {from: {opacity: '1'}, to: {opacity: '0'}},
+
+                // --- MODAL (Centered, with slight scale) ---
+                modalShow: {
+                    from: {opacity: '0', transform: 'translate(-50%, -48%) scale(0.98)'},
+                    to: {opacity: '1', transform: 'translate(-50%, -50%) scale(1)'},
                 },
-                fadeOut: {
-                    from: { opacity: '1' },
-                    to: { opacity: '0' },
+                modalHide: {
+                    from: {opacity: '1', transform: 'translate(-50%, -50%) scale(1)'},
+                    to: {opacity: '0', transform: 'translate(-50%, -48%) scale(0.98)'},
                 },
-                contentShow: {
-                    from: { opacity: '0', transform: 'translate(-50%, -48%) scale(0.96)' },
-                    to: { opacity: '1', transform: 'translate(-50%, -50%) scale(1)' },
+
+                // --- POPOVER/DROPDOWN (Subtle scale from origin, primarily fade) ---
+                // This is a safer animation for Radix popper elements.
+                // Radix itself will handle the positioning (translate).
+                // The key is to ensure this animation respects `transform-origin`.
+                scaleIn: {
+                    '0%': {opacity: '0', transform: 'scale(0.95)'},
+                    '100%': {opacity: '1', transform: 'scale(1)'},
                 },
-                contentHide: {
-                    from: { opacity: '1', transform: 'translate(-50%, -50%) scale(1)' },
-                    to: { opacity: '0', transform: 'translate(-50%, -48%) scale(0.96)' },
-                },
-                slideUpAndFade: {
-                    from: { opacity: '0', transform: 'translateY(2px)' },
-                    to: { opacity: '1', transform: 'translateY(0)' },
-                },
-                slideDownAndFade: {
-                    from: { opacity: '1', transform: 'translateY(0)' },
-                    to: { opacity: '0', transform: 'translateY(2px)' },
-                },
-                slideRightAndFade: {
-                    from: { opacity: '0', transform: 'translateX(-2px)' },
-                    to: { opacity: '1', transform: 'translateX(0)' },
-                },
-                slideLeftAndFade: {
-                    from: { opacity: '1', transform: 'translateX(0)' },
-                    to: { opacity: '0', transform: 'translateX(-2px)' },
+                scaleOut: {
+                    '0%': {opacity: '1', transform: 'scale(1)'},
+                    '100%': {opacity: '0', transform: 'scale(0.95)'},
                 },
             },
             animation: {
-                fadeIn: 'fadeIn 150ms cubic-bezier(0.4, 0, 0.2, 1)',
-                fadeOut: 'fadeOut 150ms cubic-bezier(0.4, 0, 0.2, 1)',
-                contentShow: 'contentShow 150ms cubic-bezier(0.16, 1, 0.3, 1)',
-                contentHide: 'contentHide 150ms cubic-bezier(0.16, 1, 0.3, 1)',
-                slideUpAndFade: 'slideUpAndFade 200ms cubic-bezier(0.16, 1, 0.3, 1)',
-                slideDownAndFade: 'slideDownAndFade 200ms cubic-bezier(0.16, 1, 0.3, 1)',
-                slideRightAndFade: 'slideRightAndFade 200ms cubic-bezier(0.16, 1, 0.3, 1)',
-                slideLeftAndFade: 'slideLeftAndFade 200ms cubic-bezier(0.16, 1, 0.3, 1)',
+                // General fade
+                fadeIn: 'fadeIn 0.2s ease-in-out',
+                fadeOut: 'fadeOut 0.2s ease-in-out',
+
+                // Modal specific
+                modalShow: 'modalShow 0.2s ease-out',
+                modalHide: 'modalHide 0.2s ease-in',
+
+                // Popover/Dropdown specific animations
+                // Using a very short duration for the scale animation to make it feel quick
+                // The Radix plugin will apply these based on data-state
+                popoverShow: 'scaleIn 0.1s ease-out', // Faster, more subtle
+                popoverHide: 'scaleOut 0.1s ease-in',
+                dropdownShow: 'scaleIn 0.1s ease-out',
+                dropdownHide: 'scaleOut 0.1s ease-in',
             },
-            // Optional: Custom transition timing function
             transitionTimingFunction: {
-                'apple': 'cubic-bezier(0.25, 0.1, 0.25, 1)', // Similar to ease-out
+                'app-ease-in-out': 'cubic-bezier(0.4, 0, 0.2, 1)',
+                'app-ease-out': 'cubic-bezier(0, 0, 0.2, 1)',
             },
-            // Font Families (Example)
-            fontFamily: {
-                sans: ['Inter', 'system-ui', 'sans-serif'],
-                mono: ['var(--font-mono)', 'monospace'], // Ensure CodeMirror var is used
-            },
-            // Add backdrop blur utilities if not default
-            backdropBlur: {
-                xs: '2px',
-                sm: '4px',
-                md: '8px',
-                lg: '12px',
-                xl: '16px',
-            }
         },
     },
     plugins: [
-        require('tailwindcss-radix'), // Use the Radix plugin for data-* variants
-        require('@tailwindcss/forms'), // Optional: if you need form reset styles
+        require('tailwindcss-radix')({
+            variantPrefix: 'radix',
+        }),
+        require('@tailwindcss/typography'),
+        require('@tailwindcss/forms')({strategy: 'class'}),
     ],
 } satisfies Config;

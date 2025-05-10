@@ -3,62 +3,45 @@ import React, {Suspense, useMemo} from 'react';
 import {Outlet, useLocation} from 'react-router-dom';
 import IconBar from './IconBar';
 import Sidebar from './Sidebar';
-// Keep SettingsModal import, it uses Radix Dialog internally now
 import SettingsModal from '../settings/SettingsModal';
-// REMOVED: searchTermAtom import is no longer needed here
-// import {useAtomValue} from 'jotai';
-// import {searchTermAtom} from '@/store/atoms';
 import Icon from "@/components/common/Icon";
 import {twMerge} from 'tailwind-merge';
 
-// Simple loading spinner component (No changes)
 const LoadingSpinner: React.FC = () => (
-    <div className="absolute inset-0 flex items-center justify-center bg-glass/70 backdrop-blur-md z-50">
-        <Icon name="loader" size={32} className="text-primary animate-spin"/>
+    <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-50">
+        <Icon name="loader" size={24} className="text-primary animate-spin" strokeWidth={1.5}/>
     </div>
 );
 LoadingSpinner.displayName = 'LoadingSpinner';
 
 const MainLayout: React.FC = () => {
-    // REMOVED: searchTermAtom usage is removed from hideSidebar logic
-    // const searchTerm = useAtomValue(searchTermAtom);
     const location = useLocation();
 
-    // --- UPDATED Sidebar visibility logic ---
-    // Sidebar is hidden ONLY if the current path is /calendar or /summary,
-    // regardless of search state.
+    // Sidebar is visible for all task-related views, hidden for /calendar and /summary
     const hideSidebar = useMemo(() => {
         return ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
-    }, [location.pathname]); // Dependency is now only location.pathname
+    }, [location.pathname]);
 
     return (
-        // Overall layout structure remains the same
-        <div className="flex h-screen bg-canvas-alt overflow-hidden font-sans">
+        <div className="flex h-screen bg-white overflow-hidden font-primary">
             <IconBar/>
-
-            {/* Conditional Sidebar rendering */}
             {!hideSidebar && (
-                <div className="w-56 flex-shrink-0 h-full relative"> {/* Fixed width */}
+                // Sidebar width fixed at 240px per responsive spec
+                <div className="w-[240px] flex-shrink-0 h-full relative">
                     <Sidebar/>
                 </div>
             )}
-
-            {/* Main Content Area */}
+            {/* Main Content Area taking remaining space, with defined padding */}
             <main className={twMerge(
                 "flex-1 overflow-hidden relative flex flex-col min-w-0",
-                "bg-glass/30 backdrop-blur-lg" // Background styling
+                "bg-white" // Main content area background is white
+                // Padding for main content区: 左右内边距16px，上下内边距10px will be applied by child pages or tasklist/taskdetail wrappers
             )}>
-                {/* Suspense for lazy-loaded route components */}
                 <Suspense fallback={<LoadingSpinner/>}>
-                    <Outlet/> {/* Renders the matched child route */}
+                    <Outlet/>
                 </Suspense>
             </main>
-
-            {/* Settings Modal (Radix Dialog) - renders conditionally */}
-            {/* No need for explicit key if Radix handles state reset well */}
             <SettingsModal/>
-
-            {/* AddListModal is rendered within Sidebar using Radix Dialog */}
         </div>
     );
 };

@@ -53,23 +53,21 @@ const TaskGroupHeader: React.FC<{
     groupKey: TaskGroupCategory;
 }> = React.memo(({title, groupKey}) => (
     <div
-        className="flex items-center justify-between px-3 pt-3 pb-1.5 text-[10px] font-semibold text-muted-foreground dark:text-neutral-400 uppercase tracking-wider sticky top-0 z-20"
-        style={{
-            backgroundColor: 'hsla(var(--glass-alt-h), var(--glass-alt-s), var(--glass-alt-l), var(--glass-alt-a-100))',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
-        }}
+        className={twMerge(
+            "flex items-center justify-between px-4 pt-3 pb-1.5", // Increased left padding to align with task text
+            "text-[12px] font-normal text-grey-medium uppercase tracking-[0.5px]", // Per spec for group titles
+            "sticky top-0 z-10 bg-white" // White bg for sticky header
+        )}
     >
         <span>{title}</span>
         {groupKey === 'overdue' && (
             <Popover.Anchor asChild>
                 <Popover.Trigger asChild>
                     <Button
-                        variant="ghost" size="sm" icon="calendar-check"
-                        className="text-xs !h-5 px-1.5 text-muted-foreground dark:text-neutral-400 hover:text-primary dark:hover:text-primary-light hover:bg-primary/15 dark:hover:bg-primary/20 -mr-1"
+                        variant="link" size="sm" icon="calendar-check"
+                        className="text-[11px] !h-5 px-1 text-primary hover:text-primary-dark -mr-1"
                         title="Reschedule all overdue tasks..."
+                        iconProps={{size: 12, strokeWidth: 1.5}}
                     >
                         Reschedule All
                     </Button>
@@ -84,6 +82,33 @@ const groupTitles: Record<TaskGroupCategory, string> = {
     overdue: 'Overdue', today: 'Today', next7days: 'Next 7 Days', later: 'Later', nodate: 'No Date',
 };
 const groupOrder: TaskGroupCategory[] = ['overdue', 'today', 'next7days', 'later', 'nodate'];
+
+
+// interface TaskListProps {
+//     title: string;
+// }
+//
+// const TaskGroupHeader: React.FC<{ title: string; groupKey: TaskGroupCategory; }> = React.memo(({title, groupKey}) => (
+//     <div
+//         className={twMerge("flex items-center justify-between px-4 pt-3 pb-1.5", "text-[12px] font-normal text-grey-medium uppercase tracking-[0.5px]", "sticky top-0 z-10 bg-white")}>
+//         <span>{title}</span>
+//         {groupKey === 'overdue' && (<Popover.Anchor asChild> <Popover.Trigger asChild>
+//             <Button variant="link" size="sm" icon="calendar-check"
+//                     className="text-[11px] !h-5 px-1 text-primary hover:text-primary-dark -mr-1"
+//                     title="Reschedule all overdue tasks..." iconProps={{size: 12, strokeWidth: 1.5}}> Reschedule
+//                 All </Button>
+//         </Popover.Trigger> </Popover.Anchor>)}
+//     </div>
+// ));
+// TaskGroupHeader.displayName = 'TaskGroupHeader';
+// const groupTitles: Record<TaskGroupCategory, string> = {
+//     overdue: 'Overdue',
+//     today: 'Today',
+//     next7days: 'Next 7 Days',
+//     later: 'Later',
+//     nodate: 'No Date',
+// };
+// const groupOrder: TaskGroupCategory[] = ['overdue', 'today', 'next7days', 'later', 'nodate'];
 
 const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const allTasks = useAtomValue(tasksAtom);
@@ -301,7 +326,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
     }, [setTasks, currentFilterGlobal, sortableItems]);
 
-
     const handleAddTask = useCallback(() => {
         const now = Date.now();
         let defaultList = 'Inbox';
@@ -383,6 +407,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const closeBulkReschedulePopover = useCallback(() => setIsBulkRescheduleOpen(false), []);
 
     const renderTaskGroup = useCallback((groupTasks: Task[], groupKey: TaskGroupCategory | 'flat-list' | string) => (
+        // AnimatePresence seems to conflict with dnd-kit sometimes, or cause perf issues.
+        // Given the minimalist design, we might remove it or simplify. For now, keep.
         <AnimatePresence initial={false} mode="sync">
             {groupTasks.map((task: Task) => (
                 <TaskItem
@@ -413,17 +439,20 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         return `No tasks for "${pageTitle}"`;
     }, [isSearching, searchTerm, currentFilterGlobal, pageTitle]);
 
+    // Header styles per "顶部工具栏" spec
     const headerClass = useMemo(() => twMerge(
-        "px-3 py-2 border-b border-black/10 dark:border-white/10 flex justify-between items-center flex-shrink-0 h-11 z-10",
-        "bg-glass-alt-100 dark:bg-neutral-800/70 backdrop-blur-lg"
+        "px-6 py-0 h-[56px]", // padding L/R 24px -> px-6
+        "border-b border-grey-ultra-light", // 1px极浅灰
+        "flex justify-between items-center flex-shrink-0 z-10",
+        "bg-white" // Background
     ), []);
 
     const showAddTaskButton = useMemo(() => !['completed', 'trash'].includes(currentFilterGlobal) && !isSearching, [currentFilterGlobal, isSearching]);
 
+    // Popover content wrapper per spec
     const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
-        "z-[60] p-0 bg-glass-100 dark:bg-neutral-800/95 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10",
-        "data-[state=open]:animate-slideUpAndFade",
-        "data-[state=closed]:animate-slideDownAndFade"
+        "z-[60] p-0 bg-white rounded-base shadow-modal",
+        "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
 
     return (
@@ -431,87 +460,62 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             <Popover.Root open={isBulkRescheduleOpen} onOpenChange={setIsBulkRescheduleOpen}>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd} measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
-                    <div className="h-full flex flex-col bg-transparent overflow-hidden relative">
+                    <div className="h-full flex flex-col bg-white overflow-hidden relative">
                         <div className={headerClass}>
-                            <h1 className="text-base font-semibold text-gray-800 dark:text-neutral-100 truncate pr-2"
-                                title={pageTitle}>
-                                {pageTitle}
-                            </h1>
-                            <div className="flex items-center space-x-1">
+                            {/* Page Title: Inter Light 18px #545466 */}
+                            <h1 className="text-[18px] font-light text-grey-dark truncate pr-2"
+                                title={pageTitle}>{pageTitle}</h1>
+                            <div className="flex items-center space-x-2">
                                 {showAddTaskButton && (
-                                    <Button variant="primary" size="sm" icon="plus" onClick={handleAddTask}
-                                            className="px-2.5 !h-[30px]">
-                                        Add
-                                    </Button>
+                                    // Button text: Inter Regular 13px
+                                    <Button variant="primary" size="md" icon="plus" onClick={handleAddTask}
+                                            className="!h-[32px] !px-4 !font-normal">Add Task</Button>
                                 )}
                             </div>
                         </div>
                         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto styled-scrollbar relative">
                             {isEmpty ? (
                                 <div
-                                    className="flex flex-col items-center justify-center h-full text-gray-400 dark:text-neutral-500 px-6 text-center pt-10">
+                                    className="flex flex-col items-center justify-center h-full text-grey-medium px-6 text-center pt-10">
                                     <Icon
                                         name={currentFilterGlobal === 'trash' ? 'trash' : (currentFilterGlobal === 'completed' ? 'check-square' : (isSearching ? 'search' : 'archive'))}
-                                        size={40} className="mb-3 text-gray-300 dark:text-neutral-600 opacity-80"
-                                    />
-                                    <p className="text-sm font-medium text-gray-500 dark:text-neutral-400">{emptyStateTitle}</p>
+                                        size={32} strokeWidth={1} className="mb-3 text-grey-light opacity-80"/>
+                                    {/* Empty state text: font-normal (Regular) for title, font-light for description */}
+                                    <p className="text-[13px] font-normal text-grey-dark">{emptyStateTitle}</p>
                                     {showAddTaskButton && (
-                                        <p className="text-xs mt-1 text-muted dark:text-neutral-500">Click the '+'
-                                            button to add a new task.</p>
-                                    )}
+                                        <p className="text-[11px] mt-1 text-grey-medium font-light">Click the '+' button
+                                            to add a new task.</p>)}
                                 </div>
-                            ) : (
-                                <div>
-                                    <SortableContext items={sortableItems} strategy={verticalListSortingStrategy}>
-                                        {isGroupedView ? (
-                                            <>
-                                                {groupOrder.map(groupKey => {
-                                                    const groupTasks = (tasksToDisplay as Record<TaskGroupCategory, Task[]>)[groupKey];
-                                                    if (groupTasks && groupTasks.length > 0) {
-                                                        return (
-                                                            <div key={groupKey}>
-                                                                <TaskGroupHeader
-                                                                    title={groupTitles[groupKey]}
-                                                                    groupKey={groupKey}
-                                                                />
-                                                                {renderTaskGroup(groupTasks, groupKey)}
-                                                            </div>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })}
-                                            </>
-                                        ) : (
-                                            <div className="pt-0.5">
-                                                {renderTaskGroup(tasksToDisplay as Task[], 'flat-list')}
-                                            </div>
-                                        )}
-                                    </SortableContext>
-                                </div>
-                            )}
+                            ) : (<div className="pb-16"><SortableContext items={sortableItems}
+                                                                         strategy={verticalListSortingStrategy}>
+                                {isGroupedView ? (<> {groupOrder.map(groupKey => {
+                                        const groupTasks = (tasksToDisplay as Record<TaskGroupCategory, Task[]>)[groupKey];
+                                        if (groupTasks && groupTasks.length > 0) {
+                                            return (<div key={groupKey} className="mb-4"><TaskGroupHeader
+                                                title={groupTitles[groupKey]}
+                                                groupKey={groupKey}/> {renderTaskGroup(groupTasks, groupKey)} </div>);
+                                        }
+                                        return null;
+                                    })} </>
+                                ) : (<div
+                                    className="pt-0.5"> {renderTaskGroup(tasksToDisplay as Task[], 'flat-list')} </div>)}
+                            </SortableContext></div>)}
                         </div>
                     </div>
                     <DragOverlay dropAnimation={null}>
-                        {draggingTask ? (
-                            <TaskItem task={draggingTask} isOverlay={true} scrollContainerRef={scrollContainerRef}/>
-                        ) : null}
+                        {draggingTask ? (<div className="shadow-lg rounded-base bg-white"><TaskItem task={draggingTask}
+                                                                                                    isOverlay={true}
+                                                                                                    scrollContainerRef={scrollContainerRef}/>
+                        </div>) : null}
                     </DragOverlay>
                     <Popover.Portal>
-                        <Popover.Content
-                            sideOffset={5}
-                            align="end"
-                            className={datePickerPopoverWrapperClasses}
-                            onOpenAutoFocus={(e) => e.preventDefault()}
-                            onCloseAutoFocus={(e) => e.preventDefault()}
-                        >
-                            <CustomDatePickerContent
-                                initialDate={undefined}
-                                onSelect={handleBulkRescheduleDateSelect}
-                                closePopover={closeBulkReschedulePopover}
-                            />
+                        <Popover.Content sideOffset={5} align="end" className={datePickerPopoverWrapperClasses}
+                                         onOpenAutoFocus={(e) => e.preventDefault()}
+                                         onCloseAutoFocus={(e) => e.preventDefault()}>
+                            <CustomDatePickerContent initialDate={undefined} onSelect={handleBulkRescheduleDateSelect}
+                                                     closePopover={closeBulkReschedulePopover}/>
                         </Popover.Content>
                     </Popover.Portal>
-
                 </DndContext>
             </Popover.Root>
         </TaskItemMenuProvider>

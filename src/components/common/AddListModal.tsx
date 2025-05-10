@@ -17,7 +17,6 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Use Radix's onOpenChange for closing logic
     const handleOpenChange = useCallback((open: boolean) => {
         setIsOpen(open);
         if (!open) {
@@ -48,7 +47,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
         }
         setError(null);
         onAdd(trimmedName);
-        handleOpenChange(false); // Close modal on success
+        handleOpenChange(false);
     }, [listName, allListNames, onAdd, handleOpenChange]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,46 +59,55 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
         <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
             <Dialog.Portal>
                 <Dialog.Overlay
-                    className="fixed inset-0 bg-black/60 backdrop-blur-xl z-40 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut"/>
+                    className="fixed inset-0 bg-grey-dark/30 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-40"/>
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
-                        "bg-glass-100 backdrop-blur-xl w-full max-w-sm rounded-xl shadow-strong overflow-hidden border border-black/10",
-                        "flex flex-col",
-                        "data-[state=open]:animate-contentShow", "data-[state=closed]:animate-contentHide"
+                        "bg-white w-full max-w-md rounded-base shadow-modal flex flex-col", // width, radius, shadow
+                        "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}
+                    style={{
+                        paddingTop: '24px',
+                        paddingLeft: '24px',
+                        paddingRight: '24px',
+                        paddingBottom: '20px'
+                    }} // Padding per spec
                     onEscapeKeyDown={() => handleOpenChange(false)}
                     aria-describedby={undefined}
                 >
-                    {/* Header */}
-                    <div
-                        className="px-4 py-3 border-b border-black/10 flex justify-between items-center flex-shrink-0 bg-glass-alt-100 backdrop-blur-lg">
-                        <Dialog.Title className="text-base font-semibold text-gray-800">
+                    <div className="flex justify-between items-center mb-4"> {/* Margin per spec for title */}
+                        <Dialog.Title className="text-[16px] font-normal text-grey-dark"> {/* Title style */}
                             Create New List
                         </Dialog.Title>
                         <Dialog.Close asChild>
                             <Button variant="ghost" size="icon" icon="x"
-                                    className="text-muted-foreground hover:bg-black/15 w-7 h-7 -mr-1"
+                                    className="text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark w-6 h-6 -mr-1" // Smaller icon button
+                                    iconProps={{strokeWidth: 1.5, size: 12}}
                                     aria-label="Close modal"/>
                         </Dialog.Close>
                     </div>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <label htmlFor="listNameInput"
-                                   className="block text-xs font-medium text-muted-foreground mb-1.5"> List
-                                Name </label>
+                                   className="block text-[12px] font-light text-grey-medium mb-1.5"> List Name </label>
                             <input ref={inputRef} id="listNameInput" type="text" value={listName}
-                                   onChange={handleInputChange} placeholder="e.g., Groceries, Project X"
-                                   className={twMerge("w-full h-9 px-3 text-sm bg-glass-inset-100 backdrop-blur-md border rounded-md focus:border-primary/50 focus:ring-1 focus:ring-primary/30 placeholder:text-muted shadow-inner", error ? 'border-red-400 focus:border-red-500 focus:ring-red-200' : 'border-black/10', "focus:bg-glass-inset-200")}
+                                   onChange={handleInputChange}
+                                   placeholder="e.g., Groceries, Project X"
+                                   className={twMerge( // Input style per spec
+                                       "w-full h-8 px-3 text-[13px] font-light rounded-base",
+                                       "bg-grey-ultra-light border-b border-grey-light focus:border-b-primary", //浅灰色背景, bottom line
+                                       error ? 'border-b-error focus:border-b-error' : '',
+                                       "placeholder:text-grey-medium text-grey-dark focus:outline-none"
+                                   )}
                                    required aria-required="true" aria-invalid={!!error}
                                    aria-describedby={error ? "listNameError" : undefined}/>
-                            {error && <p id="listNameError" className="text-xs text-red-600 mt-1.5">{error}</p>}
+                            {error &&
+                                <p id="listNameError" className="text-[11px] text-error mt-1 font-light">{error}</p>}
                         </div>
                         <div className="flex justify-end space-x-2 pt-2">
                             <Dialog.Close asChild>
-                                <Button variant="glass" size="md"> Cancel </Button>
+                                <Button variant="secondary" size="md"> Cancel </Button>
                             </Dialog.Close>
                             <Button type="submit" variant="primary" size="md"
                                     disabled={!listName.trim() || !!error}> Create List </Button>

@@ -43,7 +43,7 @@ import {
 import {CSS} from '@dnd-kit/utilities';
 import Icon from "@/components/common/Icon";
 
-// --- Draggable Task Item ---
+// ... (DraggableCalendarTask, MonthYearSelectorContent, DroppableDayCellContent, DroppableDayCell - logic unchanged, ensure styles are picked up)
 interface DraggableTaskProps {
     task: Task;
     onClick: () => void;
@@ -76,48 +76,23 @@ const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({task, o
         }
         return base;
     }, [transform, isDragging, isOverlay, task.completed]);
-    const stateClasses = useMemo(() => {
-        if (task.completed) {
-            return 'bg-glass-alt/40 border-transparent text-gray-500 line-through italic opacity-75';
+    const taskBlockClasses = useMemo(() => {
+        let bgColor = 'bg-primary-light/30';
+        if (task.completed) bgColor = 'bg-grey-light/50';
+        if (overdue) bgColor = 'bg-error/30';
+        return twMerge("flex items-center w-full text-left px-1.5 py-0.5 rounded-base space-x-1.5 group h-[22px]", "transition-colors duration-150 ease-out", bgColor, task.completed ? "text-grey-medium line-through italic opacity-75" : "text-grey-dark hover:opacity-80", 'text-[11px] font-light leading-snug truncate', isOverlay && "bg-white shadow-subtle !text-grey-dark !opacity-100 !visibility-visible !relative",);
+    }, [task.completed, overdue, isOverlay]);
+    return (<div ref={setNodeRef} style={style} {...listeners} {...attributes} onClick={onClick}
+                 className={taskBlockClasses} title={task.title} role="button" tabIndex={0} onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
         }
-        if (overdue) {
-            return 'bg-red-500/15 border-red-500/30 text-red-700 hover:bg-red-500/20 hover:border-red-500/40';
-        }
-        return 'bg-white/50 border-black/10 text-gray-800 hover:bg-white/70 hover:border-black/15';
-    }, [task.completed, overdue]);
-    const dotColor = useMemo(() => {
-        if (task.completed || (!task.priority && task.priority !== 0) || task.priority === 4) return null;
-        if (overdue) return 'bg-red-500';
-        switch (task.priority) {
-            case 1:
-                return 'bg-red-500';
-            case 2:
-                return 'bg-orange-400';
-            case 3:
-                return 'bg-blue-500';
-            default:
-                return null;
-        }
-    }, [task.priority, task.completed, overdue]);
-    const baseClasses = useMemo(() => twMerge("flex items-center w-full text-left px-2 py-1 rounded-md space-x-2 group", "border-[1.5px] backdrop-blur-sm transition-colors duration-150 ease-out", stateClasses, 'text-[12.5px] font-medium leading-snug truncate', isOverlay && "bg-glass-100 backdrop-blur-md shadow-lg border-black/20 !text-gray-800 !opacity-100 !visibility-visible !relative",), [stateClasses, isOverlay]);
-    return (
-        <div ref={setNodeRef} style={style} {...listeners} {...attributes} onClick={onClick} className={baseClasses}
-             title={task.title} role="button" tabIndex={0} onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick();
-            }
-        }} aria-grabbed={isDragging} aria-disabled={task.completed}>
-            {dotColor && (<div className={twMerge("w-2 h-2 rounded-full flex-shrink-0", dotColor)}></div>)}
-            <span className={twMerge("flex-1 truncate", !dotColor && "ml-[10px]")}> {task.title ||
-                <span className="italic">Untitled</span>} </span>
-        </div>
-    );
+    }} aria-grabbed={isDragging} aria-disabled={task.completed}><span className="flex-1 truncate"> {task.title ||
+        <span className="italic">Untitled</span>} </span></div>);
 });
 DraggableCalendarTask.displayName = 'DraggableCalendarTask';
 
-
-// --- Year/Month Selector Component ---
 interface MonthYearSelectorProps {
     currentDate: Date;
     onChange: (newDate: Date) => void;
@@ -128,7 +103,6 @@ const MonthYearSelectorContent: React.FC<MonthYearSelectorProps> = React.memo(({
     const currentMonth = getMonth(currentDate);
     const [displayYear, setDisplayYear] = useState(currentYear);
     const months = useMemo(() => ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], []);
-
     const handleMonthChange = useCallback((monthIndex: number) => {
         let newDate = setMonth(currentDate, monthIndex);
         if (getYear(newDate) !== displayYear) {
@@ -136,50 +110,33 @@ const MonthYearSelectorContent: React.FC<MonthYearSelectorProps> = React.memo(({
         }
         onChange(newDate);
     }, [currentDate, displayYear, onChange]);
-
     const changeDisplayYear = (direction: -1 | 1) => setDisplayYear(y => y + direction);
-
     useEffect(() => {
         setDisplayYear(getYear(currentDate));
     }, [currentDate]);
-
-    return (
-        <div className="p-2 w-56">
-            {/* Year Selector */}
-            <div className="flex items-center justify-between mb-2">
-                <Button variant="ghost" size="icon" icon="chevron-left" onClick={() => changeDisplayYear(-1)}
-                        className="w-7 h-7 text-gray-500 hover:bg-black/10" aria-label="Previous year"/>
-                <span className="text-sm font-medium text-gray-700">{displayYear}</span>
-                <Button variant="ghost" size="icon" icon="chevron-right" onClick={() => changeDisplayYear(1)}
-                        className="w-7 h-7 text-gray-500 hover:bg-black/10" aria-label="Next year"/>
-            </div>
-            {/* Month Grid */}
-            <div className="grid grid-cols-4 gap-1">
-                {months.map((month, index) => (
-                    <DropdownMenu.Item
-                        key={month}
-                        onSelect={() => handleMonthChange(index)}
-                        className={twMerge(
-                            "text-xs !h-7 justify-center flex items-center cursor-pointer select-none rounded outline-none transition-colors data-[disabled]:pointer-events-none",
-                            "focus:bg-black/10 data-[highlighted]:bg-black/10", // Hover/Focus style
-                            (index === currentMonth && displayYear === currentYear)
-                                ? 'bg-primary text-primary-foreground data-[highlighted]:bg-primary-dark' // Selected style
-                                : 'text-gray-600 data-[highlighted]:text-gray-800', // Default style
-                            "data-[disabled]:opacity-50"
-                        )}
-                        aria-pressed={index === currentMonth && displayYear === currentYear}
-                    >
-                        {month}
-                    </DropdownMenu.Item>
-                ))}
-            </div>
+    return (<div className="p-3 w-56 bg-white rounded-base shadow-modal">
+        <div className="flex items-center justify-between mb-3"><Button variant="ghost" size="icon" icon="chevron-left"
+                                                                        onClick={() => changeDisplayYear(-1)}
+                                                                        className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
+                                                                        iconProps={{size: 16, strokeWidth: 1}}
+                                                                        aria-label="Previous year"/> <span
+            className="text-[14px] font-normal text-grey-dark">{displayYear}</span> <Button variant="ghost" size="icon"
+                                                                                            icon="chevron-right"
+                                                                                            onClick={() => changeDisplayYear(1)}
+                                                                                            className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
+                                                                                            iconProps={{
+                                                                                                size: 16,
+                                                                                                strokeWidth: 1
+                                                                                            }} aria-label="Next year"/>
         </div>
-    );
+        <div className="grid grid-cols-3 gap-1"> {months.map((month, index) => (
+            <DropdownMenu.Item key={month} onSelect={() => handleMonthChange(index)}
+                               className={twMerge("text-[13px] h-8 justify-center flex items-center cursor-pointer select-none rounded-base outline-none transition-colors data-[disabled]:pointer-events-none font-light", "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light", (index === currentMonth && displayYear === currentYear) ? 'bg-primary-light text-primary font-normal data-[highlighted]:bg-primary-light' : 'text-grey-dark data-[highlighted]:text-grey-dark', "data-[disabled]:opacity-50")}
+                               aria-pressed={index === currentMonth && displayYear === currentYear}> {month} </DropdownMenu.Item>))} </div>
+    </div>);
 });
 MonthYearSelectorContent.displayName = 'MonthYearSelectorContent';
 
-
-// --- Droppable Day Cell Content ---
 interface DroppableDayCellContentProps {
     children: React.ReactNode;
     className?: string;
@@ -187,12 +144,10 @@ interface DroppableDayCellContentProps {
 }
 
 const DroppableDayCellContent: React.FC<DroppableDayCellContentProps> = React.memo(({children, className, isOver}) => {
-    const cellClasses = useMemo(() => twMerge('h-full w-full transition-colors duration-150 ease-out flex flex-col', 'relative', className, isOver && 'bg-blue-500/10'), [className, isOver]);
+    const cellClasses = useMemo(() => twMerge('h-full w-full transition-colors duration-150 ease-out flex flex-col relative', className, isOver && 'bg-primary-light/50'), [className, isOver]);
     return <div className={cellClasses}>{children}</div>;
 });
 DroppableDayCellContent.displayName = 'DroppableDayCellContent';
-
-// --- Droppable Day Cell ---
 const DroppableDayCell: React.FC<{ day: Date; children: React.ReactNode; className?: string }> = React.memo(({
                                                                                                                  day,
                                                                                                                  children,
@@ -208,17 +163,14 @@ const DroppableDayCell: React.FC<{ day: Date; children: React.ReactNode; classNa
 });
 DroppableDayCell.displayName = 'DroppableDayCell';
 
-// --- Main Calendar View Component ---
+
 const CalendarView: React.FC = () => {
-    // State and atoms
     const [tasks, setTasks] = useAtom(tasksAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const [currentMonthDate, setCurrentMonthDate] = useState(startOfDay(new Date()));
     const [draggingTaskId, setDraggingTaskId] = useState<UniqueIdentifier | null>(null);
     const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
-
-    // Memoized values
-    const draggingTask = useMemo(() => { 
+    const draggingTask = useMemo(() => {
         if (!draggingTaskId) return null;
         const id = draggingTaskId.toString().replace('caltask-', '');
         return tasks.find(t => t.id === id) ?? null;
@@ -229,7 +181,7 @@ const CalendarView: React.FC = () => {
     const endDate = useMemo(() => endOfWeek(lastDayCurrentMonth, {locale: enUS}), [lastDayCurrentMonth]);
     const daysInGrid = useMemo(() => eachDayOfInterval({start: startDate, end: endDate}), [startDate, endDate]);
     const numberOfRows = useMemo(() => daysInGrid.length / 7, [daysInGrid]);
-    const tasksByDueDate = useMemo(() => { 
+    const tasksByDueDate = useMemo(() => {
         const grouped: Record<string, Task[]> = {};
         tasks.forEach(task => {
             if (task.dueDate && task.list !== 'Trash') {
@@ -253,8 +205,6 @@ const CalendarView: React.FC = () => {
         });
         return grouped;
     }, [tasks]);
-
-    // Callbacks
     const handleTaskClick = useCallback((taskId: string) => setSelectedTaskId(taskId), [setSelectedTaskId]);
     const changeMonth = useCallback((direction: -1 | 1) => {
         setCurrentMonthDate(current => direction === 1 ? addMonths(current, 1) : subMonths(current, 1));
@@ -268,16 +218,13 @@ const CalendarView: React.FC = () => {
         setCurrentMonthDate(startOfDay(newDate));
         setExpandedDays(new Set());
     }, []);
-
-    // Drag Handlers
-    const handleDragStart = useCallback((event: DragStartEvent) => { 
-        const {active} = event;
-        if (active.data.current?.type === 'calendar-task') {
-            setDraggingTaskId(active.id);
-            setSelectedTaskId(active.data.current.task.id);
+    const handleDragStart = useCallback((event: DragStartEvent) => {
+        if (event.active.data.current?.type === 'calendar-task') {
+            setDraggingTaskId(event.active.id);
+            setSelectedTaskId(event.active.data.current.task.id);
         }
     }, [setSelectedTaskId]);
-    const handleDragEnd = useCallback((event: DragEndEvent) => { 
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
         setDraggingTaskId(null);
         const {active, over} = event;
         if (over?.data.current?.type === 'calendar-day' && active.data.current?.type === 'calendar-task') {
@@ -297,113 +244,109 @@ const CalendarView: React.FC = () => {
             }
         }
     }, [setTasks]);
-
-    // Show More callback
     const toggleExpandDay = useCallback((dateKey: string) => setExpandedDays(prev => {
         const newSet = new Set(prev);
         if (newSet.has(dateKey)) newSet.delete(dateKey); else newSet.add(dateKey);
         return newSet;
     }), []);
 
-    // Render function for calendar days
     const renderCalendarDay = useCallback((day: Date, index: number) => {
         const dateKey = format(day, 'yyyy-MM-dd');
         const dayTasks = tasksByDueDate[dateKey] || [];
         const isCurrentMonthDay = isSameMonth(day, currentMonthDate);
         const isToday = isTodayFn(day);
         const isExpanded = expandedDays.has(dateKey);
-        const MAX_VISIBLE_TASKS = 5;
+        const MAX_VISIBLE_TASKS = 3;
         const tasksToShow = isExpanded ? dayTasks : dayTasks.slice(0, MAX_VISIBLE_TASKS);
-        const hasMoreTasks = dayTasks.length > MAX_VISIBLE_TASKS;
+        const hasMoreTasks = dayTasks.length > MAX_VISIBLE_TASKS && !isExpanded;
+
         return (
             <DroppableDayCell key={dateKey} day={day}
-                              className={twMerge('border-t border-l', isCurrentMonthDay ? 'border-black/10 bg-glass/30' : 'border-black/5 bg-glass-alt/20 opacity-70', index % 7 === 0 && 'border-l-0', index < 7 && 'border-t-0', 'overflow-hidden')}>
-                <div className="flex justify-end items-center px-1.5 pt-1 h-6 flex-shrink-0"><span
-                    className={clsx('text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full', isToday ? 'bg-primary text-white shadow-sm' : 'text-gray-600', !isCurrentMonthDay && !isToday && 'text-gray-400/80',)}>{format(day, 'd')}</span>
+                              className={twMerge('border-r border-b border-grey-ultra-light', !isCurrentMonthDay && 'bg-grey-ultra-light/30 opacity-70', index % 7 === 6 && 'border-r-0', index >= daysInGrid.length - 7 && 'border-b-0', 'overflow-hidden p-1')}>
+                <div className="flex justify-end items-center h-5 flex-shrink-0 mb-1">
+                    <span
+                        className={clsx('text-[12px] font-light w-5 h-5 flex items-center justify-center rounded-full transition-colors', isToday ? 'bg-primary text-white' : (isCurrentMonthDay ? 'text-grey-dark' : 'text-grey-medium'))}>{format(day, 'd')}</span>
                 </div>
-                <div className="flex-1 space-y-0.5 px-1 pb-1 overflow-y-auto styled-scrollbar-thin min-h-[60px]">
+                <div
+                    className="flex-1 space-y-0.5 overflow-y-auto styled-scrollbar-thin min-h-[50px]"> {/* Min height to ensure cells don't collapse */}
                     {isCurrentMonthDay && tasksToShow.map((task) => (
                         <DraggableCalendarTask key={task.id} task={task} onClick={() => handleTaskClick(task.id)}/>))}
                     {isCurrentMonthDay && hasMoreTasks && (<button onClick={() => toggleExpandDay(dateKey)}
-                                                                   className="w-full text-[10px] text-center text-blue-600 hover:text-blue-800 py-0.5 px-1 rounded bg-blue-500/5 hover:bg-blue-500/10 transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-                                                                   aria-expanded={isExpanded}>{isExpanded ? 'Show Less' : `+ ${dayTasks.length - MAX_VISIBLE_TASKS} more`}</button>)}
+                                                                   className="w-full text-[10px] text-center text-primary hover:text-primary-dark py-0.5 px-1 rounded-base bg-primary-light/30 hover:bg-primary-light/50 transition-colors duration-150 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-primary font-light"
+                                                                   aria-expanded={isExpanded}> + {dayTasks.length - MAX_VISIBLE_TASKS} more </button>)}
                 </div>
             </DroppableDayCell>
         );
-    }, [tasksByDueDate, currentMonthDate, handleTaskClick, expandedDays, toggleExpandDay]);
+    }, [tasksByDueDate, currentMonthDate, handleTaskClick, expandedDays, toggleExpandDay, daysInGrid.length]);
 
     const weekDays = useMemo(() => ['S', 'M', 'T', 'W', 'T', 'F', 'S'], []);
-    const isTodayButtonDisabled = useMemo(() => isSameDay(currentMonthDate, new Date()), [currentMonthDate]);
+    const isTodayButtonDisabled = useMemo(() => isSameDay(currentMonthDate, new Date()) && isSameMonth(currentMonthDate, new Date()), [currentMonthDate]);
+
+    // Animation class for dropdowns/popovers
+    const dropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
 
     return (
         <DndContext onDragEnd={handleDragEnd} onDragStart={handleDragStart} collisionDetection={pointerWithin}
                     measuring={{droppable: {strategy: MeasuringStrategy.Always}}}>
-            <div className="h-full flex flex-col bg-glass-alt-100 overflow-hidden">
-                {/* Header */}
+            <div className="h-full flex flex-col bg-white overflow-hidden">
                 <div
-                    className="px-3 md:px-4 py-2 border-b border-black/10 flex justify-between items-center flex-shrink-0 bg-glass-100 backdrop-blur-lg z-10 h-12 shadow-sm">
-                    <div className="w-20"><h1 className="text-base font-semibold text-gray-800 truncate">Calendar</h1>
+                    className="px-6 py-0 h-[56px] border-b border-grey-ultra-light flex justify-between items-center flex-shrink-0 bg-white z-10">
+                    <div className="w-1/3"><h1 className="text-[18px] font-light text-grey-dark truncate">Calendar</h1>
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <Button onClick={goToToday} variant="glass" size="sm" className="!h-8 px-2.5 backdrop-blur-md"
-                                disabled={isTodayButtonDisabled}> Today </Button>
+                    <div className="flex-1 flex justify-center items-center space-x-1">
+                        {/* "Today" button: text, no background/border */}
+                        <Button onClick={goToToday} variant="link" size="sm"
+                                className="!h-8 px-3 !text-primary !font-normal"
+                                disabled={isTodayButtonDisabled}>Today</Button>
                         <div className="flex items-center">
                             <Button onClick={() => changeMonth(-1)} variant="ghost" size="icon" icon="chevron-left"
                                     aria-label="Previous month"
-                                    className="w-8 h-8 text-gray-500 hover:bg-black/15 rounded-md"/>
-                            {/* Radix Dropdown for Month/Year */}
+                                    className="w-8 h-8 text-grey-medium hover:bg-grey-ultra-light"
+                                    iconProps={{size: 16, strokeWidth: 1}}/>
                             <DropdownMenu.Root>
                                 <DropdownMenu.Trigger asChild>
                                     <Button variant="ghost" size="sm"
-                                            className="!h-8 px-2 text-sm font-medium w-32 text-center tabular-nums text-gray-700 hover:bg-black/15">
+                                            className="!h-8 px-3 text-[14px] font-normal w-36 text-center tabular-nums text-grey-dark hover:bg-grey-ultra-light">
                                         {format(currentMonthDate, 'MMMM yyyy', {locale: enUS})}
-                                        <Icon name="chevron-down" size={14} className="ml-1.5 opacity-60"/>
+                                        <Icon name="chevron-down" size={14} strokeWidth={1}
+                                              className="ml-1.5 opacity-60"/>
                                     </Button>
                                 </DropdownMenu.Trigger>
                                 <DropdownMenu.Portal>
                                     <DropdownMenu.Content
-                                        className={twMerge(
-                                            "z-[55] bg-glass-100 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 p-0",
-                                            "data-[state=open]:animate-slideUpAndFade",
-                                            "data-[state=closed]:animate-slideDownAndFade"
-                                        )}
-                                        sideOffset={5}
-                                        align="center">
-                                        {/* Render the content component */}
-                                        <MonthYearSelectorContent
-                                            currentDate={currentMonthDate}
-                                            onChange={handleDateChange}
-                                        />
+                                        className={twMerge("z-[55] bg-white rounded-base shadow-modal p-0", dropdownAnimationClasses)}
+                                        sideOffset={5} align="center">
+                                        <MonthYearSelectorContent currentDate={currentMonthDate}
+                                                                  onChange={handleDateChange}/>
                                     </DropdownMenu.Content>
                                 </DropdownMenu.Portal>
                             </DropdownMenu.Root>
                             <Button onClick={() => changeMonth(1)} variant="ghost" size="icon" icon="chevron-right"
                                     aria-label="Next month"
-                                    className="w-8 h-8 text-gray-500 hover:bg-black/15 rounded-md"/>
+                                    className="w-8 h-8 text-grey-medium hover:bg-grey-ultra-light"
+                                    iconProps={{size: 16, strokeWidth: 1}}/>
                         </div>
                     </div>
-                    <div className="w-20"></div>
+                    <div className="w-1/3"></div>
                 </div>
-
-                {/* Calendar Body */}
-                <div className="flex-1 overflow-hidden flex flex-col p-2 md:p-3">
-                    {/* Weekday Headers */}
-                    <div className="grid grid-cols-7 flex-shrink-0 mb-1 px-0.5"> {weekDays.map((day, index) => (
-                        <div key={`${day}-${index}`}
-                             className="text-center py-1 text-[11px] font-semibold text-gray-500/80 tracking-wide"> {day} </div>))} </div>
-                    {/* Day Grid Container */}
+                <div className="flex-1 overflow-hidden flex flex-col p-4">
+                    <div className="grid grid-cols-7 flex-shrink-0 mb-1 px-0.5">
+                        {weekDays.map((day, index) => (<div key={`${day}-${index}`}
+                                                            className="text-center py-1 text-[11px] font-normal text-grey-medium tracking-wide uppercase"> {day} </div>))}
+                    </div>
                     <div className="flex-1 min-h-0">
                         <div
-                            className={twMerge("grid grid-cols-7 h-full w-full", "gap-0", numberOfRows === 5 ? "grid-rows-5" : "grid-rows-6", "rounded-lg overflow-hidden shadow-lg border border-black/10", "bg-gradient-to-br from-white/10 via-white/5 to-white/0")}>
+                            className={twMerge("grid grid-cols-7 h-full w-full gap-0 rounded-base overflow-hidden border border-grey-ultra-light", numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6")}>
                             {daysInGrid.map(renderCalendarDay)}
                         </div>
                     </div>
                 </div>
             </div>
-            {/* Drag Overlay */}
             <DragOverlay dropAnimation={null}> {draggingTask ? (
-                <DraggableCalendarTask task={draggingTask} onClick={() => {
-                }} isOverlay={true}/>) : null} </DragOverlay>
+                <div className="rounded-base overflow-hidden shadow-lg"><DraggableCalendarTask task={draggingTask}
+                                                                                               onClick={() => {
+                                                                                               }} isOverlay={true}/>
+                </div>) : null} </DragOverlay>
         </DndContext>
     );
 };

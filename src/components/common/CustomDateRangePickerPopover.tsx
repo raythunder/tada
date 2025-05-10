@@ -31,7 +31,7 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
                                                                                                          initialStartDate,
                                                                                                          initialEndDate,
                                                                                                          onApplyRange,
-                                                                                                         closePopover, // Receive close function
+                                                                                                         closePopover,
                                                                                                      }) => {
     const today = useMemo(() => startOfDay(new Date()), []);
     const [viewDate, setViewDate] = useState(initialStartDate && isValid(initialStartDate) ? startOfDay(initialStartDate) : today);
@@ -45,14 +45,12 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
         const mEnd = endOfMonth(viewDate);
         const cStart = startOfWeek(mStart);
         const cEnd = endOfWeek(mEnd);
-        const days = eachDayOfInterval({start: cStart, end: cEnd});
-        return {calendarDays: days};
+        return {calendarDays: eachDayOfInterval({start: cStart, end: cEnd})};
     }, [viewDate]);
 
     const prevMonth = useCallback(() => setViewDate(v => subMonths(v, 1)), []);
     const nextMonth = useCallback(() => setViewDate(v => addMonths(v, 1)), []);
     const goToToday = useCallback(() => setViewDate(today), [today]);
-
     const handleSelectDate = useCallback((date: Date) => {
         const dateStart = startOfDay(date);
         if (!startDate || (startDate && endDate)) {
@@ -69,39 +67,29 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
             setHoveredDate(undefined);
         }
     }, [startDate, endDate]);
-
     const handleClear = useCallback(() => {
         setStartDate(undefined);
         setEndDate(undefined);
         setHoveredDate(undefined);
     }, []);
-
-    // Apply button now calls onApplyRange AND closePopover
     const handleApply = useCallback(() => {
         let applyStart = startDate;
         let applyEnd = endDate;
-
         if (startDate && !endDate) {
             applyStart = startDate;
             applyEnd = startDate;
         }
-
         if (applyStart && applyEnd) {
             onApplyRange(applyStart, applyEnd);
-            closePopover(); // Close after applying
+            closePopover();
         }
     }, [startDate, endDate, onApplyRange, closePopover]);
-
-
     const handleMouseEnterDay = (date: Date) => {
-        if (startDate && !endDate) {
-            setHoveredDate(startOfDay(date));
-        }
+        if (startDate && !endDate) setHoveredDate(startOfDay(date));
     }
     const handleMouseLeaveGrid = () => {
         setHoveredDate(undefined);
     }
-
     const weekDays = useMemo(() => ['S', 'M', 'T', 'W', 'T', 'F', 'S'], []);
     const isApplyDisabled = !startDate;
 
@@ -112,46 +100,36 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
     }, [initialStartDate, initialEndDate, today]);
 
     return (
-        <div
-            ref={contentRef}
-            className="date-range-picker-content bg-glass-100 dark:bg-neutral-800 backdrop-blur-xl rounded-lg shadow-strong border border-black/10 dark:border-white/10 p-4 w-[320px]"
-            // Stop propagation to prevent parent popovers/dropdowns from closing unintentionally
-            onClick={e => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-        >
-            {/* Month Navigation */}
+        <div ref={contentRef} className="bg-white rounded-base shadow-modal p-4 w-[320px]"
+             onClick={e => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
+             onTouchStart={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
                 <Button onClick={prevMonth} variant="ghost" size="icon" icon="chevron-left"
-                        className="w-7 h-7 text-gray-500 dark:text-neutral-400 hover:bg-black/10 dark:hover:bg-white/10"
-                        aria-label="Previous month"/>
+                        className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
+                        iconProps={{size: 16, strokeWidth: 1}} aria-label="Previous month"/>
                 <div
-                    className="text-base font-medium text-gray-800 dark:text-neutral-100 flex-1 text-center tabular-nums">
-                    {format(viewDate, 'MMMM yyyy')}
-                </div>
+                    className="text-[14px] font-normal text-grey-dark flex-1 text-center tabular-nums">{format(viewDate, 'MMMM yyyy')}</div>
                 <div className="flex items-center space-x-1">
                     <Button onClick={goToToday} variant="ghost" size="icon" className="w-7 h-7"
                             aria-label="Go to current month">
                         <div
-                            className={twMerge("w-1.5 h-1.5 rounded-full", isSameMonth(viewDate, today) ? "bg-primary" : "bg-gray-300 dark:bg-neutral-600")}></div>
+                            className={twMerge("w-1.5 h-1.5 rounded-full", isSameMonth(viewDate, today) ? "bg-primary" : "bg-grey-light")}></div>
                     </Button>
                     <Button onClick={nextMonth} variant="ghost" size="icon" icon="chevron-right"
-                            className="w-7 h-7 text-gray-500 dark:text-neutral-400 hover:bg-black/10 dark:hover:bg-white/10"
-                            aria-label="Next month"/>
+                            className="w-7 h-7 text-grey-medium hover:bg-grey-ultra-light"
+                            iconProps={{size: 16, strokeWidth: 1}} aria-label="Next month"/>
                 </div>
             </div>
-            {/* Selected Range Display */}
-            <div className="text-center text-xs text-muted-foreground dark:text-neutral-400 mb-3 min-h-[16px]">
+            <div className="text-center text-[11px] text-grey-medium mb-3 min-h-[16px] font-light">
                 {startDate && !endDate && `Start: ${format(startDate, 'MMM d, yyyy')}`}
                 {startDate && endDate && `${format(startDate, 'MMM d, yyyy')} - ${format(endDate, 'MMM d, yyyy')}`}
                 {!startDate && !endDate && `Select start date`}
             </div>
-            {/* Calendar Grid */}
             <div className="mb-3" onMouseLeave={handleMouseLeaveGrid}>
                 <div className="grid grid-cols-7 mb-1">
                     {weekDays.map((day, i) => (
                         <div key={i}
-                             className="text-center text-xs text-gray-500 dark:text-neutral-400 h-8 flex items-center justify-center font-medium">{day}</div>
+                             className="text-center text-[11px] text-grey-medium h-8 flex items-center justify-center font-normal">{day}</div>
                     ))}
                 </div>
                 <div className="grid grid-cols-7 gap-px">
@@ -171,20 +149,19 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
                                 onClick={() => handleSelectDate(day)}
                                 onMouseEnter={() => handleMouseEnterDay(day)}
                                 className={twMerge(
-                                    "h-9 w-9 flex items-center justify-center text-sm transition-colors duration-50 ease-linear mx-auto relative",
-                                    "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary/50 focus-visible:z-10",
-                                    !isCurrentMonth && "text-gray-400/60 dark:text-neutral-600 pointer-events-none opacity-60", // Dim non-month days
-                                    isCurrentMonth && !isSelectedStart && !isSelectedEnd && "text-gray-800 dark:text-neutral-200", // Default day in month
-                                    isDayToday && "font-semibold ring-1 ring-inset ring-primary/30 dark:ring-primary/40", // Today marker
-                                    (isInRange || isHoveringInRange) && isCurrentMonth && "bg-primary/10 dark:bg-primary/20", // In range background
-                                    isCurrentMonth && !isSelectedStart && !isSelectedEnd && !(isInRange || isHoveringInRange) && "hover:bg-black/10 dark:hover:bg-white/10", // Hover for selectable days
-                                    (isSelectedStart || isSelectedEnd) && "bg-primary text-white font-semibold z-[5]", // Selected start/end
-                                    // Rounded corners logic for range display
-                                    isSelectedStart && !endDate && hoveredDate && isAfter(hoveredDate, startDate) && "rounded-l-full", // Hovering range start
-                                    isSelectedStart && endDate && !isSameDay(startDate!, endDate!) && "rounded-l-full", // Range start
-                                    isSelectedEnd && startDate && !isSameDay(startDate!, endDate!) && "rounded-r-full", // Range end
-                                    isSelectedStart && isSelectedEnd && isSameDay(startDate!, endDate!) && "rounded-full", // Single day selected
-                                    (isInRange || isHoveringInRange) && !isSelectedStart && !isSelectedEnd && "rounded-none", // Day within range
+                                    "h-9 w-9 flex items-center justify-center text-[13px] font-light transition-colors duration-50 ease-linear mx-auto relative rounded-base", // Added rounded-base
+                                    "focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:z-10",
+                                    !isCurrentMonth && "text-grey-light pointer-events-none opacity-60",
+                                    isCurrentMonth && !isSelectedStart && !isSelectedEnd && "text-grey-dark",
+                                    isDayToday && "font-normal ring-1 ring-inset ring-primary/50",
+                                    (isInRange || isHoveringInRange) && isCurrentMonth && "bg-primary-light/50",
+                                    isCurrentMonth && !isSelectedStart && !isSelectedEnd && !(isInRange || isHoveringInRange) && "hover:bg-grey-ultra-light",
+                                    (isSelectedStart || isSelectedEnd) && "bg-primary text-white font-normal z-[5]",
+                                    isSelectedStart && !endDate && hoveredDate && isAfter(hoveredDate, startDate) && "rounded-l-full rounded-r-none", // Ensure only one side rounded if needed
+                                    isSelectedStart && endDate && !isSameDay(startDate!, endDate!) && "rounded-l-full rounded-r-none",
+                                    isSelectedEnd && startDate && !isSameDay(startDate!, endDate!) && "rounded-r-full rounded-l-none",
+                                    isSelectedStart && isSelectedEnd && isSameDay(startDate!, endDate!) && "rounded-full",
+                                    (isInRange || isHoveringInRange) && !isSelectedStart && !isSelectedEnd && "rounded-none",
                                     !isCurrentMonth && "pointer-events-none"
                                 )}
                                 aria-label={format(day, 'MMMM d, yyyy')}
@@ -197,12 +174,10 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
                     })}
                 </div>
             </div>
-            {/* Action Buttons */}
-            <div className="flex space-x-2 mt-2 border-t border-black/10 dark:border-white/10 pt-3">
-                <Button variant="ghost" size="md"
-                        className="flex-1 justify-center text-muted-foreground dark:text-neutral-400"
+            <div className="flex space-x-2 mt-2 border-t border-grey-light pt-3">
+                <Button variant="secondary" size="md" className="flex-1 justify-center text-grey-medium"
                         onClick={handleClear}> Clear </Button>
-                <Button variant="outline" size="md" className="flex-1 justify-center"
+                <Button variant="secondary" size="md" className="flex-1 justify-center"
                         onClick={closePopover}> Cancel </Button>
                 <Button variant="primary" size="md" className="flex-1 justify-center" onClick={handleApply}
                         disabled={isApplyDisabled}> Apply </Button>
