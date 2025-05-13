@@ -8,7 +8,6 @@ const TaskDetailPlaceholder: React.FC = () => {
         <div className={twMerge(
             "h-full flex flex-col items-center justify-center text-center p-8",
             "bg-white",
-            "border-l-2 border-grey-light" // Use updated grey-light
         )}>
             <Icon name="file-text" size={40} strokeWidth={1}
                   className="text-grey-light mb-4 opacity-80"/>
