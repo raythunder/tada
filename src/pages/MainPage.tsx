@@ -24,10 +24,10 @@ const MainPage: React.FC<MainPageProps> = ({title, filter}) => {
         <div className="h-full flex flex-1 overflow-hidden">
             <div
                 className={twMerge(
-                    "h-full transition-all duration-300 ease-in-out",
+                    "h-full",
                     isLg ? "w-1/2 flex-shrink-0" : "w-full flex-shrink-0",
                     "bg-white",
-                    "border-r border-grey-light" // Use updated grey-light
+                    "border-r border-grey-light"
                 )}
             >
                 <TaskList title={title}/>
