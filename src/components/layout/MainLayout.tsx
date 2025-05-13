@@ -26,8 +26,7 @@ const MainLayout: React.FC = () => {
         <div className="flex h-screen bg-white overflow-hidden font-primary">
             <IconBar/>
             {!hideSidebar && (
-                // Sidebar width fixed at 240px per responsive spec
-                <div className="w-[240px] flex-shrink-0 h-full relative">
+                <div className="w-[240px] flex-shrink-0 h-full relative border-r border-grey-light">
                     <Sidebar/>
                 </div>
             )}
