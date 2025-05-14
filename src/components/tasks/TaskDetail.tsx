@@ -145,6 +145,10 @@ const TaskDetail: React.FC = () => {
     const hasUnsavedChangesRef = useRef(false);
     const isMountedRef = useRef(true);
 
+    // Definition for the priority dot when no specific priority is set
+    // Consistent with TaskItem's definition for its dot
+    const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
+
     useEffect(() => {
         isMountedRef.current = true;
         return () => {
@@ -519,8 +523,37 @@ const TaskDetail: React.FC = () => {
         "border-b border-grey-light dark:border-neutral-700/60"
     ), []);
 
+    // Priority map, consistent with TaskItem's structure
+    const taskListPriorityMap: Record<number, {
+        label: string;
+        iconColor: string;
+        bgColor: string;
+        shortLabel: string;
+    }> = {
+        1: {label: 'High Priority', iconColor: 'text-error', bgColor: 'bg-error', shortLabel: 'P1'},
+        2: {label: 'Medium Priority', iconColor: 'text-warning', bgColor: 'bg-warning', shortLabel: 'P2'},
+        3: {label: 'Low Priority', iconColor: 'text-info', bgColor: 'bg-info', shortLabel: 'P3'},
+        4: {label: 'Lowest Priority', iconColor: 'text-grey-medium', bgColor: 'bg-grey-medium', shortLabel: 'P4'},
+    };
+
+    const priorityDotBgColor = useMemo(() => {
+        if (!selectedTask) return ''; // Should be caught by !isInteractiveDisabled check
+        if (selectedTask.priority && taskListPriorityMap[selectedTask.priority]) {
+            return taskListPriorityMap[selectedTask.priority].bgColor;
+        }
+        return noPriorityBgColor;
+    }, [selectedTask, taskListPriorityMap, noPriorityBgColor]);
+
+    const priorityDotLabel = useMemo(() => {
+        if (!selectedTask) return ''; // Should be caught by !isInteractiveDisabled check
+        if (selectedTask.priority && taskListPriorityMap[selectedTask.priority]) {
+            return taskListPriorityMap[selectedTask.priority].label;
+        }
+        return 'No Priority';
+    }, [selectedTask, taskListPriorityMap]);
+
     const titleInputClasses = useMemo(() => twMerge(
-        "flex-1 text-lg font-medium border-none focus:ring-0 focus:outline-none bg-transparent p-0 mx-3 leading-tight",
+        "flex-1 text-lg font-medium border-none focus:ring-0 focus:outline-none bg-transparent p-0 leading-tight", // Removed mx-3
         "placeholder:text-grey-medium dark:placeholder:text-neutral-500 placeholder:font-normal",
         (isInteractiveDisabled) && "line-through text-grey-medium dark:text-neutral-400/80",
         "text-grey-dark dark:text-neutral-100 tracking-tight"
@@ -562,15 +595,13 @@ const TaskDetail: React.FC = () => {
         isTrash && "cursor-not-allowed opacity-60"
     ), [displayDueDateForRender, overdue, isCompleted, isTrash]);
 
-    // Aligned with TaskList.moreOptionsDropdownContentClasses
     const dropdownContentClasses = useMemo(() => twMerge(
         "z-[60] min-w-[200px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700",
         "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"
     ), []);
 
-    // Aligned with TaskList.datePickerPopoverWrapperClasses (used for Popover.Root around DropdownMenu if date picker is opened from menu)
     const headerMenuDatePickerPopoverWrapperClasses = useMemo(() => twMerge(
-        "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800", // z-index higher than dropdown
+        "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800",
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
 
@@ -588,7 +619,6 @@ const TaskDetail: React.FC = () => {
         return iconAreaSpace + dateTextSpace;
     }, [newSubtaskDueDate, subtaskDateTextWidth]);
 
-    // Aligned with TaskList.getNewTaskMenuRadioItemListClasses
     const getRadioItemClasses = (isSelected: boolean) => twMerge(
         "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
         "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light",
@@ -599,7 +629,6 @@ const TaskDetail: React.FC = () => {
         "data-[disabled]:opacity-50"
     );
 
-    // Aligned with TaskList.getNewTaskMenuSubTriggerClasses
     const getSubTriggerClasses = () => twMerge(
         "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
         "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light data-[state=open]:bg-grey-ultra-light",
@@ -614,25 +643,6 @@ const TaskDetail: React.FC = () => {
         "data-[state=delayed-open]:animate-fadeIn data-[state=closed]:animate-fadeOut"
     ), []);
 
-    const taskListPriorityMap: Record<number, {
-        label: string;
-        iconColor: string;
-        bgColor: string;
-        shortLabel: string;
-    }> = {
-        1: {label: 'High Priority', iconColor: 'text-error', bgColor: 'bg-error', shortLabel: 'P1'},
-        2: {label: 'Medium Priority', iconColor: 'text-warning', bgColor: 'bg-warning', shortLabel: 'P2'},
-        3: {label: 'Low Priority', iconColor: 'text-info', bgColor: 'bg-info', shortLabel: 'P3'},
-        4: {label: 'Lowest Priority', iconColor: 'text-grey-medium', bgColor: 'bg-grey-medium', shortLabel: 'P4'},
-    };
-
-    const priorityDisplayMap: Record<number, { label: string; icon: IconName; color: string }> = useMemo(() => ({
-        1: {label: 'High', icon: 'flag', color: taskListPriorityMap[1].iconColor},
-        2: {label: 'Medium', icon: 'flag', color: taskListPriorityMap[2].iconColor},
-        3: {label: 'Low', icon: 'flag', color: taskListPriorityMap[3].iconColor},
-        4: {label: 'Lowest', icon: 'flag', color: taskListPriorityMap[4].iconColor},
-    }), []);
-
     const progressMenuItems = useMemo(() => [
         {label: 'Not Started', value: null, icon: 'circle' as IconName, iconStroke: 1.5},
         {label: 'Started', value: 20, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
@@ -644,8 +654,8 @@ const TaskDetail: React.FC = () => {
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
 
     const handleMoreActionsDropdownCloseFocus = useCallback((event: Event) => {
-        if (isHeaderMenuPopoverOpen) { // If a popover (like date picker) was opened from the menu
-            event.preventDefault(); // Prevent focusing the trigger, let popover manage focus
+        if (isHeaderMenuPopoverOpen) {
+            event.preventDefault();
         }
     }, [isHeaderMenuPopoverOpen]);
 
@@ -660,13 +670,56 @@ const TaskDetail: React.FC = () => {
         <>
             <div className={mainPanelClass}>
                 <div className={headerClass}>
-                    <ProgressIndicator percentage={selectedTask.completionPercentage} isTrash={isTrash}
-                                       onClick={cycleCompletionPercentage} size={22} className="flex-shrink-0"
-                                       ariaLabelledby={`task-title-input-${selectedTask.id}`}/>
-                    <input ref={titleInputRef} type="text" value={localTitle} onChange={handleTitleChange}
-                           onKeyDown={handleTitleKeyDown} onBlur={handleMainContentBlur} className={titleInputClasses}
-                           placeholder="Task title..." disabled={isTrash} aria-label="Task title"
-                           id={`task-title-input-${selectedTask.id}`}/>
+                    {/* Left group: PI, Dot, Title */}
+                    <div className="flex items-center flex-1 min-w-0 gap-x-2.5 mr-3">
+                        <ProgressIndicator
+                            percentage={selectedTask.completionPercentage}
+                            isTrash={isTrash}
+                            onClick={cycleCompletionPercentage}
+                            size={22}
+                            className="flex-shrink-0"
+                            ariaLabelledby={`task-title-input-${selectedTask.id}`}
+                        />
+
+                        {/* Priority Dot - only shown for active tasks */}
+                        {!isInteractiveDisabled && (
+                            <Tooltip.Provider delayDuration={300}>
+                                <Tooltip.Root>
+                                    <Tooltip.Trigger asChild>
+                                         <span
+                                             className={twMerge(
+                                                 "w-2.5 h-2.5 rounded-full flex-shrink-0", // 10px dot
+                                                 priorityDotBgColor
+                                             )}
+                                             aria-label={priorityDotLabel}
+                                         />
+                                    </Tooltip.Trigger>
+                                    <Tooltip.Portal>
+                                        <Tooltip.Content className={tooltipContentClass} side="bottom" sideOffset={4}>
+                                            {priorityDotLabel}
+                                            <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900/95"/>
+                                        </Tooltip.Content>
+                                    </Tooltip.Portal>
+                                </Tooltip.Root>
+                            </Tooltip.Provider>
+                        )}
+
+                        <input
+                            ref={titleInputRef}
+                            type="text"
+                            value={localTitle}
+                            onChange={handleTitleChange}
+                            onKeyDown={handleTitleKeyDown}
+                            onBlur={handleMainContentBlur}
+                            className={titleInputClasses} // Uses modified class without mx-3
+                            placeholder="Task title..."
+                            disabled={isTrash}
+                            aria-label="Task title"
+                            id={`task-title-input-${selectedTask.id}`}
+                        />
+                    </div>
+
+                    {/* Right group: Actions */}
                     <div className="flex items-center space-x-1 flex-shrink-0">
                         <Popover.Root modal={true} open={isHeaderMenuPopoverOpen}
                                       onOpenChange={handleHeaderMenuPopoverOpenChange}>
@@ -830,17 +883,15 @@ const TaskDetail: React.FC = () => {
                                     onOpenAutoFocus={(e) => e.preventDefault()}
                                     onCloseAutoFocus={(e) => {
                                         e.preventDefault();
-                                        // Check if dropdown is still open. If so, focus trigger or keep focus managed by dropdown.
-                                        // If dropdown closed with popover, this won't matter as much.
                                         if (isMoreActionsOpen) {
-                                            // moreActionsButtonRef.current?.focus(); // Or let Radix manage.
+                                            // moreActionsButtonRef.current?.focus();
                                         }
                                     }}
                                 >
                                     <CustomDatePickerContent
                                         initialDate={displayDueDateForPicker}
                                         onSelect={(date) => {
-                                            handleFooterDatePickerSelect(date); // Re-use footer logic for updating date
+                                            handleFooterDatePickerSelect(date);
                                             closeHeaderMenuDatePickerPopover();
                                         }}
                                         closePopover={closeHeaderMenuDatePickerPopover}
@@ -1036,7 +1087,7 @@ const TaskDetail: React.FC = () => {
                             </Tooltip.Root>
                             <Popover.Portal>
                                 <Popover.Content
-                                    className={twMerge( // Using standard popover classes, similar to TaskList datepicker
+                                    className={twMerge(
                                         "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800",
                                         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
                                     )}
@@ -1075,7 +1126,7 @@ const TaskDetail: React.FC = () => {
                             </Tooltip.Root>
                             <Popover.Portal>
                                 <Popover.Content
-                                    className={twMerge(dropdownContentClasses, "p-3 text-xs w-auto min-w-0")} // Use dropdownContent for theme, override padding and width
+                                    className={twMerge(dropdownContentClasses, "p-3 text-xs w-auto min-w-0")}
                                     side="top" align="end" sideOffset={5}
                                     onCloseAutoFocus={(e) => e.preventDefault()}>
                                     <div className="space-y-1.5 text-grey-medium dark:text-neutral-300">
