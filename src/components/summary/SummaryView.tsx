@@ -567,8 +567,9 @@ const SummaryView: React.FC = () => {
             </div>
             <div
                 className="flex-1 flex flex-col md:flex-row overflow-hidden p-3 md:p-4 gap-3 md:gap-4 min-h-0">
+                {/* Left Panel: Task List */}
                 <div
-                    className="w-full md:w-[360px] h-1/2 md:h-full flex flex-col bg-white dark:bg-neutral-800 rounded-base shadow-subtle dark:shadow-subtle-dark overflow-hidden flex-shrink-0">
+                    className="w-full md:w-[360px] h-1/2 md:h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden flex-shrink-0">
                     <div
                         className="px-4 py-3 border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 h-12">
                         <h2 className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 truncate">Tasks
@@ -595,73 +596,87 @@ const SummaryView: React.FC = () => {
                                                 onSelectionChange={handleTaskSelectionChange}/>)))}
                     </div>
                 </div>
+
+                {/* Vertical Separator (visible on md screens and up) */}
+                <div className="hidden md:block w-px bg-grey-light dark:bg-neutral-700 self-stretch my-0"></div>
+
+                {/* Right Panel: Summary Editor */}
                 <div
-                    className="flex-1 h-1/2 md:h-full flex flex-col bg-white dark:bg-neutral-800 rounded-base shadow-subtle dark:shadow-subtle-dark overflow-hidden">
-                    <div className="flex-1 flex flex-col overflow-hidden p-4 min-h-0">
-                        {totalRelevantSummaries > 0 || isGenerating ? (
+                    className="flex-1 h-1/2 md:h-full flex flex-col bg-white dark:bg-neutral-800 overflow-hidden">
+                    {/* Header section for Summary */}
+                    <div
+                        className="px-4 py-3 h-12 border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0">
+                        {(totalRelevantSummaries > 0 || isGenerating) ? (
                             <>
-                                <div className="flex justify-between items-center mb-3 flex-shrink-0 h-6">
-                                    <span
-                                        className="text-[11px] font-light text-grey-medium dark:text-neutral-400">{isGenerating ? 'Generating summary...' : (summaryTimestamp ? `Generated: ${summaryTimestamp}` : 'Unsaved Summary')}</span>
-                                    <div className="flex items-center space-x-1">
-                                        <DropdownMenu.Root open={isRefTasksDropdownOpen}
-                                                           onOpenChange={setIsRefTasksDropdownOpen}>
-                                            <DropdownMenu.Trigger asChild disabled={!currentSummary || isGenerating}>
-                                                <button
-                                                    className={twMerge("flex items-center text-[11px] font-light h-6 px-1.5 rounded-base transition-colors duration-150 ease-in-out focus:outline-none", !currentSummary || isGenerating ? "text-grey-medium/50 dark:text-neutral-500/50 cursor-not-allowed" : "text-primary dark:text-primary-light hover:bg-primary-light dark:hover:bg-primary-dark/30 focus-visible:ring-1 focus-visible:ring-primary")}
-                                                    aria-haspopup="true">
-                                                    <Icon name="file-text" size={12} strokeWidth={1}
-                                                          className="mr-1 opacity-80"/>{tasksUsedCount} tasks
-                                                    used<Icon
-                                                    name="chevron-down" size={12} strokeWidth={1}
-                                                    className="ml-0.5 opacity-70"/>
-                                                </button>
-                                            </DropdownMenu.Trigger>
-                                            <DropdownMenu.Portal>
-                                                <DropdownMenu.Content
-                                                    className={twMerge("z-[60] p-0 dark:border dark:border-neutral-700", dropdownAnimationClasses)}
-                                                    sideOffset={4}
-                                                    align="end"
-                                                    onCloseAutoFocus={e => e.preventDefault()}
-                                                >
-                                                    {renderReferencedTasksDropdown()}
-                                                </DropdownMenu.Content>
-                                            </DropdownMenu.Portal>
-                                        </DropdownMenu.Root>
-                                        {totalRelevantSummaries > 1 && !isGenerating && (<>
-                                            <Button variant="ghost" size="icon" icon="chevron-left"
-                                                    onClick={handlePrevSummary}
-                                                    disabled={currentIndex >= totalRelevantSummaries - 1}
-                                                    className="w-6 h-6 text-grey-medium dark:text-neutral-400"
-                                                    iconProps={{size: 14, strokeWidth: 1}} aria-label="Older summary"/>
-                                            <span
-                                                className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 tabular-nums">{displayedIndex} / {totalRelevantSummaries}</span>
-                                            <Button variant="ghost" size="icon" icon="chevron-right"
-                                                    onClick={handleNextSummary} disabled={currentIndex <= 0}
-                                                    className="w-6 h-6 text-grey-medium dark:text-neutral-400"
-                                                    iconProps={{size: 14, strokeWidth: 1}} aria-label="Newer summary"/>
-                                        </>)}
-                                    </div>
-                                </div>
-                                <div
-                                    className="flex-1 min-h-0 border border-grey-light dark:border-neutral-700 rounded-base overflow-hidden bg-white dark:bg-neutral-800 relative">
-                                    <CodeMirrorEditor
-                                        key={isGenerating ? 'generating' : (currentSummary?.id ?? 'no-summary')}
-                                        ref={editorRef} value={summaryEditorContent} onChange={handleEditorChange}
-                                        placeholder={isGenerating ? "Generating..." : "AI generated summary will appear here..."}
-                                        className="!h-full !bg-transparent !border-none"
-                                        readOnly={isGenerating || !currentSummary}/>
-                                    {hasUnsavedChangesRef.current && !isGenerating && currentSummary && (<span
-                                        className="absolute bottom-2 right-2 text-[10px] text-grey-medium/70 dark:text-neutral-400/70 italic animate-pulse font-light">saving...</span>)}
-                                    {isGenerating && (<div
-                                        className="absolute inset-0 bg-white/70 dark:bg-neutral-800/70 backdrop-blur-sm flex items-center justify-center z-10">
-                                        <Icon name="loader" size={20} strokeWidth={1.5}
-                                              className="text-primary dark:text-primary-light animate-spin"/></div>)}
+                                <span
+                                    className="text-[11px] font-light text-grey-medium dark:text-neutral-400 truncate">
+                                    {isGenerating ? 'Generating summary...' : (summaryTimestamp ? `Generated: ${summaryTimestamp}` : 'Unsaved Summary')}
+                                </span>
+                                <div className="flex items-center space-x-1">
+                                    <DropdownMenu.Root open={isRefTasksDropdownOpen}
+                                                       onOpenChange={setIsRefTasksDropdownOpen}>
+                                        <DropdownMenu.Trigger asChild disabled={!currentSummary || isGenerating}>
+                                            <button
+                                                className={twMerge("flex items-center text-[11px] font-light h-6 px-1.5 rounded-base transition-colors duration-150 ease-in-out focus:outline-none", !currentSummary || isGenerating ? "text-grey-medium/50 dark:text-neutral-500/50 cursor-not-allowed" : "text-primary dark:text-primary-light hover:bg-primary-light dark:hover:bg-primary-dark/30 focus-visible:ring-1 focus-visible:ring-primary")}
+                                                aria-haspopup="true">
+                                                <Icon name="file-text" size={12} strokeWidth={1}
+                                                      className="mr-1 opacity-80"/>{tasksUsedCount} tasks
+                                                used<Icon
+                                                name="chevron-down" size={12} strokeWidth={1}
+                                                className="ml-0.5 opacity-70"/>
+                                            </button>
+                                        </DropdownMenu.Trigger>
+                                        <DropdownMenu.Portal>
+                                            <DropdownMenu.Content
+                                                className={twMerge("z-[60] p-0 dark:border dark:border-neutral-700", dropdownAnimationClasses)}
+                                                sideOffset={4}
+                                                align="end"
+                                                onCloseAutoFocus={e => e.preventDefault()}
+                                            >
+                                                {renderReferencedTasksDropdown()}
+                                            </DropdownMenu.Content>
+                                        </DropdownMenu.Portal>
+                                    </DropdownMenu.Root>
+                                    {totalRelevantSummaries > 1 && !isGenerating && (<>
+                                        <Button variant="ghost" size="icon" icon="chevron-left"
+                                                onClick={handlePrevSummary}
+                                                disabled={currentIndex >= totalRelevantSummaries - 1}
+                                                className="w-6 h-6 text-grey-medium dark:text-neutral-400"
+                                                iconProps={{size: 14, strokeWidth: 1}} aria-label="Older summary"/>
+                                        <span
+                                            className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 tabular-nums">{displayedIndex} / {totalRelevantSummaries}</span>
+                                        <Button variant="ghost" size="icon" icon="chevron-right"
+                                                onClick={handleNextSummary} disabled={currentIndex <= 0}
+                                                className="w-6 h-6 text-grey-medium dark:text-neutral-400"
+                                                iconProps={{size: 14, strokeWidth: 1}} aria-label="Newer summary"/>
+                                    </>)}
                                 </div>
                             </>
                         ) : (
+                            <h2 className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 truncate">Summary</h2>
+                        )}
+                    </div>
+
+                    {/* Main content area for summary (editor or placeholder) */}
+                    <div className="flex-1 min-h-0 p-4">
+                        {(totalRelevantSummaries > 0 || isGenerating) ? (
+                            <div className="h-full w-full relative overflow-hidden bg-white dark:bg-neutral-800">
+                                <CodeMirrorEditor
+                                    key={isGenerating ? 'generating' : (currentSummary?.id ?? 'no-summary')}
+                                    ref={editorRef} value={summaryEditorContent} onChange={handleEditorChange}
+                                    placeholder={isGenerating ? "Generating..." : "AI generated summary will appear here..."}
+                                    className="!h-full !bg-transparent !border-none"
+                                    readOnly={isGenerating || !currentSummary}/>
+                                {hasUnsavedChangesRef.current && !isGenerating && currentSummary && (<span
+                                    className="absolute bottom-2 right-2 text-[10px] text-grey-medium/70 dark:text-neutral-400/70 italic animate-pulse font-light">saving...</span>)}
+                                {isGenerating && (<div
+                                    className="absolute inset-0 bg-white/70 dark:bg-neutral-800/70 backdrop-blur-sm flex items-center justify-center z-10">
+                                    <Icon name="loader" size={20} strokeWidth={1.5}
+                                          className="text-primary dark:text-primary-light animate-spin"/></div>)}
+                            </div>
+                        ) : (
                             <div
-                                className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-6 text-center">
+                                className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-2 text-center"> {/* Reduced px-6 to px-2 as parent has p-4 */}
                                 <Icon name="sparkles" size={32} strokeWidth={1}
                                       className="mb-3 text-grey-light dark:text-neutral-500 opacity-80"/>
                                 <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">No Summary
