@@ -30,7 +30,7 @@ import {
 } from "@dnd-kit/core";
 import {arrayMove, SortableContext, verticalListSortingStrategy} from "@dnd-kit/sortable";
 import {AnimatePresence, motion} from "framer-motion";
-import SubtaskItemDetail from "./SubtaskItemDetail";
+import SubtaskItemDetail from "./SubtaskItemDetail"; // Ensure this path is correct
 
 // --- Helper TagPill Component (Kept for potential future re-use, but not actively used if tags are removed from footer) ---
 interface TagPillProps {
@@ -119,7 +119,7 @@ const TaskDetail: React.FC = () => {
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isFooterDatePickerOpen, setIsFooterDatePickerOpen] = useState(false);
-    const [isHeaderMenuDatePickerOpen, setIsHeaderMenuDatePickerOpen] = useState(false);
+    const [isHeaderMenuDatePickerOpen, setIsHeaderMenuDatePickerOpen] = useState(false); // This state remains for Popover.Root around DropdownMenu
     const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false);
     const [isInfoPopoverOpen, setIsInfoPopoverOpen] = useState(false);
 
@@ -127,7 +127,12 @@ const TaskDetail: React.FC = () => {
     const [isInfoTooltipOpen, setIsInfoTooltipOpen] = useState(false);
 
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+    const [newSubtaskDueDate, setNewSubtaskDueDate] = useState<Date | undefined>(undefined);
+    const [isNewSubtaskDatePickerOpen, setIsNewSubtaskDatePickerOpen] = useState(false);
+    const [subtaskDateTextWidth, setSubtaskDateTextWidth] = useState(0);
+    const newSubtaskDateDisplayRef = useRef<HTMLSpanElement>(null);
     const newSubtaskInputRef = useRef<HTMLInputElement>(null);
+
     const [draggingSubtaskId, setDraggingSubtaskId] = useState<UniqueIdentifier | null>(null);
 
     const titleInputRef = useRef<HTMLInputElement>(null);
@@ -148,7 +153,7 @@ const TaskDetail: React.FC = () => {
                 savePendingChanges(selectedTaskInternal.id, latestTitleRef.current, latestContentRef.current, localDueDate, latestTagsStringRef.current);
             }
         };
-    }, [selectedTaskInternal]);
+    }, [selectedTaskInternal]); // localDueDate and latestTagsStringRef removed as they are part of savePendingChanges closure or refs
 
     const savePendingChanges = useCallback((taskId: string, title: string, content: string, dueDate: Date | undefined, tagsString: string) => {
         if (!taskId || !hasUnsavedChangesRef.current || !isMountedRef.current) return;
@@ -197,6 +202,7 @@ const TaskDetail: React.FC = () => {
         }
 
         setNewSubtaskTitle('');
+        setNewSubtaskDueDate(undefined);
         hasUnsavedChangesRef.current = false;
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
@@ -208,6 +214,7 @@ const TaskDetail: React.FC = () => {
 
             if (localTitle !== taskTitle) setLocalTitle(taskTitle);
             if (localContent !== taskContent) setLocalContent(taskContent);
+            // Check time for dates to avoid unnecessary re-renders if only object identity changed
             if (localDueDate?.getTime() !== taskDueDateObj?.getTime()) setLocalDueDate(taskDueDateObj && isValid(taskDueDateObj) ? taskDueDateObj : undefined);
             if (localTagsString !== taskTagsString) setLocalTagsString(taskTagsString);
 
@@ -235,13 +242,24 @@ const TaskDetail: React.FC = () => {
             setLocalTagsString('');
             latestTagsStringRef.current = '';
 
+            setNewSubtaskTitle('');
+            setNewSubtaskDueDate(undefined);
+
             setIsDeleteDialogOpen(false);
             setIsFooterDatePickerOpen(false);
-            setIsHeaderMenuDatePickerOpen(false);
+            // setIsHeaderMenuDatePickerOpen(false); // Keep for Popover.Root
             setIsMoreActionsOpen(false);
             setIsInfoPopoverOpen(false);
         }
     }, [selectedTask, savePendingChanges, localDueDate, localTagsString, selectedTaskInternal, localTitle, localContent]);
+
+    useEffect(() => {
+        if (newSubtaskDueDate && newSubtaskDateDisplayRef.current) {
+            setSubtaskDateTextWidth(newSubtaskDateDisplayRef.current.offsetWidth);
+        } else {
+            setSubtaskDateTextWidth(0);
+        }
+    }, [newSubtaskDueDate, isNewSubtaskDatePickerOpen]);
 
 
     const triggerSave = useCallback(() => {
@@ -309,23 +327,36 @@ const TaskDetail: React.FC = () => {
         setIsDateTooltipOpen(false);
     }, []);
 
-    const handleHeaderMenuDateSelect = useCallback((dateWithTime: Date | undefined) => {
-        setLocalDueDate(dateWithTime);
-        updateTask({dueDate: dateWithTime ? dateWithTime.getTime() : null});
-        setIsHeaderMenuDatePickerOpen(false);
-    }, [updateTask]);
-
-    const closeHeaderMenuDatePickerPopover = useCallback(() => {
-        setIsHeaderMenuDatePickerOpen(false);
-    }, []);
+    // handleHeaderMenuDateSelect and closeHeaderMenuDatePickerPopover are no longer needed as the menu item is removed.
+    // However, isHeaderMenuDatePickerOpen state is still used by the Popover.Root wrapping the Dropdown.
+    // For cleanliness, they can be removed if no other component uses them.
+    // For now, keep them to avoid breaking Popover.Root open logic if it was used for something else.
+    // Re-evaluation: The Popover.Root was specifically for the date picker. Since the menu item is gone,
+    // the Popover.Root and its associated state/handlers for date picking from header are not strictly needed.
+    // However, the prompt asks for "minimal changes" and the Popover.Root is tied to the DropdownMenu.Trigger.
+    // Removing it entirely might be a larger structural change than intended.
+    // Let's simplify: The "Set Due Date..." item is removed, so the Popover.Content for header date picker won't show.
+    // `isHeaderMenuDatePickerOpen` state and its handlers can be kept to avoid changing the Popover.Root structure,
+    // or removed if we are confident that Popover.Root was *only* for that date picker.
+    // Given the code, Popover.Root wraps Popover.Anchor which wraps DropdownMenu.Trigger.
+    // This structure is usually for when a DropdownMenu item itself needs to open a Popover.
+    // Since the "Set Due Date..." item is removed, the `isHeaderMenuDatePickerOpen` and its direct handlers
+    // for date picking logic are no longer directly invoked.
+    // The `onCloseAutoFocus={handleMoreActionsDropdownCloseFocus}` on DropdownMenu.Content still uses `isHeaderMenuDatePickerOpen`.
+    // So, we should keep `isHeaderMenuDatePickerOpen` and `handleMoreActionsDropdownCloseFocus`.
+    // The Popover.Content for header date picker is now effectively dead code if the trigger is removed.
+    // The `RadixMenuItem` onSelect for "Set Due Date" was:
+    // onSelect={(event) => { event.preventDefault(); setIsHeaderMenuDatePickerOpen(true); }}
+    // This is now gone. So `setIsHeaderMenuDatePickerOpen(true)` is never called from the menu.
+    // The Popover.Root itself still exists around the three-dot menu.
+    // Let's keep `isHeaderMenuDatePickerOpen` state for now due to `handleMoreActionsDropdownCloseFocus`
+    // and the Popover.Root structure, but note its primary purpose is gone.
 
     const handleListChange = useCallback((newList: string) => updateTask({list: newList}), [updateTask]);
     const handlePriorityChange = useCallback((newPriority: number | null) => updateTask({priority: newPriority}), [updateTask]);
     const handleProgressChange = useCallback((newPercentage: number | null) => {
         updateTask({completionPercentage: newPercentage});
-        if (newPercentage === 100 && selectedTask?.id === selectedTaskId) {
-        }
-    }, [updateTask, selectedTask?.id, selectedTaskId]);
+    }, [updateTask]);
 
     const cycleCompletionPercentage = useCallback(() => {
         if (!selectedTask || selectedTask.list === 'Trash') return;
@@ -368,12 +399,13 @@ const TaskDetail: React.FC = () => {
             createdAt: now,
             updatedAt: now,
             completedAt: sub.completed ? now : null,
+            // Ensure new subtasks get new IDs if they are also duplicated
         }));
         const newTaskData: Partial<Task> = {
             ...taskToDuplicate,
             id: newParentTaskId,
             title: `${taskToDuplicate.title || 'Untitled Task'} (Copy)`,
-            order: taskToDuplicate.order + 0.01,
+            order: taskToDuplicate.order + 0.01, // Consider a more robust ordering strategy if many duplicates
             createdAt: now,
             updatedAt: now,
             completed: false,
@@ -405,7 +437,7 @@ const TaskDetail: React.FC = () => {
                 setLocalTitle(selectedTask.title);
                 latestTitleRef.current = selectedTask.title;
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                hasUnsavedChangesRef.current = false;
+                hasUnsavedChangesRef.current = false; // Changes reverted
             }
             titleInputRef.current?.blur();
         }
@@ -419,18 +451,24 @@ const TaskDetail: React.FC = () => {
         if (!selectedTask || !newSubtaskTitle.trim() || isInteractiveDisabled) return;
         const now = Date.now();
         const newSub: Subtask = {
-            id: `subtask-${now}-${Math.random().toString(16).slice(2)}`, parentId: selectedTask.id,
-            title: newSubtaskTitle.trim(), completed: false, completedAt: null,
+            id: `subtask-${now}-${Math.random().toString(16).slice(2)}`,
+            parentId: selectedTask.id,
+            title: newSubtaskTitle.trim(),
+            completed: false,
+            completedAt: null,
             order: (selectedTask.subtasks?.reduce((max, s) => Math.max(max, s.order), 0) || 0) + 1000,
-            createdAt: now, updatedAt: now, dueDate: null,
+            createdAt: now,
+            updatedAt: now,
+            dueDate: newSubtaskDueDate ? newSubtaskDueDate.getTime() : null,
         };
         setTasks(prevTasks => prevTasks.map(t => t.id === selectedTask.id ? {
             ...t,
             subtasks: [...(t.subtasks || []), newSub].sort((a, b) => a.order - b.order)
         } : t));
         setNewSubtaskTitle('');
+        setNewSubtaskDueDate(undefined);
         newSubtaskInputRef.current?.focus();
-    }, [selectedTask, newSubtaskTitle, setTasks, isInteractiveDisabled]);
+    }, [selectedTask, newSubtaskTitle, setTasks, isInteractiveDisabled, newSubtaskDueDate]);
 
     const handleUpdateSubtask = useCallback((subtaskId: string, updates: Partial<Omit<Subtask, 'id' | 'parentId' | 'createdAt'>>) => {
         if (!selectedTask) return;
@@ -479,19 +517,19 @@ const TaskDetail: React.FC = () => {
 
     const mainPanelClass = useMemo(() => twMerge(
         "h-full flex flex-col",
-        "bg-white dark:bg-neutral-850", // Panel background is white
+        "bg-white dark:bg-neutral-850",
     ), []);
 
     const headerClass = useMemo(() => twMerge(
         "px-4 py-2 h-14 flex items-center justify-between flex-shrink-0",
-        "border-b border-grey-light dark:border-neutral-700/60" // Use updated grey-light
+        "border-b border-grey-light dark:border-neutral-700/60"
     ), []);
 
     const titleInputClasses = useMemo(() => twMerge(
         "flex-1 text-lg font-medium border-none focus:ring-0 focus:outline-none bg-transparent p-0 mx-3 leading-tight",
-        "placeholder:text-grey-medium dark:placeholder:text-neutral-500 placeholder:font-normal", // Placeholder uses new grey-medium
-        (isInteractiveDisabled) && "line-through text-grey-medium dark:text-neutral-400/80", // Disabled uses new grey-medium
-        "text-grey-dark dark:text-neutral-100 tracking-tight" // Main title text uses new grey-dark
+        "placeholder:text-grey-medium dark:placeholder:text-neutral-500 placeholder:font-normal",
+        (isInteractiveDisabled) && "line-through text-grey-medium dark:text-neutral-400/80",
+        "text-grey-dark dark:text-neutral-100 tracking-tight"
     ), [isInteractiveDisabled]);
 
     const editorContainerClass = useMemo(() => twMerge(
@@ -503,39 +541,67 @@ const TaskDetail: React.FC = () => {
         "!h-full text-sm !bg-transparent !border-none !shadow-none",
         (isInteractiveDisabled) && "opacity-60 cursor-not-allowed",
         isTrash && "pointer-events-none",
-        "dark:!text-neutral-300" // Dark mode specific, light mode inherits from theme (which uses grey-dark)
+        "dark:!text-neutral-300"
     ), [isInteractiveDisabled, isTrash]);
 
     const footerClass = useMemo(() => twMerge(
         "px-3 py-2 h-11 flex items-center justify-between flex-shrink-0",
-        "border-t border-grey-light dark:border-neutral-700/60" // Use updated grey-light
+        "border-t border-grey-light dark:border-neutral-700/60"
     ), []);
 
     const actionButtonClass = useMemo(() => twMerge(
-        "text-grey-medium dark:text-neutral-400", // Default icon color
-        "hover:bg-grey-ultra-light dark:hover:bg-neutral-700/50", // Use updated grey-ultra-light
-        "hover:text-grey-dark dark:hover:text-neutral-200", // Hover icon color
+        "text-grey-medium dark:text-neutral-400",
+        "hover:bg-grey-ultra-light dark:hover:bg-neutral-700/50",
+        "hover:text-grey-dark dark:hover:text-neutral-200",
         "focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1",
-        "focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-850" // Ring offset for light mode
+        "focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-850"
     ), []);
+
+    const footerDateTriggerClass = useMemo(() => twMerge(
+        "h-8 flex items-center text-xs px-2 py-1 rounded-base transition-colors duration-150",
+        "focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1",
+        "focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-850", // Adjust offset for footer context if needed
+        "hover:bg-grey-ultra-light dark:hover:bg-neutral-700/50",
+        (displayDueDateForRender && isValid(displayDueDateForRender))
+            ? (overdue && !isCompleted && !isTrash ? "text-error dark:text-red-400 font-medium" : "text-primary dark:text-primary-light font-medium")
+            : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200",
+        isTrash && "cursor-not-allowed opacity-60"
+    ), [displayDueDateForRender, overdue, isCompleted, isTrash]);
+
 
     const dropdownContentClasses = useMemo(() => twMerge(
         "z-[55] bg-white dark:bg-neutral-800 min-w-[200px] w-52 p-1 rounded-base shadow-modal",
         "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"
     ), []);
 
-    const headerMenuDatePickerPopoverWrapperClasses = useMemo(() => twMerge(
+    const headerMenuDatePickerPopoverWrapperClasses = useMemo(() => twMerge( // Still used by Popover.Root structure
         "z-[60] p-0 bg-white dark:bg-neutral-800 rounded-base shadow-modal",
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
+
+    const subtaskDatePickerPopoverWrapperClasses = useMemo(() => twMerge(
+        "z-[70] p-0 bg-white dark:bg-neutral-800 rounded-base shadow-modal",
+        "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
+    ), []);
+
+    const newSubtaskInputPaddingLeft = useMemo(() => {
+        const iconAreaSpace = 28; // Width of the calendar button (w-7 is 28px)
+        let dateTextSpace = 0;
+        if (newSubtaskDueDate && subtaskDateTextWidth > 0) {
+            // pl-1 (4px) + text width + pr-1 (4px) + some buffer (e.g. 4px)
+            dateTextSpace = 4 + subtaskDateTextWidth + 4 + 4;
+        }
+        return iconAreaSpace + dateTextSpace;
+    }, [newSubtaskDueDate, subtaskDateTextWidth]);
+
 
     const radioItemClasses = (isSelected: boolean, itemSpecificClasses: string = "", isDanger: boolean = false) => twMerge(
         "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] outline-none transition-colors data-[disabled]:pointer-events-none h-8 font-normal",
         isDanger
             ? "text-error data-[highlighted]:bg-error/10 data-[highlighted]:text-error dark:text-red-400 dark:data-[highlighted]:bg-red-500/15 dark:data-[highlighted]:text-red-300"
-            : "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07] focus:bg-grey-ultra-light dark:focus:bg-white/[.07]", // Use updated grey-ultra-light
+            : "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07] focus:bg-grey-ultra-light dark:focus:bg-white/[.07]",
         isSelected && !isDanger && "bg-primary/15 text-primary data-[state=checked]:bg-primary/15 data-[state=checked]:text-primary dark:bg-primary/25 dark:text-primary-light data-[state=checked]:dark:bg-primary/25 data-[state=checked]:dark:text-primary-light",
-        !isSelected && !isDanger && "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 focus:text-grey-dark dark:focus:text-neutral-50", // Default item text uses grey-dark
+        !isSelected && !isDanger && "text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-200 dark:data-[highlighted]:text-neutral-50 focus:text-grey-dark dark:focus:text-neutral-50",
         "data-[state=checked]:data-[highlighted]:bg-primary/20 data-[state=checked]:dark:data-[highlighted]:bg-primary/30",
         "data-[disabled]:opacity-50",
         itemSpecificClasses
@@ -548,8 +614,8 @@ const TaskDetail: React.FC = () => {
 
     const subTriggerClasses = useMemo(() => twMerge(
         "relative flex cursor-pointer select-none items-center rounded-base px-3 py-2 text-[13px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-8",
-        "text-grey-dark dark:text-neutral-200", // Subtrigger text uses grey-dark
-        "focus:bg-grey-ultra-light dark:focus:bg-white/[.07]", // Use updated grey-ultra-light
+        "text-grey-dark dark:text-neutral-200",
+        "focus:bg-grey-ultra-light dark:focus:bg-white/[.07]",
         "data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-white/[.07]",
         "data-[state=open]:bg-grey-ultra-light dark:data-[state=open]:bg-white/[.07]",
         "focus:text-grey-dark dark:focus:text-neutral-50",
@@ -566,7 +632,7 @@ const TaskDetail: React.FC = () => {
         1: {label: 'High', icon: 'flag', color: 'text-error dark:text-red-400'},
         2: {label: 'Medium', icon: 'flag', color: 'text-warning dark:text-orange-400'},
         3: {label: 'Low', icon: 'flag', color: 'text-info dark:text-blue-400'},
-        4: {label: 'Lowest', icon: 'flag', color: 'text-grey-medium dark:text-neutral-400'}, // Lowest priority flag uses grey-medium
+        4: {label: 'Lowest', icon: 'flag', color: 'text-grey-medium dark:text-neutral-400'},
     }), []);
 
     const progressMenuItems = useMemo(() => [{
@@ -580,6 +646,8 @@ const TaskDetail: React.FC = () => {
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
 
     const handleMoreActionsDropdownCloseFocus = useCallback((event: Event) => {
+        // This check might be less relevant if isHeaderMenuDatePickerOpen is never true from menu interaction
+        // but kept for structural integrity of the existing Popover around the Dropdown.
         if (isHeaderMenuDatePickerOpen) {
             event.preventDefault();
         }
@@ -604,6 +672,7 @@ const TaskDetail: React.FC = () => {
                            placeholder="Task title..." disabled={isTrash} aria-label="Task title"
                            id={`task-title-input-${selectedTask.id}`}/>
                     <div className="flex items-center space-x-1 flex-shrink-0">
+                        {/* Popover.Root still wraps DropdownMenu for structural reasons or future use, but its date picker content is no longer triggered from menu */}
                         <Popover.Root modal={true} open={isHeaderMenuDatePickerOpen}
                                       onOpenChange={setIsHeaderMenuDatePickerOpen}>
                             <DropdownMenu.Root open={isMoreActionsOpen} onOpenChange={setIsMoreActionsOpen}>
@@ -648,22 +717,13 @@ const TaskDetail: React.FC = () => {
                                             </DropdownMenu.Portal>
                                         </DropdownMenu.Sub>
 
-                                        <DropdownMenu.Separator
-                                            className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
-
-                                        <RadixMenuItem
-                                            icon="calendar-plus"
-                                            onSelect={(event) => {
-                                                event.preventDefault();
-                                                setIsHeaderMenuDatePickerOpen(true);
-                                            }}
-                                            disabled={isTrash}
-                                        >
-                                            Set Due Date...
-                                        </RadixMenuItem>
+                                        {/* "Set Due Date..." menu item and its separator are removed here */}
+                                        {/* <DropdownMenu.Separator className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/> */}
+                                        {/* RadixMenuItem for Set Due Date removed */}
 
                                         <DropdownMenu.Separator
                                             className="h-px bg-grey-light/70 dark:bg-white/10 my-1"/>
+
 
                                         <DropdownMenu.Sub>
                                             <DropdownMenu.SubTrigger className={subTriggerClasses}
@@ -760,24 +820,29 @@ const TaskDetail: React.FC = () => {
                                     </DropdownMenu.Content>
                                 </DropdownMenu.Portal>
                             </DropdownMenu.Root>
-                            <Popover.Portal>
-                                <Popover.Content
-                                    className={headerMenuDatePickerPopoverWrapperClasses}
-                                    sideOffset={5}
-                                    align="end"
-                                    onOpenAutoFocus={(e) => e.preventDefault()}
-                                    onCloseAutoFocus={(e) => {
-                                        e.preventDefault();
-                                        moreActionsButtonRef.current?.focus();
-                                    }}
-                                >
-                                    <CustomDatePickerContent
-                                        initialDate={localDueDate ?? undefined}
-                                        onSelect={handleHeaderMenuDateSelect}
-                                        closePopover={closeHeaderMenuDatePickerPopover}
-                                    />
-                                </Popover.Content>
-                            </Popover.Portal>
+                            {/* The Popover.Content for the header date picker is no longer triggered by a menu item.
+                                 It could be removed, but Popover.Root itself is still part of the structure.
+                                 If `isHeaderMenuDatePickerOpen` is never set to true, this content won't show.
+                             */}
+                            {isHeaderMenuDatePickerOpen && ( // Conditional rendering to be safe
+                                <Popover.Portal>
+                                    <Popover.Content
+                                        className={headerMenuDatePickerPopoverWrapperClasses}
+                                        sideOffset={5}
+                                        align="end"
+                                        onOpenAutoFocus={(e) => e.preventDefault()}
+                                        onCloseAutoFocus={(e) => {
+                                            e.preventDefault();
+                                            moreActionsButtonRef.current?.focus();
+                                        }}
+                                    >
+                                        {/* Content was CustomDatePicker, but it's not opened via menu now */}
+                                        {/* <CustomDatePickerContent ... /> */}
+                                        <div></div>
+                                        {/* Placeholder if content is truly gone */}
+                                    </Popover.Content>
+                                </Popover.Portal>
+                            )}
                         </Popover.Root>
                         <Button variant="ghost" size="icon" icon="x" onClick={handleClose}
                                 className={twMerge(actionButtonClass, "w-8 h-8")}
@@ -794,7 +859,7 @@ const TaskDetail: React.FC = () => {
                     </div>
                     <div
                         className={twMerge(
-                            "px-5 pt-4 pb-5 border-t border-grey-light/70 dark:border-neutral-700/40", // Use updated grey-light
+                            "px-5 pt-4 pb-5 border-t border-grey-light/70 dark:border-neutral-700/40",
                             "flex-shrink-0 flex flex-col",
                             sortedSubtasks.length > 0 ? "max-h-[45vh]" : ""
                         )}
@@ -849,29 +914,83 @@ const TaskDetail: React.FC = () => {
                         {!isInteractiveDisabled && (
                             <div
                                 className={twMerge(
-                                    "flex items-center flex-shrink-0 h-10 pt-2.5",
-                                    sortedSubtasks.length > 0 ? "border-t border-grey-light/50 dark:border-neutral-700/30 mt-auto" : "mt-1" // Use updated grey-light
+                                    "flex items-center flex-shrink-0 py-2.5",
+                                    sortedSubtasks.length > 0 ? "border-t border-grey-light/50 dark:border-neutral-700/30 mt-auto" : "mt-1"
                                 )}>
-                                <input
-                                    ref={newSubtaskInputRef} type="text" value={newSubtaskTitle}
-                                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && newSubtaskTitle.trim()) handleAddSubtask();
-                                        if (e.key === 'Escape') setNewSubtaskTitle('');
-                                    }}
-                                    placeholder="+ Add subtask..."
-                                    className={twMerge(
-                                        "flex-1 text-[13px] h-8 px-3 rounded-base",
-                                        "bg-grey-ultra-light dark:bg-neutral-700/60",
-                                        "border border-transparent dark:border-transparent",
-                                        "focus:border-transparent dark:focus:border-transparent",
-                                        "placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
-                                        "text-grey-dark dark:text-neutral-100",
-                                        "focus:outline-none",
-                                        "transition-colors duration-150 ease-in-out" // Use transition-colors and standard ease
-                                    )}
-                                    aria-label="New subtask title"
-                                />
+                                <div
+                                    className="group relative flex items-center flex-1 h-8 bg-grey-ultra-light dark:bg-neutral-700/60 rounded-base transition-all duration-150 ease-in-out border border-transparent dark:border-transparent">
+                                    <div
+                                        className="absolute left-0.5 top-1/2 -translate-y-1/2 flex items-center h-full">
+                                        <Popover.Root open={isNewSubtaskDatePickerOpen}
+                                                      onOpenChange={setIsNewSubtaskDatePickerOpen}>
+                                            <Popover.Trigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className={twMerge(
+                                                        "flex items-center justify-center w-7 h-7 rounded-l-base hover:bg-grey-light focus:outline-none",
+                                                        "dark:hover:bg-neutral-600",
+                                                        newSubtaskDueDate ? "text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary" : "text-grey-medium hover:text-grey-dark dark:text-neutral-400 dark:hover:text-neutral-200"
+                                                    )}
+                                                    aria-label="Set subtask due date"
+                                                >
+                                                    <Icon name="calendar" size={16} strokeWidth={1.5}/>
+                                                </button>
+                                            </Popover.Trigger>
+                                            <Popover.Portal>
+                                                <Popover.Content
+                                                    sideOffset={5}
+                                                    align="start"
+                                                    className={subtaskDatePickerPopoverWrapperClasses}
+                                                    onOpenAutoFocus={(e) => e.preventDefault()}
+                                                    onCloseAutoFocus={(e) => {
+                                                        e.preventDefault();
+                                                        newSubtaskInputRef.current?.focus();
+                                                    }}
+                                                >
+                                                    <CustomDatePickerContent
+                                                        initialDate={newSubtaskDueDate}
+                                                        onSelect={(date) => {
+                                                            setNewSubtaskDueDate(date ?? undefined);
+                                                            setIsNewSubtaskDatePickerOpen(false);
+                                                        }}
+                                                        closePopover={() => setIsNewSubtaskDatePickerOpen(false)}
+                                                    />
+                                                </Popover.Content>
+                                            </Popover.Portal>
+                                        </Popover.Root>
+
+                                        {newSubtaskDueDate && (
+                                            <div className="flex items-center pl-1 pr-1 h-full pointer-events-none">
+                                                <span
+                                                    ref={newSubtaskDateDisplayRef}
+                                                    className="text-[12px] text-primary dark:text-primary-light whitespace-nowrap font-medium"
+                                                >
+                                                    {formatRelativeDate(newSubtaskDueDate, false)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <input
+                                        ref={newSubtaskInputRef} type="text" value={newSubtaskTitle}
+                                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && newSubtaskTitle.trim()) handleAddSubtask();
+                                            if (e.key === 'Escape') {
+                                                setNewSubtaskTitle('');
+                                                setNewSubtaskDueDate(undefined);
+                                            }
+                                        }}
+                                        placeholder=" Add subtask..."
+                                        className={twMerge(
+                                            "w-full h-full pr-3 text-[13px]",
+                                            "bg-transparent border-none outline-none",
+                                            "text-grey-dark dark:text-neutral-100 placeholder:text-grey-medium dark:placeholder:text-neutral-400/70",
+                                            "transition-colors duration-150 ease-in-out"
+                                        )}
+                                        style={{paddingLeft: `${newSubtaskInputPaddingLeft}px`}}
+                                        aria-label="New subtask title"
+                                    />
+                                </div>
                                 <AnimatePresence>
                                     {newSubtaskTitle.trim() && (
                                         <motion.div initial={{opacity: 0, scale: 0.8}} animate={{opacity: 1, scale: 1}}
@@ -887,7 +1006,7 @@ const TaskDetail: React.FC = () => {
                 </div>
 
                 <div className={footerClass}>
-                    <div className="flex items-center space-x-0.5">
+                    <div className="flex items-center">
                         <Tooltip.Provider><Popover.Root open={isFooterDatePickerOpen} onOpenChange={(open) => {
                             setIsFooterDatePickerOpen(open);
                             if (!open) setIsDateTooltipOpen(false);
@@ -896,9 +1015,12 @@ const TaskDetail: React.FC = () => {
                                           onOpenChange={setIsDateTooltipOpen}>
                                 <Tooltip.Trigger asChild>
                                     <Popover.Trigger asChild disabled={isTrash}>
-                                        <Button variant="ghost" size="icon" icon="calendar"
-                                                className={twMerge(actionButtonClass, "w-8 h-8", overdue && !isCompleted && !isTrash && "text-error dark:text-red-400")}
-                                                aria-label="Set due date"/>
+                                        <button className={footerDateTriggerClass} aria-label="Set due date">
+                                            {displayDueDateForRender && isValid(displayDueDateForRender)
+                                                ? formatRelativeDate(displayDueDateForRender, true)
+                                                : "Set Due Date"
+                                            }
+                                        </button>
                                     </Popover.Trigger>
                                 </Tooltip.Trigger>
                                 <Tooltip.Portal>
