@@ -141,7 +141,6 @@ const taskListPriorityMap: Record<number, {
 const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
 
 
-// Aligned with TaskList.tsx style functions
 const getTaskItemMenuItemStyle = (selected?: boolean, isDanger?: boolean) => twMerge(
     "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
     isDanger
@@ -180,16 +179,13 @@ interface TaskItemRadixMenuItemProps extends DropdownMenu.DropdownMenuItemProps 
     isDanger?: boolean;
 }
 
-const TaskItemRadixMenuItem: React.FC<TaskItemRadixMenuItemProps> = React.memo(({
-                                                                                    icon,
-                                                                                    iconColor,
-                                                                                    selected,
-                                                                                    children,
-                                                                                    className,
-                                                                                    isDanger = false,
-                                                                                    ...props
-                                                                                }) => (
+// FIX for ref warning: Wrap TaskItemRadixMenuItem with React.forwardRef
+const TaskItemRadixMenuItem = React.forwardRef<
+    React.ElementRef<typeof DropdownMenu.Item>,
+    TaskItemRadixMenuItemProps
+>(({icon, iconColor, selected, children, className, isDanger = false, ...props}, ref) => (
     <DropdownMenu.Item
+        ref={ref} // Forward the ref to the DropdownMenu.Item
         className={twMerge(getTaskItemMenuItemStyle(selected, isDanger), className)}
         {...props}
     >
@@ -208,10 +204,15 @@ interface TaskItemProps {
     groupCategory?: TaskGroupCategory;
     isOverlay?: boolean;
     style?: React.CSSProperties;
-    scrollContainerRef?: React.RefObject<HTMLDivElement>;
+    scrollContainerRef?: React.RefObject<HTMLDivElement>; // This prop seems unused in TaskItem itself. Consider if it's still needed.
 }
 
-const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay = false, style: overlayStyle}) => {
+const TaskItem: React.FC<TaskItemProps> = memo(({
+                                                    task,
+                                                    groupCategory,
+                                                    isOverlay = false,
+                                                    style: overlayStyle /*, scrollContainerRef */
+                                                }) => {
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
@@ -230,6 +231,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     const isCompleted = useMemo(() => (task.completionPercentage ?? 0) === 100 && !isTrashItem, [task.completionPercentage, isTrashItem]);
     const isSortable = useMemo(() => !isCompleted && !isTrashItem && !isOverlay, [isCompleted, isTrashItem, isOverlay]);
     const isInteractive = useMemo(() => !isOverlay && !isCompleted && !isTrashItem, [isOverlay, isCompleted, isTrashItem]);
+
     const {
         attributes,
         listeners,
@@ -245,28 +247,28 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
 
     const style = useMemo(() => {
         const baseTransform = CSS.Transform.toString(transform);
-        const calculatedTransition = dndTransition || 'background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out';
+        const calculatedTransition = dndTransition || 'background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, opacity 0.2s ease-in-out';
         if (isDragging && !isOverlay) return {
             transform: baseTransform,
             transition: calculatedTransition,
             opacity: 0.7,
             cursor: 'grabbing',
             boxShadow: '0 4px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.05)',
-            zIndex: 10,
+            zIndex: 10, // Ensure dragging item is above others
         };
         if (isOverlay) return {
             ...overlayStyle,
-            transform: baseTransform,
-            transition: calculatedTransition,
+            transform: baseTransform, // DragOverlay applies its own transform; only use if needed for internal consistency
+            transition: calculatedTransition, // dndTransition for smooth movement during DragOverlay
             cursor: 'grabbing',
-            boxShadow: '0 8px 16px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)',
-            zIndex: 1000,
+            boxShadow: '0 8px 16px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)', // Prominent shadow for overlay
+            zIndex: 1000, // Highest z-index for overlay
         };
         return {
             ...overlayStyle,
             transform: baseTransform,
             transition: calculatedTransition,
-            zIndex: isSelected ? 2 : 1,
+            zIndex: isSelected ? 2 : 1, // Selected item slightly above others
         };
     }, [overlayStyle, transform, dndTransition, isDragging, isOverlay, isSelected]);
 
@@ -288,12 +290,12 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     const handleTaskClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
         if (target.closest('button, input, a, [data-radix-popper-content-wrapper], [role="dialog"], [role="menuitem"], [data-date-picker-trigger="true"], [data-tooltip-trigger]')) return;
-        if (isDragging) return;
+        if (isDragging) return; // Prevent selection while dragging the item itself
         setSelectedTaskId(id => (id === task.id ? null : task.id));
-        setOpenItemId(null);
+        setOpenItemId(null); // Close any open menus on this item
     }, [setSelectedTaskId, task.id, isDragging, setOpenItemId]);
 
-    const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks'>>) => {
+    const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks' | 'id' | 'createdAt'>>) => {
         setTasks(prevTasks => prevTasks.map(t => (t.id === task.id ? {...t, ...updates, updatedAt: Date.now()} : t)));
     }, [setTasks, task.id]);
 
@@ -316,18 +318,20 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     const handleProgressChange = useCallback((newPercentage: number | null) => {
         updateTask({completionPercentage: newPercentage});
         if (newPercentage === 100 && isSelected) setSelectedTaskId(null);
+        setIsMoreActionsOpen(false); // Close menu after selection
     }, [updateTask, isSelected, setSelectedTaskId]);
 
     const handleDateSelect = useCallback((dateWithTime: Date | undefined) => {
         const newDueDate = dateWithTime ? dateWithTime.getTime() : null;
         updateTask({dueDate: newDueDate});
+        // Popovers will close themselves via their respective close functions
     }, [updateTask]);
 
     const handleMoreActionsOpenChange = useCallback((open: boolean) => {
         setIsMoreActionsOpen(open);
         if (open) {
             setOpenItemId(task.id);
-            setIsMenuPopoverOpen(false);
+            setIsMenuPopoverOpen(false); // Ensure only one type of menu is open
             setIsDateClickPickerOpen(false);
         }
     }, [task.id, setOpenItemId]);
@@ -337,8 +341,11 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
         setIsMenuPopoverOpen(open);
         if (open) {
             setOpenItemId(task.id);
-            setIsMoreActionsOpen(true);
+            // setIsMoreActionsOpen(true); // This was causing the menu to stay open; Popover.Trigger handles this
             setIsDateClickPickerOpen(false);
+        } else {
+            // If menu popover is closed, also ensure the main dropdown is flagged as closed IF it's not being kept open by Popover.Trigger
+            // This might require more nuanced handling if Popover.Trigger doesn't automatically manage parent DropdownMenu state
         }
     }, [task.id, setOpenItemId]);
 
@@ -352,11 +359,20 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     }, [task.id, setOpenItemId]);
 
 
-    const closeMenuDatePickerPopover = useCallback(() => handleMenuPopoverOpenChange(false), [handleMenuPopoverOpenChange]);
-    const closeDateClickPopover = useCallback(() => handleDateClickPickerOpenChange(false), [handleDateClickPickerOpenChange]);
+    const closeMenuDatePickerPopover = useCallback(() => {
+        handleMenuPopoverOpenChange(false);
+        // Potentially focus back to the "More Actions" trigger or the item itself
+        moreActionsButtonRef.current?.focus();
+    }, [handleMenuPopoverOpenChange]);
+
+    const closeDateClickPopover = useCallback(() => {
+        handleDateClickPickerOpenChange(false);
+        dateDisplayRef.current?.focus();
+    }, [handleDateClickPickerOpenChange]);
 
     const handlePriorityChange = useCallback((newPriority: number | null) => {
         updateTask({priority: newPriority});
+        setIsMoreActionsOpen(false); // Close menu after selection
     }, [updateTask]);
 
     const handleListChange = useCallback((newList: string) => {
@@ -366,30 +382,33 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
 
     const handleDuplicateTask = useCallback(() => {
         const now = Date.now();
+        const newParentTaskId = `task-${now}-${Math.random().toString(16).slice(2)}`;
+
         const duplicatedSubtasks = (task.subtasks || []).map(sub => ({
             ...sub,
             id: `subtask-${now}-${Math.random().toString(16).slice(2)}`,
-            parentId: '',
+            parentId: newParentTaskId, // Link to new parent
             createdAt: now,
             updatedAt: now,
-            completedAt: sub.completed ? now : null,
+            completedAt: sub.completed ? now : null, // Reset completion if duplicating for active use
         }));
-        const newParentTaskId = `task-${now}-${Math.random().toString(16).slice(2)}`;
-        duplicatedSubtasks.forEach(sub => sub.parentId = newParentTaskId);
 
-        const newTaskData: Partial<Task> = {
-            ...task,
+        const newTaskData: Omit<Task, 'groupCategory' | 'completed'> = { // Let tasksAtom derive groupCategory and completed
             id: newParentTaskId,
             title: `${task.title} (Copy)`,
-            order: task.order + 0.01,
+            order: task.order + 0.01, // Slightly adjust order to appear after original
             createdAt: now,
             updatedAt: now,
-            completed: false,
-            completedAt: null,
-            completionPercentage: task.completionPercentage === 100 ? null : task.completionPercentage,
+            completionPercentage: task.completionPercentage === 100 ? null : task.completionPercentage, // Reset if it was 100%
+            completedAt: null, // New task is not completed by default
+            list: task.list, // Keep in the same list
+            priority: task.priority,
+            content: task.content,
+            tags: [...(task.tags || [])],
             subtasks: duplicatedSubtasks,
+            // groupCategory will be set by tasksAtom
+            // completed will be set by tasksAtom
         };
-        delete newTaskData.groupCategory;
 
         setTasks(prev => {
             const index = prev.findIndex(t => t.id === task.id);
@@ -397,11 +416,12 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
             if (index !== -1) {
                 newTasks.splice(index + 1, 0, newTaskData as Task);
             } else {
-                newTasks.push(newTaskData as Task);
+                newTasks.push(newTaskData as Task); // Fallback if original task not found (should not happen)
             }
-            return newTasks;
+            // Re-sort by order if necessary, though tasksAtom might handle this with its final sort.
+            return newTasks.sort((a, b) => a.order - b.order);
         });
-        setSelectedTaskId(newParentTaskId);
+        setSelectedTaskId(newParentTaskId); // Select the new duplicated task
         setIsMoreActionsOpen(false);
     }, [task, setTasks, setSelectedTaskId]);
 
@@ -429,16 +449,19 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     const subtaskSearchMatch = useMemo(() => {
         if (searchWords.length === 0 || !task.subtasks || task.subtasks.length === 0) return null;
 
-        const parentTitleIncludesAllSearch = searchWords.every(w => task.title.toLowerCase().includes(w));
-        const parentContentMatchesButNotTitle = task.content &&
-            searchWords.some(w => task.content!.toLowerCase().includes(w)) &&
-            !parentTitleIncludesAllSearch;
+        const parentTitleIncludesAllSearchWords = searchWords.every(w => task.title.toLowerCase().includes(w));
+
+        // Check if content has a match AND title does not contain all search words (to prioritize title matches)
+        const parentContentMatchesSomeWord = task.content && searchWords.some(w => task.content!.toLowerCase().includes(w));
 
         for (const subtask of task.subtasks) {
-            const subtaskTitleIncludesSearch = searchWords.some(w => subtask.title.toLowerCase().includes(w));
-            if (subtaskTitleIncludesSearch && (!parentTitleIncludesAllSearch || parentContentMatchesButNotTitle)) {
+            const subtaskTitleIncludesSomeSearchWord = searchWords.some(w => subtask.title.toLowerCase().includes(w));
+            // Show subtask match if:
+            // 1. Subtask title matches AND parent title does NOT contain ALL search terms
+            // OR 2. Subtask title matches AND parent content matches (but parent title didn't fully match), suggesting subtask is more relevant.
+            if (subtaskTitleIncludesSomeSearchWord && (!parentTitleIncludesAllSearchWords || parentContentMatchesSomeWord)) {
                 return {
-                    type: 'title',
+                    type: 'title', //  Indicating it's from subtask title
                     text: generateContentSnippet(subtask.title, searchTerm, 30),
                     original: subtask.title
                 };
@@ -450,10 +473,16 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
 
     const showContentHighlight = useMemo(() => {
         if (searchWords.length === 0 || !task.content?.trim()) return false;
-        const lc = task.content.toLowerCase();
-        const lt = task.title.toLowerCase();
-        const contentHasMatch = searchWords.some(w => lc.includes(w));
-        const titleHasAllMatches = searchWords.every(w => lt.includes(w));
+
+        const lcContent = task.content.toLowerCase();
+        const lcTitle = task.title.toLowerCase();
+
+        const contentHasMatch = searchWords.some(w => lcContent.includes(w));
+        const titleHasAllMatches = searchWords.every(w => lcTitle.includes(w));
+
+        // Show content highlight if:
+        // 1. Content has a match AND
+        // 2. EITHER Title does not have all matches OR there isn't a more specific subtask match already displayed.
         return contentHasMatch && (!titleHasAllMatches && !subtaskSearchMatch);
 
     }, [searchWords, task.content, task.title, subtaskSearchMatch]);
@@ -464,18 +493,18 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     }, [setNodeRef]);
 
     const baseClasses = useMemo(() => twMerge(
-        'task-item flex items-center px-4 pr-3 h-[48px] mb-1.5',
+        'task-item flex items-center px-4 pr-3 h-[48px] mb-1.5', // Consistent height and padding
         'group relative rounded-base',
         isOverlay
-            ? 'bg-white dark:bg-neutral-750 shadow-xl border border-grey-light dark:border-neutral-600'
-            : isSelected && !isDragging
+            ? 'bg-white dark:bg-neutral-750 shadow-xl border border-grey-light dark:border-neutral-600' // Overlay style
+            : isSelected && !isDragging // Selected but not being dragged
                 ? 'bg-grey-ultra-light dark:bg-neutral-700'
-                : isTrashItem || isCompleted
-                    ? 'bg-white dark:bg-neutral-800 opacity-60'
-                    : 'bg-white dark:bg-neutral-800 hover:bg-grey-ultra-light dark:hover:bg-neutral-750',
+                : isTrashItem || isCompleted // Completed or Trashed items
+                    ? 'bg-white dark:bg-neutral-800 opacity-60' // Less prominent
+                    : 'bg-white dark:bg-neutral-800 hover:bg-grey-ultra-light dark:hover:bg-neutral-750', // Default interactive items
         isDragging ? 'cursor-grabbing' : (isSortable ? 'cursor-grab' : 'cursor-default'),
-        'transition-colors duration-150 ease-in-out outline-none',
-        'focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-800'
+        'transition-colors duration-150 ease-in-out outline-none', // Smooth transitions
+        'focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-800' // Focus styling
     ), [isOverlay, isSelected, isDragging, isTrashItem, isCompleted, isSortable]);
 
 
@@ -488,19 +517,19 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
     const availableLists = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
 
     const actionsMenuContentClasses = useMemo(() => twMerge(
-        'z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700', // Adjusted min-width
+        'z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700',
         'data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide'
     ), []);
 
     const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
-        "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800",
+        "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800", // Ensure high z-index
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
 
     const progressMenuItems = useMemo(() => [
         {label: 'Not Started', value: null, icon: 'circle' as IconName, iconStroke: 1.5},
-        {label: 'In Progress', value: 30, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
-        {label: 'Mostly Done', value: 60, icon: 'circle-dot' as IconName, iconStroke: 1.5},
+        {label: 'In Progress', value: 30, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5}, // Example: 30%
+        {label: 'Mostly Done', value: 60, icon: 'circle-dot' as IconName, iconStroke: 1.5},      // Example: 60%
         {label: 'Completed', value: 100, icon: 'circle-check' as IconName, iconStroke: 2},
     ], []);
 
@@ -510,10 +539,10 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
         'flex items-center whitespace-nowrap rounded-base transition-colors duration-150 ease-in-out outline-none',
         'text-[11px] font-light',
         overdue && 'text-error dark:text-red-400',
-        (isCompleted || isTrashItem) && 'line-through opacity-70',
+        (isCompleted || isTrashItem) && 'line-through opacity-70', // Muted and struck-through if completed/trashed
         isDateClickable && 'cursor-pointer hover:bg-grey-light dark:hover:bg-neutral-700 px-1 py-0.5 mx-[-4px] my-[-2px] focus-visible:ring-1 focus-visible:ring-primary',
-        !isDateClickable && 'px-0 py-0',
-        !overdue && 'text-grey-medium dark:text-neutral-400'
+        !isDateClickable && 'px-0 py-0', // No extra padding if not clickable
+        !overdue && 'text-grey-medium dark:text-neutral-400' // Default color for non-overdue dates
     ), [overdue, isCompleted, isTrashItem, isDateClickable]);
 
     const tooltipContentClass = "text-[11px] bg-grey-dark dark:bg-neutral-900/95 text-white dark:text-neutral-100 px-2 py-1 rounded-base shadow-md select-none z-[70] data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut";
@@ -522,7 +551,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
         if (task.priority && taskListPriorityMap[task.priority]) {
             return taskListPriorityMap[task.priority].bgColor;
         }
-        return noPriorityBgColor;
+        return noPriorityBgColor; // Should not be visible if no priority, or use a neutral placeholder
     }, [task.priority]);
 
     const priorityDotLabel = useMemo(() => {
@@ -539,22 +568,23 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                  style={style}
                  className={baseClasses} {...(isSortable ? attributes : {})} {...(isSortable ? listeners : {})}
                  onClick={handleTaskClick}
-                 role={isSortable ? "listitem" : "button"}
-                 tabIndex={isInteractive ? 0 : -1}
+                 role={isSortable ? "listitem" : "button"} // Role="button" if not sortable but clickable
+                 tabIndex={isInteractive || isSortable ? 0 : -1} // Allow focus if interactive or sortable
                  onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
                      if ((e.key === 'Enter' || e.key === ' ') && !(e.target as HTMLElement).closest('button, input, a, [role="menuitem"], [data-date-picker-trigger="true"], [data-tooltip-trigger]')) {
                          e.preventDefault();
                          handleTaskClick(e as unknown as React.MouseEvent<HTMLDivElement>);
                      }
-                     if ((e.key === 'Enter' || e.key === ' ') && (e.target as HTMLElement).getAttribute('data-date-picker-trigger') === 'true') {
+                     if ((e.key === 'Enter' || e.key === ' ') && (e.target as HTMLElement).getAttribute('data-date-picker-trigger') === 'true' && isDateClickable) {
                          e.preventDefault();
                          e.stopPropagation();
                          handleDateClickPickerOpenChange(true);
                      }
-                     if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === taskItemRef.current && moreActionsButtonRef.current) {
+                     // Allow opening "more actions" with Enter/Space if the item itself is focused
+                     if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === taskItemRef.current && moreActionsButtonRef.current && isInteractive) {
                          e.preventDefault();
                          e.stopPropagation();
-                         moreActionsButtonRef.current.click();
+                         moreActionsButtonRef.current.click(); // Simulate click on the more actions button
                      }
                  }}
                  aria-selected={isSelected} aria-labelledby={`task-title-${task.id}`}>
@@ -565,15 +595,15 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                        ariaLabelledby={`task-title-${task.id}`} size={16}/>
                 </div>
 
-                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <div className="flex-1 min-w-0 flex flex-col justify-center"> {/* min-w-0 for proper truncation */}
                     <div className="flex items-center">
                         {!isCompleted && !isTrashItem && task.priority && (
                             <Tooltip.Provider delayDuration={300}><Tooltip.Root>
                                 <Tooltip.Trigger asChild>
                                      <span
                                          className={twMerge("w-2 h-2 rounded-full flex-shrink-0 mr-2", priorityDotBgClass)}
-                                         data-tooltip-trigger="true"
-                                         aria-label={priorityDotLabel}
+                                         data-tooltip-trigger="true" // For custom tooltip handling if needed
+                                         aria-label={priorityDotLabel} // Direct aria-label is good for simple cases
                                      />
                                 </Tooltip.Trigger>
                                 <Tooltip.Portal><Tooltip.Content className={tooltipContentClass} side="top"
@@ -588,10 +618,10 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                     </div>
 
                     <div
-                        className={twMerge("flex items-center flex-wrap text-grey-medium dark:text-neutral-400 mt-0.5 leading-tight gap-x-2 gap-y-0.5 min-h-[17px]",
+                        className={twMerge("flex items-center flex-wrap text-grey-medium dark:text-neutral-400 mt-0.5 leading-tight gap-x-2 gap-y-0.5 min-h-[17px]", // min-h to prevent layout shift
                             (isCompleted || isTrashItem) && "opacity-70"
                         )}>
-                        {!isTrashItem && (
+                        {!isTrashItem && ( // Don't show list for trashed items, or show "Trash" if desired
                             <Tooltip.Provider delayDuration={200}><Tooltip.Root>
                                 <Tooltip.Trigger asChild>
                                     <span className="flex items-center text-[11px] font-light cursor-default"
@@ -635,7 +665,10 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                 <Popover.Trigger asChild disabled={!isDateClickable}>
                                     <button ref={dateDisplayRef} className={dueDateClasses}
                                             title={isDateClickable ? `Due: ${formatDate(dueDate!)} (Click to change)` : `Due: ${formatDate(dueDate!)}`}
-                                            onClick={isDateClickable ? (e) => e.stopPropagation() : undefined}
+                                            onClick={isDateClickable ? (e) => {
+                                                e.stopPropagation();
+                                                handleDateClickPickerOpenChange(true);
+                                            } : undefined}
                                             onKeyDown={isDateClickable ? (e) => {
                                                 if (e.key === 'Enter' || e.key === ' ') {
                                                     e.preventDefault();
@@ -645,20 +678,20 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                             } : undefined}
                                             aria-label={isDateClickable ? `Change due date, currently ${formatRelativeDate(dueDate!, false)}` : `Due date ${formatRelativeDate(dueDate!, false)}`}
                                             data-date-picker-trigger={isDateClickable ? "true" : "false"}
-                                            data-tooltip-trigger="true"
+                                            data-tooltip-trigger={!isDateClickable ? "true" : "false"} // Only show tooltip if not clickable
                                     >
                                         <Icon name="calendar" size={12} strokeWidth={1.5}
                                               className="mr-0.5 opacity-80 flex-shrink-0"/>
                                         {formatRelativeDate(dueDate!, false)}
                                     </button>
                                 </Popover.Trigger>
-                                {isDateClickable && (
+                                {isDateClickable && ( /* Conditional rendering of Portal/Content is fine */
                                     <Popover.Portal><Popover.Content side="bottom" align="start" sideOffset={5}
                                                                      className={datePickerPopoverWrapperClasses}
-                                                                     onOpenAutoFocus={(e) => e.preventDefault()}
+                                                                     onOpenAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing
                                                                      onCloseAutoFocus={(e) => {
                                                                          e.preventDefault();
-                                                                         dateDisplayRef.current?.focus();
+                                                                         dateDisplayRef.current?.focus(); // Return focus to trigger
                                                                      }}>
                                         <CustomDatePickerContent
                                             initialDate={dueDate ?? undefined} onSelect={handleDateSelect}
@@ -692,7 +725,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                         {showContentHighlight && (
                             <div
                                 className={clsx("flex items-center text-[11px] text-grey-medium dark:text-neutral-400 italic w-full font-light", (isCompleted || isTrashItem) && 'line-through')}>
-                                <Icon name="file-text" size={10} strokeWidth={1}
+                                <Icon name="file-text" size={10} strokeWidth={1} /* Adjusted stroke for subtlety */
                                       className="mr-1 opacity-70 flex-shrink-0 mt-px"/>
                                 <Highlighter {...highlighterProps}
                                              textToHighlight={generateContentSnippet(task.content!, searchTerm)}
@@ -717,8 +750,10 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                 {isInteractive && (
                     <div
                         className="task-item-actions absolute top-1/2 -translate-y-1/2 right-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150 ease-in-out z-10"
-                        onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
-                        onTouchStart={(e) => e.stopPropagation()}>
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()} // Prevent task selection
+                        onTouchStart={(e) => e.stopPropagation()} // For touch devices
+                    >
                         <Popover.Root modal={true} open={isMenuPopoverOpen} onOpenChange={handleMenuPopoverOpenChange}>
                             <DropdownMenu.Root open={isMoreActionsOpen} onOpenChange={handleMoreActionsOpenChange}>
                                 <Popover.Anchor asChild>
@@ -737,10 +772,18 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                         sideOffset={4}
                                         align="end"
                                         onCloseAutoFocus={(e) => {
-                                            const parentElement = taskItemRef.current;
-                                            const isParentHovered = parentElement?.matches(':hover');
-                                            if (isMenuPopoverOpen || !isParentHovered) {
+                                            // Prevent focus from shifting away if a popover inside the menu was just opened
+                                            if (isMenuPopoverOpen) {
                                                 e.preventDefault();
+                                            } else if (document.activeElement !== moreActionsButtonRef.current && taskItemRef.current?.contains(document.activeElement)) {
+                                                // If focus is still within the task item but not on the trigger, allow Radix to manage,
+                                                // unless a menu popover is open (handled above).
+                                                // If focus is outside, or on trigger, default behavior is fine.
+                                            } else if (!taskItemRef.current?.contains(document.activeElement)) {
+                                                // If focus is completely outside, also allow default.
+                                            } else {
+                                                e.preventDefault(); // Default: keep focus on trigger or manage manually
+                                                moreActionsButtonRef.current?.focus();
                                             }
                                         }}
                                     >
@@ -820,12 +863,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                                             className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
                                         <Popover.Trigger asChild>
-                                            <TaskItemRadixMenuItem icon="calendar-plus"
-                                                                   onSelect={(event) => {
-                                                                       event.preventDefault();
-                                                                       handleMenuPopoverOpenChange(true);
-                                                                   }}
-                                                                   disabled={!isInteractive}>
+                                            <TaskItemRadixMenuItem // This component now uses forwardRef
+                                                icon="calendar-plus"
+                                                onSelect={(event) => {
+                                                    event.preventDefault(); // Prevent menu from closing
+                                                    handleMenuPopoverOpenChange(true);
+                                                }}
+                                                disabled={!isInteractive}>
                                                 Set Due Date...
                                             </TaskItemRadixMenuItem>
                                         </Popover.Trigger>
@@ -885,12 +929,16 @@ const TaskItem: React.FC<TaskItemProps> = memo(({task, groupCategory, isOverlay 
                             </DropdownMenu.Root>
 
                             <Popover.Portal>
-                                <Popover.Content side="right" align="start"
+                                <Popover.Content side="right"
+                                                 align="start" /* Changed from side="bottom" for better UX from menu */
                                                  sideOffset={5}
                                                  className={datePickerPopoverWrapperClasses}
-                                                 onOpenAutoFocus={(e) => e.preventDefault()}
-                                                 onCloseAutoFocus={(e) => {
+                                                 onOpenAutoFocus={(e) => e.preventDefault()} // Prevent focus stealing
+                                                 onCloseAutoFocus={(e) => { // Manage focus on close
                                                      e.preventDefault();
+                                                     // Try to focus the "Set Due Date..." menu item or the main trigger
+                                                     // This requires the "Set Due Date..." item to be focusable or have a ref
+                                                     moreActionsButtonRef.current?.focus(); // Fallback to main trigger
                                                  }}>
                                     <CustomDatePickerContent
                                         initialDate={dueDate ?? undefined} onSelect={handleDateSelect}
