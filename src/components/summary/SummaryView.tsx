@@ -97,6 +97,7 @@ const SummaryView: React.FC = () => {
         setCurrentIndex(0);
         hasUnsavedChangesRef.current = false;
     }, [period, listFilter, setCurrentIndex, setSelectedTaskIds]);
+
     useEffect(() => {
         const summaryToLoad = relevantSummaries[currentIndex];
         const summaryText = summaryToLoad?.summaryText ?? '';
@@ -108,6 +109,7 @@ const SummaryView: React.FC = () => {
         }
         setIsRefTasksDropdownOpen(false);
     }, [currentIndex, relevantSummaries]);
+
     useEffect(() => {
         if (hasUnsavedChangesRef.current && currentSummary?.id) {
             const summaryIdToUpdate = currentSummary.id;
@@ -119,6 +121,7 @@ const SummaryView: React.FC = () => {
             hasUnsavedChangesRef.current = false;
         }
     }, [debouncedEditorContent, currentSummary?.id, setStoredSummaries]);
+
     const forceSaveCurrentSummary = useCallback(() => {
         if (hasUnsavedChangesRef.current && currentSummary?.id) {
             const id = currentSummary.id;
@@ -130,6 +133,7 @@ const SummaryView: React.FC = () => {
             hasUnsavedChangesRef.current = false;
         }
     }, [currentSummary?.id, setStoredSummaries, summaryEditorContent]);
+
     const handlePeriodValueChange = useCallback((selectedValue: string) => {
         forceSaveCurrentSummary();
         if (selectedValue === 'custom') {
@@ -141,10 +145,12 @@ const SummaryView: React.FC = () => {
             setIsRangePickerOpen(false);
         }
     }, [setPeriod, setIsRangePickerOpen, forceSaveCurrentSummary]);
+
     const handleListChange = useCallback((newList: string) => {
         forceSaveCurrentSummary();
         setListFilter(newList);
     }, [setListFilter, forceSaveCurrentSummary]);
+
     const handleTaskSelectionChange = useCallback((taskId: string, isSelected: boolean | 'indeterminate') => {
         if (typeof isSelected === 'boolean') {
             setSelectedTaskIds(prev => {
@@ -154,16 +160,20 @@ const SummaryView: React.FC = () => {
             });
         }
     }, [setSelectedTaskIds]);
+
     const handleSelectAllTasks = useCallback(() => {
         const nonTrashedTaskIds = filteredTasks.filter(t => t.list !== 'Trash').map(t => t.id);
         setSelectedTaskIds(new Set(nonTrashedTaskIds));
     }, [filteredTasks, setSelectedTaskIds]);
+
     const handleDeselectAllTasks = useCallback(() => {
         setSelectedTaskIds(new Set());
     }, [setSelectedTaskIds]);
+
     const handleSelectAllToggle = useCallback((isChecked: boolean | 'indeterminate') => {
         if (isChecked === true) handleSelectAllTasks(); else handleDeselectAllTasks();
     }, [handleSelectAllTasks, handleDeselectAllTasks]);
+
     const handleGenerateClick = useCallback(async () => {
         forceSaveCurrentSummary();
         setIsGenerating(true);
@@ -191,6 +201,7 @@ const SummaryView: React.FC = () => {
             setIsGenerating(false);
         }
     }, [selectedTaskIds, allTasks, filterKey, setIsGenerating, setStoredSummaries, setCurrentIndex, forceSaveCurrentSummary]);
+
     const handleEditorChange = useCallback((newValue: string) => {
         if (!isInternalEditorUpdate.current) {
             setSummaryEditorContent(newValue);
@@ -198,23 +209,28 @@ const SummaryView: React.FC = () => {
         }
         isInternalEditorUpdate.current = false;
     }, []);
+
     const handlePrevSummary = useCallback(() => {
         forceSaveCurrentSummary();
         setCurrentIndex(prev => Math.min(prev + 1, relevantSummaries.length - 1));
     }, [setCurrentIndex, relevantSummaries.length, forceSaveCurrentSummary]);
+
     const handleNextSummary = useCallback(() => {
         forceSaveCurrentSummary();
         setCurrentIndex(prev => Math.max(prev - 1, 0));
     }, [setCurrentIndex, forceSaveCurrentSummary]);
+
     const handleRangeApply = useCallback((startDate: Date, endDate: Date) => {
         forceSaveCurrentSummary();
         setPeriod({start: startDate.getTime(), end: endDate.getTime()});
         setIsRangePickerOpen(false);
     }, [setPeriod, setIsRangePickerOpen, forceSaveCurrentSummary]);
+
     const openHistoryModal = useCallback(() => {
         forceSaveCurrentSummary();
         setIsHistoryModalOpen(true);
     }, [forceSaveCurrentSummary]);
+
     const closeHistoryModal = useCallback(() => setIsHistoryModalOpen(false), []);
     const closeRangePicker = useCallback(() => setIsRangePickerOpen(false), []);
 
@@ -228,6 +244,7 @@ const SummaryView: React.FC = () => {
         label: 'Custom Range...',
         value: 'custom'
     },], []);
+
     const listOptions = useMemo(() => [{
         label: 'All Lists',
         value: 'all'
@@ -235,6 +252,7 @@ const SummaryView: React.FC = () => {
         label: listName,
         value: listName
     }))], [availableLists]);
+
     const selectedPeriodLabel = useMemo(() => {
         const option = periodOptions.find(p => typeof period === 'string' && p.value === period);
         if (option) return option.label;
@@ -249,26 +267,31 @@ const SummaryView: React.FC = () => {
         }
         return 'Select Period';
     }, [period, periodOptions]);
+
     const selectedListLabel = useMemo(() => {
         const option = listOptions.find(l => l.value === listFilter);
         return option ? option.label : 'Select List';
     }, [listFilter, listOptions]);
+
     const isGenerateDisabled = useMemo(() => {
         if (isGenerating) return true;
         if (selectedTaskIds.size === 0) return true;
         const selectedTasks = allTasks.filter(t => selectedTaskIds.has(t.id));
         return !selectedTasks.some(t => t.list !== 'Trash');
     }, [isGenerating, selectedTaskIds, allTasks]);
+
     const tasksUsedCount = useMemo(() => currentSummary?.taskIds.length ?? 0, [currentSummary]);
     const summaryTimestamp = useMemo(() => currentSummary ? formatDateTime(currentSummary.createdAt) : null, [currentSummary]);
     const selectableTasks = useMemo(() => filteredTasks.filter(t => t.list !== 'Trash'), [filteredTasks]);
     const allSelectableTasksSelected = useMemo(() => selectableTasks.length > 0 && selectableTasks.every(task => selectedTaskIds.has(task.id)), [selectableTasks, selectedTaskIds]);
     const someSelectableTasksSelected = useMemo(() => selectableTasks.some(task => selectedTaskIds.has(task.id)) && !allSelectableTasksSelected, [selectedTaskIds, allSelectableTasksSelected, selectableTasks]);
+
     const selectAllState = useMemo(() => {
         if (allSelectableTasksSelected) return true;
         if (someSelectableTasksSelected) return 'indeterminate';
         return false;
     }, [allSelectableTasksSelected, someSelectableTasksSelected]);
+
     const totalRelevantSummaries = useMemo(() => relevantSummaries.length, [relevantSummaries]);
     const displayedIndex = useMemo(() => totalRelevantSummaries > 0 ? (currentIndex + 1) : 0, [totalRelevantSummaries, currentIndex]);
 
@@ -312,6 +335,7 @@ const SummaryView: React.FC = () => {
                 </li>))}</ul>) : (
                 <p className="text-[12px] text-grey-medium italic p-4 text-center font-light">No referenced tasks
                     found.</p>)} </div>);
+
     const TaskItemMiniInline: React.FC<{
         task: Task;
         isSelected: boolean;
@@ -323,6 +347,7 @@ const SummaryView: React.FC = () => {
         const uniqueId = `summary-task-${task.id}`;
         const isDisabled = task.list === 'Trash';
         const INITIAL_VISIBLE_SUBTASKS = 1;
+
         const handleLabelClick = (e: React.MouseEvent<HTMLLabelElement>) => {
             if ((e.target as HTMLElement).closest('[data-subtask-expander="true"]')) {
                 e.preventDefault();
@@ -331,22 +356,27 @@ const SummaryView: React.FC = () => {
             if ((e.target as HTMLElement).closest('input[type="checkbox"]')) return;
             if (!isDisabled) onSelectionChange(task.id, !isSelected);
         };
+
         const toggleSubtaskExpansion = (e: React.MouseEvent<HTMLButtonElement>) => {
             e.stopPropagation();
             setIsSubtasksExpanded(prev => !prev);
         };
+
         const sortedSubtasks = useMemo(() => {
             if (!task.subtasks) return [];
             return [...task.subtasks].sort((a, b) => a.order - b.order);
         }, [task.subtasks]);
+
         const subtasksToShow = useMemo(() => {
             if (!sortedSubtasks) return [];
             return isSubtasksExpanded ? sortedSubtasks : sortedSubtasks.slice(0, INITIAL_VISIBLE_SUBTASKS);
         }, [sortedSubtasks, isSubtasksExpanded, INITIAL_VISIBLE_SUBTASKS]);
+
         const hiddenSubtasksCount = useMemo(() => {
             if (!sortedSubtasks) return 0;
             return Math.max(0, sortedSubtasks.length - INITIAL_VISIBLE_SUBTASKS);
         }, [sortedSubtasks, INITIAL_VISIBLE_SUBTASKS]);
+
         return (<label htmlFor={uniqueId}
                        className={twMerge("flex flex-col p-2 rounded-base transition-colors duration-150 ease-in-out", isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer", isSelected && !isDisabled ? "bg-primary-light" : "hover:bg-grey-ultra-light")}
                        onClick={handleLabelClick}>
@@ -443,7 +473,7 @@ const SummaryView: React.FC = () => {
                                         className="!h-8 px-3 text-grey-dark font-light hover:bg-grey-ultra-light min-w-[120px] tabular-nums"><Icon
                                     name="calendar-days" size={14} strokeWidth={1}
                                     className="mr-1.5 opacity-80"/>{selectedPeriodLabel}<Icon
-                                    name="chevron-down" // Icon opacity increased
+                                    name="chevron-down"
                                     size={14} strokeWidth={1}
                                     className="ml-auto opacity-70 pl-1"/></Button>
                             </DropdownMenu.Trigger></Popover.Anchor>
@@ -477,7 +507,7 @@ const SummaryView: React.FC = () => {
                                                               className="!h-8 px-3 text-grey-dark font-light hover:bg-grey-ultra-light min-w-[110px]"><Icon
                             name="list" size={14} strokeWidth={1}
                             className="mr-1.5 opacity-80"/>{selectedListLabel}<Icon name="chevron-down"
-                                                                                    size={14} // Icon opacity increased
+                                                                                    size={14}
                                                                                     strokeWidth={1}
                                                                                     className="ml-auto opacity-70 pl-1"/></Button></DropdownMenu.Trigger>
                         <DropdownMenu.Portal>
@@ -544,16 +574,21 @@ const SummaryView: React.FC = () => {
                                                     aria-haspopup="true">
                                                     <Icon name="file-text" size={12} strokeWidth={1}
                                                           className="mr-1 opacity-80"/>{tasksUsedCount} tasks
-                                                    used<Icon // Icon opacity increased
+                                                    used<Icon
                                                     name="chevron-down" size={12} strokeWidth={1}
                                                     className="ml-0.5 opacity-70"/>
                                                 </button>
                                             </DropdownMenu.Trigger>
-                                            <DropdownMenu.Portal><DropdownMenu.Content
-                                                className={twMerge("z-[55] p-0", dropdownAnimationClasses)}
-                                                sideOffset={4} align="end" onInteractOutside={e => e.preventDefault()}
-                                                onFocusOutside={e => e.preventDefault()}
-                                                onCloseAutoFocus={e => e.preventDefault()}>{renderReferencedTasksDropdown()}</DropdownMenu.Content></DropdownMenu.Portal>
+                                            <DropdownMenu.Portal>
+                                                <DropdownMenu.Content
+                                                    className={twMerge("z-[55] p-0", dropdownAnimationClasses)}
+                                                    sideOffset={4}
+                                                    align="end"
+                                                    onCloseAutoFocus={e => e.preventDefault()}
+                                                >
+                                                    {renderReferencedTasksDropdown()}
+                                                </DropdownMenu.Content>
+                                            </DropdownMenu.Portal>
                                         </DropdownMenu.Root>
                                         {totalRelevantSummaries > 1 && !isGenerating && (<>
                                             <Button variant="ghost" size="icon" icon="chevron-left"
