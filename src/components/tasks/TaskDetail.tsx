@@ -515,7 +515,7 @@ const TaskDetail: React.FC = () => {
     ), []);
 
     const headerClass = useMemo(() => twMerge(
-        "px-4 py-2 h-14 flex items-center justify-between flex-shrink-0", // px-4 makes border-b inset
+        "px-4 py-2 h-[56px] flex items-center justify-between flex-shrink-0", // px-4 makes border-b inset
         "border-b border-grey-light dark:border-neutral-700/60",
         "bg-white dark:bg-neutral-850" // Explicit background for header
     ), []);
