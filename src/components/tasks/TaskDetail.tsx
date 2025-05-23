@@ -1051,7 +1051,6 @@ const TaskDetail: React.FC = () => {
                                                         type="button"
                                                         className={twMerge(
                                                             "flex items-center justify-center w-6 h-6 rounded-l-base",
-                                                            "dark:hover:bg-neutral-600",
                                                             newSubtaskDueDate ? "text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary" : "text-grey-medium hover:text-grey-dark dark:text-neutral-400 dark:hover:text-neutral-200"
                                                         )}
                                                         aria-label="Set subtask due date"

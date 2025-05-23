@@ -791,7 +791,6 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                 type="button"
                                                 className={twMerge(
                                                     "flex items-center justify-center w-6 h-6 rounded-l-base focus:outline-none ml-1",
-                                                    "dark:hover:bg-neutral-600",
                                                     newTaskDueDate ? "text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary" : "text-grey-medium hover:text-grey-dark dark:text-neutral-400 dark:hover:text-neutral-200",
                                                     (isCurrentlyAiMode && isAiProcessing) && "opacity-50 cursor-not-allowed"
                                                 )}
@@ -877,7 +876,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                         <DropdownMenu.Trigger asChild>
                                             <button
                                                 type="button"
-                                                className="flex items-center justify-center w-7 h-7 rounded-r-base dark:hover:bg-neutral-600 text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-primary"
+                                                className="flex items-center justify-center w-7 h-7 rounded-r-base text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-primary"
                                                 aria-label="More task options"
                                                 disabled={(isCurrentlyAiMode && isAiProcessing) || isAiProcessing}
                                             >

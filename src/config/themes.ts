@@ -79,53 +79,47 @@ export const PREDEFINED_BACKGROUND_IMAGES: {
 }[] = [
     {id: 'none', name: 'None', url: 'none', isLight: true},
     {
-        id: 'abstract-lines',
-        name: 'Abstract Lines',
-        url: '/backgrounds/abstract-lines.jpg',
-        author: 'Fakurian Design',
-        authorUrl: 'https://unsplash.com/@fakurian',
-        isLight: false
+        "id": "brown-grass-sunset",
+        "name": "Brown Grass Sunset",
+        "url": "/backgrounds/1.jpg",
+        "isLight": true
     },
     {
-        id: 'mountain-landscape',
-        name: 'Mountain Landscape',
-        url: '/backgrounds/mountain-landscape.jpg',
-        author: 'Daniel Leone',
-        authorUrl: 'https://unsplash.com/@danielleone',
-        isLight: true
+        "id": "sailboat-on-sea",
+        "name": "Sailboat On Sea",
+        "url": "/backgrounds/2.jpg",
+        "isLight": true
     },
     {
-        id: 'geometric-pattern',
-        name: 'Geometric Pattern',
-        url: '/backgrounds/geometric-pattern.jpg',
-        author: 'John Towner',
-        authorUrl: 'https://unsplash.com/@heytowner',
-        isLight: true
+        "id": "green-grass-field",
+        "name": "Green Grass Field",
+        "url": "/backgrounds/3.jpg",
+        "isLight": true
     },
     {
-        id: 'subtle-waves',
-        name: 'Subtle Waves',
-        url: '/backgrounds/subtle-waves.jpg',
-        author: 'Ricardo Gomez Angel',
-        authorUrl: 'https://unsplash.com/@rgaleriacom',
-        isLight: true
+        "id": "snowy-cabin-dawn",
+        "name": "Snowy Cabin Dawn",
+        "url": "/backgrounds/4.webp",
+        "isLight": true
     },
     {
-        id: 'dark-minimalist',
-        name: 'Dark Minimalist',
-        url: '/backgrounds/dark-minimalist.jpg',
-        author: 'eberhard grossgasteiger',
-        authorUrl: 'https://unsplash.com/@eberhardgross',
-        isLight: false
+        "id": "burrata-salad-bowl",
+        "name": "Burrata Salad Bowl",
+        "url": "/backgrounds/5.webp",
+        "isLight": true
     },
     {
-        id: 'aurora-sky',
-        name: 'Aurora Sky',
-        url: '/backgrounds/aurora-sky.jpg',
-        author: 'Vincent Guth',
-        authorUrl: 'https://unsplash.com/@vguth',
-        isLight: false
+        "id": "cappadocia-balloons",
+        "name": "Cappadocia Balloons",
+        "url": "/backgrounds/6.webp",
+        "isLight": true
     },
+    {
+        "id": "red-orange-poppy",
+        "name": "Red Orange Poppy",
+        "url": "/backgrounds/7.webp",
+        "isLight": true
+    }
 ];
 
 export const APP_VERSION = '1.0.1 - UX Refinements';
