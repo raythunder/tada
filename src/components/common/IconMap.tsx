@@ -71,6 +71,7 @@ export const iconMap = {
     'inbox': LucideIcons.Inbox,
     'list-checks': LucideIcons.ListChecks,
     'x-circle': LucideIcons.XCircle,
+    'key': LucideIcons.Key,
     'calendar-check': LucideIcons.CalendarCheck,
     'refresh-cw': LucideIcons.RefreshCw,
     'copy-plus': LucideIcons.CopyPlus,
