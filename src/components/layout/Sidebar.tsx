@@ -14,16 +14,19 @@ import {
     selectedTaskIdAtom,
     taskCountsAtom,
     tasksAtom,
-    userListNamesAtom,
+    userListsAtom,
     userTagNamesAtom
 } from '@/store/atoms';
-import {Task, TaskFilter} from '@/types';
+import {List, Task, TaskFilter} from '@/types';
 import {twMerge} from 'tailwind-merge';
 import Button from '../common/Button';
 import AddListModal from '../common/AddListModal';
 import {IconName} from "@/components/common/IconMap";
 import Highlighter from "react-highlight-words";
 import {AnimatePresence, motion} from 'framer-motion';
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as service from "@/services/apiService";
+import {RESET} from "jotai/utils";
 
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -146,13 +149,15 @@ CollapsibleSection.displayName = 'CollapsibleSection';
 
 const Sidebar: React.FC = () => {
     const counts = useAtomValue(taskCountsAtom);
-    const userLists = useAtomValue(userListNamesAtom);
+    const userLists = useAtomValue(userListsAtom);
     const userTags = useAtomValue(userTagNamesAtom);
     const searchResults = useAtomValue(rawSearchResultsAtom);
     const [searchTerm, setSearchTerm] = useAtom(searchTermAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
-    const setTasks = useSetAtom(tasksAtom);
-    const [, setIsAddListModalOpen] = useAtom(isAddListModalOpenAtom);
+    const setListsAtom = useSetAtom(userListsAtom);
+    const setTasksAtom = useSetAtom(tasksAtom);
+    const [isAddListModalOpen, setIsAddListModalOpen] = useAtom(isAddListModalOpenAtom);
+    const [currentFilter, setCurrentFilter] = useAtom(currentFilterAtom);
 
     const preferencesData = useAtomValue(preferencesSettingsAtom);
     const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
@@ -167,26 +172,10 @@ const Sidebar: React.FC = () => {
         setIsAddListModalOpen(true);
     }, [setIsAddListModalOpen]);
 
-    const handleListAdded = useCallback((newListName: string) => {
-        const trimmedName = newListName.trim();
-        if (!trimmedName) return;
-        // Create a placeholder task in the new list to ensure the list is created on the backend
-        const now = Date.now();
-        const placeholderTask: Task = {
-            id: `task-${now}`,
-            title: `Welcome to ${trimmedName}`,
-            listName: trimmedName,
-            order: now,
-            completed: false,
-            completedAt: null,
-            completePercentage: null,
-            createdAt: now,
-            updatedAt: now,
-            groupCategory: 'nodate',
-        };
-        setTasks(prev => [...(prev ?? []), placeholderTask]);
-        navigate(`/list/${encodeURIComponent(trimmedName)}`);
-    }, [setTasks, navigate]);
+    const handleListAdded = useCallback(() => {
+        setIsAddListModalOpen(false);
+        setListsAtom(RESET);
+    }, [setListsAtom, setIsAddListModalOpen]);
 
     const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setSearchTerm(e.target.value);
@@ -201,7 +190,44 @@ const Sidebar: React.FC = () => {
         setSelectedTaskId(task.id);
     }, [setSelectedTaskId]);
 
-    const myListsToDisplay = useMemo(() => userLists.filter(list => list !== 'Inbox'), [userLists]);
+    const handleDeleteList = useCallback(async (list: List) => {
+        if (list.name === 'Inbox') {
+            alert("The 'Inbox' list cannot be deleted.");
+            return;
+        }
+        if (!confirm(`Are you sure you want to delete "${list.name}"? Tasks in this list will be moved to your Inbox.`)) {
+            return;
+        }
+        try {
+            await service.apiDeleteList(list.id);
+            if (currentFilter === `list-${list.name}`) {
+                navigate('/all');
+            }
+            setListsAtom(RESET);
+            setTasksAtom(RESET); // Tasks must be refetched
+        } catch (e: any) {
+            alert(`Error deleting list: ${e.message}`);
+        }
+    }, [currentFilter, navigate, setListsAtom, setTasksAtom]);
+
+    const handleRenameList = useCallback(async (list: List) => {
+        const newName = prompt('Enter the new list name:', list.name);
+        if (newName && newName.trim() && newName.trim() !== list.name) {
+            try {
+                await service.apiUpdateList(list.id, {name: newName.trim()});
+                if (currentFilter === `list-${list.name}`) {
+                    navigate(`/list/${encodeURIComponent(newName.trim())}`);
+                }
+                setListsAtom(RESET);
+                setTasksAtom(RESET); // Tasks must be refetched for updated listName
+            } catch (e: any) {
+                alert(`Error renaming list: ${e.message}`);
+            }
+        }
+    }, [currentFilter, navigate, setListsAtom, setTasksAtom]);
+
+    const myListsToDisplay = useMemo(() => userLists?.filter(list => list.name !== 'Inbox') ?? [], [userLists]);
+    const inboxList = useMemo(() => userLists?.find(list => list.name === 'Inbox'), [userLists]);
     const tagsToDisplay = useMemo(() => userTags, [userTags]);
 
     const searchInputClassName = useMemo(() => twMerge(
@@ -220,6 +246,9 @@ const Sidebar: React.FC = () => {
     }), [debouncedSearchTerm]);
 
     const searchResultButtonClassName = "flex items-start w-full px-2 py-1.5 text-left rounded-base hover:bg-grey-ultra-light dark:hover:bg-grey-deep text-[13px] group transition-colors duration-100 ease-in-out focus:outline-none focus-visible:ring-1 focus-visible:ring-primary";
+
+    const dropdownContentClasses = "z-[60] min-w-[120px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700 data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
+    const dropdownItemClasses = "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light dark:focus:bg-neutral-700 dark:data-[highlighted]:bg-neutral-700 text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-200 dark:data-[highlighted]:text-neutral-100";
 
     if (isLoadingPreferences) {
         return (
@@ -310,9 +339,9 @@ const Sidebar: React.FC = () => {
                                     <SidebarItem to="/next7days" filter="next7days" icon="calendar"
                                                  label={preferences.language === 'zh-CN' ? '未来7天' : "Next 7 Days"}
                                                  count={counts.next7days}/>
-                                    <SidebarItem to="/list/Inbox" filter="list-Inbox" icon="inbox"
-                                                 label={preferences.language === 'zh-CN' ? '收件箱' : "Inbox"}
-                                                 count={counts.lists['Inbox']}/>
+                                    {inboxList && <SidebarItem to="/list/Inbox" filter="list-Inbox" icon="inbox"
+                                                               label={preferences.language === 'zh-CN' ? '收件箱' : "Inbox"}
+                                                               count={counts.lists['Inbox']}/>}
                                 </nav>
                                 <CollapsibleSection title={preferences.language === 'zh-CN' ? '我的列表' : "My Lists"}
                                                     action={
@@ -325,10 +354,41 @@ const Sidebar: React.FC = () => {
                                     {myListsToDisplay.length === 0 ? (
                                         <p className="text-[12px] text-grey-medium dark:text-neutral-400 px-2 py-1 italic font-light">
                                             {preferences.language === 'zh-CN' ? '暂无自定义列表。' : 'No custom lists yet.'}
-                                        </p>) : (myListsToDisplay.map(listName => (
-                                        <SidebarItem key={listName} to={`/list/${encodeURIComponent(listName)}`}
-                                                     filter={`list-${listName}`} icon="list" label={listName}
-                                                     count={counts.lists[listName]} isUserList={true}/>)))}
+                                        </p>) : (myListsToDisplay.map(list => (
+                                        <div key={list.id} className="group/listitem relative pr-7">
+                                            <SidebarItem to={`/list/${encodeURIComponent(list.name)}`}
+                                                         filter={`list-${list.name}`}
+                                                         icon={(list.icon as IconName) || 'list'} label={list.name}
+                                                         count={counts.lists[list.name]} isUserList={true}/>
+                                            <div
+                                                className="absolute top-0 right-0 h-full flex items-center opacity-0 group-hover/listitem:opacity-100 transition-opacity">
+                                                <DropdownMenu.Root>
+                                                    <DropdownMenu.Trigger asChild>
+                                                        <Button variant="ghost" size="icon" icon="more-horizontal"
+                                                                className="w-6 h-6 text-grey-medium dark:text-neutral-400"
+                                                                aria-label={`Actions for ${list.name}`}/>
+                                                    </DropdownMenu.Trigger>
+                                                    <DropdownMenu.Portal>
+                                                        <DropdownMenu.Content className={dropdownContentClasses}
+                                                                              side="right" align="start"
+                                                                              sideOffset={-24}>
+                                                            <DropdownMenu.Item className={dropdownItemClasses}
+                                                                               onSelect={() => handleRenameList(list)}>
+                                                                <Icon name="edit" size={14} className="mr-2 opacity-80"
+                                                                      strokeWidth={1.5}/> Rename
+                                                            </DropdownMenu.Item>
+                                                            <DropdownMenu.Item
+                                                                className={twMerge(dropdownItemClasses, "text-error dark:text-red-400 data-[highlighted]:bg-red-500/10 dark:data-[highlighted]:bg-red-500/20")}
+                                                                onSelect={() => handleDeleteList(list)}>
+                                                                <Icon name="trash" size={14} className="mr-2 opacity-80"
+                                                                      strokeWidth={1.5}/> Delete
+                                                            </DropdownMenu.Item>
+                                                        </DropdownMenu.Content>
+                                                    </DropdownMenu.Portal>
+                                                </DropdownMenu.Root>
+                                            </div>
+                                        </div>
+                                    )))}
                                 </CollapsibleSection>
                                 {tagsToDisplay.length > 0 && (
                                     <CollapsibleSection title={preferences.language === 'zh-CN' ? '标签' : "Tags"}
@@ -350,7 +410,7 @@ const Sidebar: React.FC = () => {
                     </AnimatePresence>
                 </div>
             </aside>
-            <AddListModal onAdd={handleListAdded}/>
+            <AddListModal onAddSuccess={handleListAdded}/>
         </>
     );
 };

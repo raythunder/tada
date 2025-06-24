@@ -1,33 +1,46 @@
 // src/components/common/AddListModal.tsx
-import React, {useCallback, useRef, useState} from 'react';
-import {useAtom} from 'jotai';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {useAtom, useAtomValue} from 'jotai';
 import {isAddListModalOpenAtom, userListNamesAtom} from '@/store/atoms';
 import Button from './Button';
 import {twMerge} from 'tailwind-merge';
 import * as Dialog from '@radix-ui/react-dialog';
+import * as service from '@/services/apiService';
 
 interface AddListModalProps {
-    onAdd: (listName: string) => void;
+    onAddSuccess: () => void;
 }
 
-const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
+const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
     const [isOpen, setIsOpen] = useAtom(isAddListModalOpenAtom);
-    const [allListNames] = useAtom(userListNamesAtom);
+    const allListNames = useAtomValue(userListNamesAtom);
     const [listName, setListName] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            // Focus input when modal opens
+            const timer = setTimeout(() => inputRef.current?.focus(), 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
 
     const handleOpenChange = useCallback((open: boolean) => {
         setIsOpen(open);
         if (!open) {
+            // Reset state on close
             setListName('');
             setError(null);
+            setIsLoading(false);
         }
     }, [setIsOpen]);
 
-    const handleSubmit = useCallback((e: React.FormEvent) => {
+    const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         const trimmedName = listName.trim();
+
         if (!trimmedName) {
             setError("List name cannot be empty.");
             inputRef.current?.focus();
@@ -45,10 +58,21 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
             inputRef.current?.select();
             return;
         }
+
         setError(null);
-        onAdd(trimmedName);
-        handleOpenChange(false);
-    }, [listName, allListNames, onAdd, handleOpenChange]);
+        setIsLoading(true);
+
+        try {
+            await service.apiCreateList({name: trimmedName});
+            onAddSuccess(); // Notify parent of success
+            handleOpenChange(false); // Close modal
+        } catch (e: any) {
+            setError(e.message || "Failed to create list.");
+        } finally {
+            setIsLoading(false);
+        }
+
+    }, [listName, allListNames, onAddSuccess, handleOpenChange]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setListName(e.target.value);
@@ -111,6 +135,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                                 aria-required="true"
                                 aria-invalid={!!error}
                                 aria-describedby={error ? "listNameError" : undefined}
+                                disabled={isLoading}
                             />
                             {error && (
                                 <p id="listNameError"
@@ -122,7 +147,9 @@ const AddListModal: React.FC<AddListModalProps> = ({onAdd}) => {
                                 <Button variant="secondary" size="md"> Cancel </Button>
                             </Dialog.Close>
                             <Button type="submit" variant="primary" size="md"
-                                    disabled={!listName.trim() || !!error}> Create List </Button>
+                                    disabled={!listName.trim() || !!error || isLoading}
+                                    loading={isLoading}
+                            > Create List </Button>
                         </div>
                     </form>
                 </Dialog.Content>

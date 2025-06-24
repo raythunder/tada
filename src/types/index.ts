@@ -10,6 +10,14 @@ export interface User {
     isPremium: boolean;
 }
 
+export interface List {
+    id: string;
+    name: string;
+    icon?: string | null;
+    color?: string | null;
+    order?: number | null;
+}
+
 export interface Subtask {
     id: string;
     parentId: string; // Corresponds to task_id on backend
@@ -29,7 +37,8 @@ export interface Task {
     completedAt: number | null;
     completePercentage: number | null;
     dueDate?: number | null;
-    listName: string; // Renamed from 'list' to match backend alias
+    listId: string | null;
+    listName: string;
     content?: string;
     order: number;
     createdAt: number;

@@ -1,12 +1,15 @@
 // src/services/apiService.ts
+import {AppearanceSettings, List, PreferencesSettings, StoredSummary, Task, User} from '@/types';
 import {
-    AppearanceSettings,
-    PreferencesSettings,
-    StoredSummary,
-    Task,
-    User
-} from '@/types';
-import { AuthResponse as ApiAuthResponse, TaskCreate, TaskUpdate, TaskBulkUpdate, TaskBulkDelete, AiTaskSuggestion } from '@/types/api';
+    AiTaskSuggestion,
+    AuthResponse as ApiAuthResponse,
+    ListCreate,
+    ListUpdate,
+    TaskBulkDelete,
+    TaskBulkUpdate,
+    TaskCreate,
+    TaskUpdate
+} from '@/types/api';
 
 const API_BASE_URL = '/api/v1';
 
@@ -33,7 +36,9 @@ export const setAuthToken = (token: string | null): void => {
 const toCamel = (s: string): string => s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
 const toSnake = (s: string): string => s.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
 
-const isObject = (o: any): o is { [key: string]: any } => o === Object(o) && !Array.isArray(o) && typeof o !== 'function';
+const isObject = (o: any): o is {
+    [key: string]: any
+} => o === Object(o) && !Array.isArray(o) && typeof o !== 'function';
 
 const keysToCamel = (o: any): any => {
     if (isObject(o)) {
@@ -81,7 +86,7 @@ const apiFetch = async <T>(endpoint: string, options: ApiFetchOptions = {}): Pro
 
     const config: RequestInit = {
         method: options.method || 'GET',
-        headers: { ...headers, ...options.headers },
+        headers: {...headers, ...options.headers},
     };
 
     if (options.body) {
@@ -116,15 +121,19 @@ const apiFetch = async <T>(endpoint: string, options: ApiFetchOptions = {}): Pro
 // --- User & Auth ---
 export type AuthResponse = ApiAuthResponse;
 
-export const apiSendCode = async (identifier: string, purpose: 'register' | 'login' | 'reset_password'): Promise<{ success: boolean; message?: string; error?: string }> => {
+export const apiSendCode = async (identifier: string, purpose: 'register' | 'login' | 'reset_password'): Promise<{
+    success: boolean;
+    message?: string;
+    error?: string
+}> => {
     try {
         const response = await apiFetch<{ message: string }>('/users/send-code', {
             method: 'POST',
-            body: { identifier, purpose }
+            body: {identifier, purpose}
         });
-        return { success: true, message: response.message };
+        return {success: true, message: response.message};
     } catch (e: any) {
-        return { success: false, error: e.message };
+        return {success: false, error: e.message};
     }
 };
 
@@ -138,9 +147,9 @@ export const apiRegisterWithCode = async (formData: FormData): Promise<AuthRespo
         if (response.success && response.token) {
             setAuthToken(response.token);
         }
-        return { ...response, success: true };
+        return {...response, success: true};
     } catch (e: any) {
-        return { success: false, error: e.message };
+        return {success: false, error: e.message};
     }
 };
 
@@ -152,7 +161,7 @@ export const apiLogin = async (identifier: string, password: string): Promise<Au
 
         const response = await fetch(`${API_BASE_URL}/users/login/password`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: formData.toString(),
         });
 
@@ -165,7 +174,7 @@ export const apiLogin = async (identifier: string, password: string): Promise<Au
         }
         return camelData;
     } catch (e: any) {
-        return { success: false, error: e.message };
+        return {success: false, error: e.message};
     }
 };
 
@@ -173,38 +182,46 @@ export const apiLoginWithCode = async (identifier: string, code: string): Promis
     try {
         const response = await apiFetch<AuthResponse>('/users/login/code', {
             method: 'POST',
-            body: { identifier, code }
+            body: {identifier, code}
         });
         if (response.success && response.token) {
             setAuthToken(response.token);
         }
-        return { ...response, success: true };
+        return {...response, success: true};
     } catch (e: any) {
-        return { success: false, error: e.message };
+        return {success: false, error: e.message};
     }
 };
 
-export const apiPasswordRecovery = async (identifier: string, code: string, newPassword: string): Promise<{ success: boolean; message: string; error?: string }> => {
+export const apiPasswordRecovery = async (identifier: string, code: string, newPassword: string): Promise<{
+    success: boolean;
+    message: string;
+    error?: string
+}> => {
     try {
         const response = await apiFetch<{ message: string }>('/users/password-recovery', {
             method: 'POST',
-            body: { identifier, code, newPassword }
+            body: {identifier, code, newPassword}
         });
-        return { success: true, ...response };
+        return {success: true, ...response};
     } catch (e: any) {
-        return { success: false, message: '', error: e.message };
+        return {success: false, message: '', error: e.message};
     }
 };
 
-export const apiChangePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string; error?: string }> => {
+export const apiChangePassword = async (currentPassword: string, newPassword: string): Promise<{
+    success: boolean;
+    message: string;
+    error?: string
+}> => {
     try {
         const response = await apiFetch<{ message: string }>('/users/me/change-password', {
             method: 'POST',
-            body: { currentPassword, newPassword }
+            body: {currentPassword, newPassword}
         });
-        return { success: true, ...response };
+        return {success: true, ...response};
     } catch (e: any) {
-        return { success: false, message: '', error: e.message };
+        return {success: false, message: '', error: e.message};
     }
 };
 
@@ -241,7 +258,10 @@ export const apiDeleteAvatar = (): Promise<User> => {
 };
 
 // --- Settings ---
-export const apiFetchSettings = async(): Promise<{ appearance: AppearanceSettings, preferences: PreferencesSettings }> => {
+export const apiFetchSettings = async (): Promise<{
+    appearance: AppearanceSettings,
+    preferences: PreferencesSettings
+}> => {
     return apiFetch<{ appearance: AppearanceSettings, preferences: PreferencesSettings }>('/users/me/settings');
 };
 
@@ -258,6 +278,24 @@ export const apiUpdatePreferencesSettings = (settings: PreferencesSettings): Pro
         body: settings,
     });
 };
+
+// --- Lists ---
+export const apiFetchLists = (): Promise<List[]> => apiFetch<List[]>('/lists/');
+
+export const apiCreateList = (listData: ListCreate): Promise<List> => apiFetch<List>('/lists/', {
+    method: 'POST',
+    body: listData,
+});
+
+export const apiUpdateList = (listId: string, listData: ListUpdate): Promise<List> => apiFetch<List>(`/lists/${listId}`, {
+    method: 'PUT',
+    body: listData,
+});
+
+export const apiDeleteList = (listId: string): Promise<{ message: string }> => apiFetch<{
+    message: string
+}>(`/lists/${listId}`, {method: 'DELETE'});
+
 
 // --- Tasks, Subtasks, Tags ---
 export const apiFetchTasks = (params: { [key: string]: any } = {}): Promise<Task[]> => {
@@ -285,7 +323,7 @@ export const apiUpdateTask = (taskId: string, taskData: TaskUpdate): Promise<Tas
 };
 
 export const apiDeleteTask = (taskId: string): Promise<void> => {
-    return apiFetch<void>(`/tasks/${taskId}`, { method: 'DELETE' });
+    return apiFetch<void>(`/tasks/${taskId}`, {method: 'DELETE'});
 };
 
 export const apiBulkUpdateTasks = (updates: TaskBulkUpdate): Promise<{ message: string }> => {
@@ -303,14 +341,18 @@ export const apiBulkDeleteTasks = (deletes: TaskBulkDelete): Promise<{ message: 
 };
 
 // --- AI Services ---
-export const apiSuggestTask = async (prompt: string): Promise<{ success: boolean; data?: AiTaskSuggestion; error?: string; }> => {
+export const apiSuggestTask = async (prompt: string): Promise<{
+    success: boolean;
+    data?: AiTaskSuggestion;
+    error?: string;
+}> => {
     try {
         const response = await apiFetch<AiTaskSuggestion>(`/ai/suggest-task?prompt=${encodeURIComponent(prompt)}`, {
             method: 'POST',
         });
-        return { success: true, data: response };
+        return {success: true, data: response};
     } catch (e: any) {
-        return { success: false, error: e.message };
+        return {success: false, error: e.message};
     }
 };
 
@@ -329,28 +371,34 @@ export const apiStreamSummary = (taskIds: string[], periodKey: string, listKey: 
         onmessage: null as ((event: MessageEvent) => void) | null,
         onerror: null as ((event: Event) => void) | null,
 
-        addEventListener(type: 'message' | 'error', listener: (event: any) => void) { this._listeners[type].push(listener); },
-        close() { controller.abort(); },
+        addEventListener(type: 'message' | 'error', listener: (event: any) => void) {
+            this._listeners[type].push(listener);
+        },
+        close() {
+            controller.abort();
+        },
     } as any;
 
     (async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/ai/summary?${queryParams.toString()}`, {
-                headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+                headers: {'Authorization': `Bearer ${getAuthToken()}`},
                 signal: controller.signal,
             });
-            if (!response.ok || !response.body) { throw new Error(`Failed to connect to SSE: ${response.statusText}`); }
+            if (!response.ok || !response.body) {
+                throw new Error(`Failed to connect to SSE: ${response.statusText}`);
+            }
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             while (true) {
-                const { done, value } = await reader.read();
+                const {done, value} = await reader.read();
                 if (done) break;
                 const chunk = decoder.decode(value);
                 const lines = chunk.split('\n').filter(line => line.trim() !== '');
                 for (const line of lines) {
                     if (line.startsWith('data:')) {
                         const data = line.substring(5).trim();
-                        const messageEvent = new MessageEvent('message', { data });
+                        const messageEvent = new MessageEvent('message', {data});
                         if (customEventSource.onmessage) customEventSource.onmessage(messageEvent);
                         customEventSource._listeners.message.forEach((l: any) => l(messageEvent));
                     }
@@ -372,5 +420,5 @@ export const apiFetchSummaries = (): Promise<StoredSummary[]> => {
 };
 
 export const apiDeleteSummary = (summaryId: string): Promise<void> => {
-    return apiFetch<void>(`/ai/summaries/${summaryId}`, { method: 'DELETE' });
+    return apiFetch<void>(`/ai/summaries/${summaryId}`, {method: 'DELETE'});
 };

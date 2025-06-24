@@ -10,11 +10,27 @@ export interface AuthResponse {
     message?: string;
 }
 
+// --- Lists ---
+export interface ListCreate {
+    name: string;
+    icon?: string | null;
+    color?: string | null;
+    order?: number | null;
+}
+
+export interface ListUpdate {
+    name?: string;
+    icon?: string | null;
+    color?: string | null;
+    order?: number | null;
+}
+
+
 // --- Tasks ---
 export interface TaskCreate {
     title: string;
     content?: string | null;
-    listName: string; // Maps to 'list' alias on backend
+    listId?: string | null;
     priority?: number | null;
     tags?: string[] | null;
     dueDate?: string | null; // ISO 8601 string
@@ -30,7 +46,7 @@ export interface TaskUpdate {
     completePercentage?: number | null;
     dueDate?: string | null; // ISO 8601 string
     priority?: number | null;
-    listName?: string; // Maps to 'list' alias
+    listId?: string | null;
     order?: number;
     tags?: string[] | null;
 }
@@ -41,7 +57,7 @@ export interface TaskBulkUpdate {
     completePercentage?: number;
     dueDate?: string | null;
     priority?: number | null;
-    listName?: string;
+    listId?: string | null;
 }
 
 export interface TaskBulkDelete {

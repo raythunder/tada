@@ -3,6 +3,7 @@ import {atom, WritableAtom} from 'jotai';
 import {RESET} from 'jotai/utils';
 import {
     AppearanceSettings,
+    List,
     PreferencesSettings,
     SettingsTab,
     StoredSummary,
@@ -12,8 +13,10 @@ import {
     User
 } from '@/types';
 import {
-    addDays,
-    endOfDay, endOfMonth, endOfWeek, isAfter,
+    endOfDay,
+    endOfMonth,
+    endOfWeek,
+    isAfter,
     isBefore,
     isSameDay,
     isValid,
@@ -76,6 +79,7 @@ export const currentUserAtom: AsyncDataAtom<User, User | null | typeof RESET | '
     async (get, set, update) => {
         const resetAllUserData = () => {
             set(tasksAtom, RESET);
+            set(userListsAtom, RESET);
             set(appearanceSettingsAtom, RESET);
             set(preferencesSettingsAtom, RESET);
             set(storedSummariesAtom, RESET);
@@ -105,6 +109,7 @@ export const currentUserAtom: AsyncDataAtom<User, User | null | typeof RESET | '
                 set(baseCurrentUserAtom, user);
                 // After fetching user, trigger fetch for other data
                 set(tasksAtom, RESET);
+                set(userListsAtom, RESET);
                 set(appearanceSettingsAtom, RESET);
                 set(preferencesSettingsAtom, RESET);
                 set(storedSummariesAtom, RESET);
@@ -137,49 +142,6 @@ const baseTasksDataAtom = atom<Task[] | null>(null);
 export const tasksLoadingAtom = atom<boolean>(true);
 export const tasksErrorAtom = atom<string | null>(null);
 
-const findTaskChanges = (prevTasks: Task[], nextTasks: Task[]) => {
-    const prevMap = new Map(prevTasks.map(t => [t.id, t]));
-    const nextMap = new Map(nextTasks.map(t => [t.id, t]));
-
-    const created: Task[] = [];
-    const updated: {id: string, changes: TaskUpdate}[] = [];
-    const deleted: string[] = [];
-
-    // Detect created and updated
-    for (const nextTask of nextTasks) {
-        const prevTask = prevMap.get(nextTask.id);
-        if (!prevTask) {
-            if (!nextTask.id.startsWith('task-')) { // Ignore local-only tasks if they still exist somehow
-                created.push(nextTask);
-            }
-        } else {
-            let changes: TaskUpdate = {};
-            if(nextTask.title !== prevTask.title) changes.title = nextTask.title;
-            if(nextTask.content !== prevTask.content) changes.content = nextTask.content;
-            if(nextTask.completed !== prevTask.completed) changes.completed = nextTask.completed;
-            if(nextTask.completePercentage !== prevTask.completePercentage) changes.completePercentage = nextTask.completePercentage;
-            if(nextTask.dueDate !== prevTask.dueDate) changes.dueDate = nextTask.dueDate ? new Date(nextTask.dueDate).toISOString() : null;
-            if(nextTask.priority !== prevTask.priority) changes.priority = nextTask.priority;
-            if(nextTask.listName !== prevTask.listName) changes.listName = nextTask.listName;
-            if(nextTask.order !== prevTask.order) changes.order = nextTask.order;
-            if(JSON.stringify(nextTask.tags?.sort()) !== JSON.stringify(prevTask.tags?.sort())) changes.tags = nextTask.tags;
-
-            if (Object.keys(changes).length > 0) {
-                updated.push({ id: nextTask.id, changes });
-            }
-        }
-    }
-
-    // Detect deleted
-    for (const prevTask of prevTasks) {
-        if (!nextMap.has(prevTask.id)) {
-            deleted.push(prevTask.id);
-        }
-    }
-
-    return { created, updated, deleted };
-};
-
 export const tasksAtom: AsyncDataAtom<Task[]> = atom(
     (get) => get(baseTasksDataAtom),
     async (get, set, update) => {
@@ -195,7 +157,7 @@ export const tasksAtom: AsyncDataAtom<Task[]> = atom(
             try {
                 const fetchedTasks = await service.apiFetchTasks();
                 const tasksWithCategory = fetchedTasks.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}));
-                set(baseTasksDataAtom, tasksWithCategory.sort((a,b) => (a.order ?? 0) - (b.order ?? 0)));
+                set(baseTasksDataAtom, tasksWithCategory.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
             } catch (e: any) {
                 set(tasksErrorAtom, e.message || 'Failed to fetch tasks');
                 set(baseTasksDataAtom, []);
@@ -221,25 +183,61 @@ export const tasksAtom: AsyncDataAtom<Task[]> = atom(
         const newLocalTasks = nextTasksWithCategory.filter(t => t.id.startsWith('task-'));
         const existingTasks = nextTasksWithCategory.filter(t => !t.id.startsWith('task-'));
 
+        const findTaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
+            const prevMap = new Map(prevTasks.map(t => [t.id, t]));
+            const updated: { id: string, changes: TaskUpdate }[] = [];
+            const deleted: string[] = prevTasks.filter(p => !nextTasks.some(n => n.id === p.id)).map(t => t.id);
+
+            for (const nextTask of nextTasks) {
+                const prevTask = prevMap.get(nextTask.id);
+                if (prevTask) {
+                    let changes: TaskUpdate = {};
+                    if (nextTask.title !== prevTask.title) changes.title = nextTask.title;
+                    if (nextTask.content !== prevTask.content) changes.content = nextTask.content;
+                    if (nextTask.completed !== prevTask.completed) changes.completed = nextTask.completed;
+                    if (nextTask.completePercentage !== prevTask.completePercentage) changes.completePercentage = nextTask.completePercentage;
+                    if (nextTask.dueDate !== prevTask.dueDate) changes.dueDate = nextTask.dueDate ? new Date(nextTask.dueDate).toISOString() : null;
+                    if (nextTask.priority !== prevTask.priority) changes.priority = nextTask.priority;
+                    if (nextTask.listId !== prevTask.listId) changes.listId = nextTask.listId;
+                    if (nextTask.order !== prevTask.order) changes.order = nextTask.order;
+                    if (JSON.stringify(nextTask.tags?.sort()) !== JSON.stringify(prevTask.tags?.sort())) changes.tags = nextTask.tags;
+
+                    if (Object.keys(changes).length > 0) {
+                        updated.push({id: nextTask.id, changes});
+                    }
+                }
+            }
+            return {updated, deleted};
+        };
+
+
         // Handle creations first to get real IDs
         const creationPromises = newLocalTasks.map(async (taskToCreate) => {
             const createPayload: TaskCreate = {
-                title: taskToCreate.title, content: taskToCreate.content, listName: taskToCreate.listName,
-                priority: taskToCreate.priority, tags: taskToCreate.tags,
+                title: taskToCreate.title,
+                content: taskToCreate.content,
+                listId: taskToCreate.listId,
+                priority: taskToCreate.priority,
+                tags: taskToCreate.tags,
                 dueDate: taskToCreate.dueDate ? new Date(taskToCreate.dueDate).toISOString() : null,
-                order: taskToCreate.order, completed: taskToCreate.completed, completePercentage: taskToCreate.completePercentage ?? 0,
+                order: taskToCreate.order,
+                completed: taskToCreate.completed,
+                completePercentage: taskToCreate.completePercentage ?? 0,
             };
             return service.apiCreateTask(createPayload);
         });
 
         try {
             const createdTasks = await Promise.all(creationPromises);
-            const finalTaskList = [...existingTasks, ...createdTasks.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}))];
+            const finalTaskList = [...existingTasks, ...createdTasks.map(t => ({
+                ...t,
+                groupCategory: getTaskGroupCategory(t)
+            }))];
 
             // Now diff the server-acknowledged state
-            const { updated, deleted } = findTaskChanges(previousTasks, finalTaskList);
+            const {updated, deleted} = findTaskChangesForAPI(previousTasks, finalTaskList);
 
-            const updatePromises = updated.map(({ id, changes }) => service.apiUpdateTask(id, changes));
+            const updatePromises = updated.map(({id, changes}) => service.apiUpdateTask(id, changes));
             const deletePromises = deleted.map(id => service.apiDeleteTask(id));
 
             await Promise.all([...updatePromises, ...deletePromises]);
@@ -257,6 +255,46 @@ export const tasksAtom: AsyncDataAtom<Task[]> = atom(
 tasksAtom.onMount = (setSelf) => {
     setSelf(RESET);
 };
+
+// --- List Atoms ---
+const baseUserListsAtom = atom<List[] | null>(null);
+export const userListsLoadingAtom = atom<boolean>(true);
+export const userListsErrorAtom = atom<string | null>(null);
+
+export const userListsAtom: AsyncDataAtom<List[], List[] | ((prev: List[] | null) => List[]) | typeof RESET> = atom(
+    (get) => get(baseUserListsAtom),
+    async (get, set, update) => {
+        const currentUser = get(currentUserAtom);
+        if (update === RESET) {
+            if (!currentUser) {
+                set(baseUserListsAtom, []);
+                set(userListsLoadingAtom, false);
+                return;
+            }
+            set(userListsLoadingAtom, true);
+            set(userListsErrorAtom, null);
+            try {
+                const fetched = await service.apiFetchLists();
+                set(baseUserListsAtom, fetched);
+            } catch (e: any) {
+                set(userListsErrorAtom, e.message || 'Failed to load lists');
+                set(baseUserListsAtom, []);
+            } finally {
+                set(userListsLoadingAtom, false);
+            }
+            return;
+        }
+
+        if (!currentUser) return;
+
+        const nextLists = typeof update === 'function' ? (update as (prev: List[] | null) => List[])(get(baseUserListsAtom)) : update;
+        set(baseUserListsAtom, nextLists);
+    }
+);
+userListsAtom.onMount = (setSelf) => {
+    setSelf(RESET);
+};
+
 
 // --- UI State Atoms ---
 export const selectedTaskIdAtom = atom<string | null>(null);
@@ -309,7 +347,9 @@ export const appearanceSettingsAtom: AsyncDataAtom<AppearanceSettings> = atom(
         }
     }
 );
-appearanceSettingsAtom.onMount = (setSelf) => { setSelf(RESET); };
+appearanceSettingsAtom.onMount = (setSelf) => {
+    setSelf(RESET);
+};
 
 export type DefaultNewTaskDueDate = null | 'today' | 'tomorrow';
 
@@ -353,20 +393,14 @@ export const preferencesSettingsAtom: AsyncDataAtom<PreferencesSettings> = atom(
         }
     }
 );
-preferencesSettingsAtom.onMount = (setSelf) => { setSelf(RESET); };
+preferencesSettingsAtom.onMount = (setSelf) => {
+    setSelf(RESET);
+};
 
 export type PremiumSettings = { tier: 'free' | 'pro'; subscribedUntil: number | null; };
 export const premiumSettingsAtom = atom((get): PremiumSettings => {
     const user = get(currentUserAtom);
-    return user?.isPremium ? { tier: 'pro', subscribedUntil: null } : { tier: 'free', subscribedUntil: null };
-});
-
-// --- User Lists ---
-export const userDefinedListsAtom = atom<string[]>((get) => {
-    const tasks = get(tasksAtom) ?? [];
-    const listsFromTasks = new Set<string>();
-    tasks.forEach(task => { if (task.listName && task.listName !== 'Inbox' && task.listName !== 'Trash') { listsFromTasks.add(task.listName); } });
-    return Array.from(listsFromTasks).sort();
+    return user?.isPremium ? {tier: 'pro', subscribedUntil: null} : {tier: 'free', subscribedUntil: null};
 });
 
 // --- Summary Atoms ---
@@ -380,7 +414,7 @@ const baseStoredSummariesAtom = atom<StoredSummary[] | null>(null);
 export const storedSummariesLoadingAtom = atom<boolean>(true);
 export const storedSummariesErrorAtom = atom<string | null>(null);
 
-export const storedSummariesAtom: AsyncDataAtom<StoredSummary[], StoredSummary[] | ((prev: StoredSummary[]) => StoredSummary[]) | typeof RESET> = atom(
+export const storedSummariesAtom: AsyncDataAtom<StoredSummary[], StoredSummary[] | ((prev: StoredSummary[] | null) => StoredSummary[]) | typeof RESET> = atom(
     (get) => get(baseStoredSummariesAtom),
     async (get, set, update) => {
         const currentUser = get(currentUserAtom);
@@ -405,16 +439,24 @@ export const storedSummariesAtom: AsyncDataAtom<StoredSummary[], StoredSummary[]
         }
 
         if (!currentUser) return;
-        const updatedSummaries = typeof update === 'function' ? (update as (prev: StoredSummary[]) => StoredSummary[])(get(baseStoredSummariesAtom) ?? []) : update;
+        const updatedSummaries = typeof update === 'function' ? (update as (prev: StoredSummary[] | null) => StoredSummary[])(get(baseStoredSummariesAtom) ?? []) : update;
         set(baseStoredSummariesAtom, updatedSummaries);
     }
 );
-storedSummariesAtom.onMount = (setSelf) => { setSelf(RESET); };
+storedSummariesAtom.onMount = (setSelf) => {
+    setSelf(RESET);
+};
 
 export const currentSummaryIndexAtom = atom<number>(0);
 export const isGeneratingSummaryAtom = atom<boolean>(false);
-export const SUMMARY_FIELD_OPTIONS: { id: string; label: string }[] = [ {id: 'accomplishments', label: '今日工作总结'}, {id: 'tomorrowPlan', label: '明日工作计划'}, {id: 'challenges', label: '遇到的问题与困难'}, {id: 'teamCommunication', label: '团队沟通情况'}, {id: 'learnings', label: '学习与成长收获'}, {id: 'blockers', label: '当前主要瓶颈'}, ];
-export const summarySelectedFieldsAtom = atom<string[]>([ SUMMARY_FIELD_OPTIONS[0].id, SUMMARY_FIELD_OPTIONS[1].id ]);
+export const SUMMARY_FIELD_OPTIONS: { id: string; label: string }[] = [{
+    id: 'accomplishments',
+    label: '今日工作总结'
+}, {id: 'tomorrowPlan', label: '明日工作计划'}, {id: 'challenges', label: '遇到的问题与困难'}, {
+    id: 'teamCommunication',
+    label: '团队沟通情况'
+}, {id: 'learnings', label: '学习与成长收获'}, {id: 'blockers', label: '当前主要瓶颈'},];
+export const summarySelectedFieldsAtom = atom<string[]>([SUMMARY_FIELD_OPTIONS[0].id, SUMMARY_FIELD_OPTIONS[1].id]);
 
 // --- Derived Atoms ---
 export const selectedTaskAtom = atom((get) => {
@@ -424,12 +466,13 @@ export const selectedTaskAtom = atom((get) => {
     return selectedId ? tasks.find(task => task.id === selectedId) ?? null : null;
 });
 
-export const userListNamesAtom = atom((get) => {
-    const tasks = get(tasksAtom) ?? [];
-    const listsFromTasks = new Set<string>();
-    tasks.forEach(task => { if(task.listName && task.listName !== 'Trash') { listsFromTasks.add(task.listName); } });
-    if (!listsFromTasks.has('Inbox')) { listsFromTasks.add('Inbox'); }
-    return Array.from(listsFromTasks).sort((a, b) => a === 'Inbox' ? -1 : b === 'Inbox' ? 1 : a.localeCompare(b));
+export const userListNamesAtom = atom<string[]>((get) => {
+    const lists = get(userListsAtom) ?? [];
+    return lists.map(l => l.name).sort((a, b) => {
+        if (a === 'Inbox') return -1;
+        if (b === 'Inbox') return 1;
+        return a.localeCompare(b);
+    });
 });
 
 export const userTagNamesAtom = atom((get) => {
@@ -464,7 +507,11 @@ export const taskCountsAtom = atom((get) => {
             if (task.listName && Object.prototype.hasOwnProperty.call(counts.lists, task.listName)) {
                 counts.lists[task.listName]++;
             }
-            task.tags?.forEach(tag => { if (Object.prototype.hasOwnProperty.call(counts.tags, tag)) { counts.tags[tag]++; } });
+            task.tags?.forEach(tag => {
+                if (Object.prototype.hasOwnProperty.call(counts.tags, tag)) {
+                    counts.tags[tag]++;
+                }
+            });
         }
     });
     return counts;
@@ -472,11 +519,15 @@ export const taskCountsAtom = atom((get) => {
 
 export const groupedAllTasksAtom = atom((get): Record<TaskGroupCategory, Task[]> => {
     const tasksToGroup = (get(tasksAtom) ?? []).filter(t => t.listName !== 'Trash' && !t.completed)
-        .sort((a, b) => (a.order - b.order) || (a.createdAt - b.createdAt));
-    const groups: Record<TaskGroupCategory, Task[]> = { overdue: [], today: [], next7days: [], later: [], nodate: [] };
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
+    const groups: Record<TaskGroupCategory, Task[]> = {overdue: [], today: [], next7days: [], later: [], nodate: []};
     tasksToGroup.forEach(task => {
         const category = task.groupCategory;
-        if (Object.prototype.hasOwnProperty.call(groups, category)) { groups[category].push(task); } else { groups.nodate.push(task); }
+        if (Object.prototype.hasOwnProperty.call(groups, category)) {
+            groups[category].push(task);
+        } else {
+            groups.nodate.push(task);
+        }
     });
     return groups;
 });
@@ -507,7 +558,13 @@ export const currentSummaryFilterKeyAtom = atom<string>((get) => {
     const period = get(summaryPeriodFilterAtom);
     const list = get(summaryListFilterAtom);
     let periodStr = '';
-    if (typeof period === 'string') { periodStr = period; } else if (period && typeof period === 'object' && period.start && period.end) { periodStr = `custom_${startOfDay(new Date(period.start)).getTime()}_${endOfDay(new Date(period.end)).getTime()}`; } else { periodStr = 'invalid_period'; }
+    if (typeof period === 'string') {
+        periodStr = period;
+    } else if (period && typeof period === 'object' && period.start && period.end) {
+        periodStr = `custom_${startOfDay(new Date(period.start)).getTime()}_${endOfDay(new Date(period.end)).getTime()}`;
+    } else {
+        periodStr = 'invalid_period';
+    }
     const listStr = list;
     return `${periodStr}__${listStr}`;
 });
@@ -519,28 +576,58 @@ export const filteredTasksForSummaryAtom = atom<Task[]>((get) => {
     const todayStart = startOfDay(new Date());
     let startDateNum: number | null = null, endDateNum: number | null = null;
     switch (period) {
-        case 'today': startDateNum = todayStart.getTime(); endDateNum = endOfDay(new Date()).getTime(); break;
-        case 'yesterday': startDateNum = startOfDay(subDays(todayStart, 1)).getTime(); endDateNum = endOfDay(new Date(startDateNum)).getTime(); break;
-        case 'thisWeek': startDateNum = startOfWeek(todayStart).getTime(); endDateNum = endOfWeek(todayStart).getTime(); break;
-        case 'lastWeek': startDateNum = startOfWeek(subWeeks(todayStart, 1)).getTime(); endDateNum = endOfWeek(new Date(startDateNum)).getTime(); break;
-        case 'thisMonth': startDateNum = startOfMonth(todayStart).getTime(); endDateNum = endOfMonth(todayStart).getTime(); break;
-        case 'lastMonth': startDateNum = startOfMonth(subMonths(todayStart, 1)).getTime(); endDateNum = endOfMonth(new Date(startDateNum)).getTime(); break;
-        default: if (typeof period === 'object' && period.start && period.end) { startDateNum = startOfDay(new Date(period.start)).getTime(); endDateNum = endOfDay(new Date(period.end)).getTime(); } break;
+        case 'today':
+            startDateNum = todayStart.getTime();
+            endDateNum = endOfDay(new Date()).getTime();
+            break;
+        case 'yesterday':
+            startDateNum = startOfDay(subDays(todayStart, 1)).getTime();
+            endDateNum = endOfDay(new Date(startDateNum)).getTime();
+            break;
+        case 'thisWeek':
+            startDateNum = startOfWeek(todayStart).getTime();
+            endDateNum = endOfWeek(todayStart).getTime();
+            break;
+        case 'lastWeek':
+            startDateNum = startOfWeek(subWeeks(todayStart, 1)).getTime();
+            endDateNum = endOfWeek(new Date(startDateNum)).getTime();
+            break;
+        case 'thisMonth':
+            startDateNum = startOfMonth(todayStart).getTime();
+            endDateNum = endOfMonth(todayStart).getTime();
+            break;
+        case 'lastMonth':
+            startDateNum = startOfMonth(subMonths(todayStart, 1)).getTime();
+            endDateNum = endOfMonth(new Date(startDateNum)).getTime();
+            break;
+        default:
+            if (typeof period === 'object' && period.start && period.end) {
+                startDateNum = startOfDay(new Date(period.start)).getTime();
+                endDateNum = endOfDay(new Date(period.end)).getTime();
+            }
+            break;
     }
     if (!startDateNum || !endDateNum) return [];
-    const startDateObj = new Date(startDateNum); const endDateObj = new Date(endDateNum);
+    const startDateObj = new Date(startDateNum);
+    const endDateObj = new Date(endDateNum);
     if (!isValid(startDateObj) || !isValid(endDateObj)) return [];
     return allTasks.filter(task => {
         if (task.listName === 'Trash') return false;
         if (listFilter !== 'all' && task.listName !== listFilter) return false;
         let relevantDateTimestamp: number | null = null;
-        if (task.completed && task.completedAt) { relevantDateTimestamp = task.completedAt; } else if (!task.completed && task.dueDate) { relevantDateTimestamp = task.dueDate; } else { relevantDateTimestamp = task.updatedAt; }
+        if (task.completed && task.completedAt) {
+            relevantDateTimestamp = task.completedAt;
+        } else if (!task.completed && task.dueDate) {
+            relevantDateTimestamp = task.dueDate;
+        } else {
+            relevantDateTimestamp = task.updatedAt;
+        }
         if (!relevantDateTimestamp) return false;
         const relevantDate = safeParseDate(relevantDateTimestamp);
         if (!relevantDate || !isValid(relevantDate)) return false;
         const relevantDateDayStart = startOfDay(relevantDate);
         return !isBefore(relevantDateDayStart, startDateObj) && !isAfter(relevantDateDayStart, endDateObj);
-    }).sort((a, b) => (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || a.order - b.order || a.createdAt - b.createdAt);
+    }).sort((a, b) => (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
 });
 
 export const relevantStoredSummariesAtom = atom<StoredSummary[]>((get) => {
@@ -563,5 +650,5 @@ export const referencedTasksForSummaryAtom = atom<Task[]>((get) => {
     if (!summary) return [];
     const tasks = get(tasksAtom) ?? [];
     const ids = new Set(summary.taskIds);
-    return tasks.filter(t => ids.has(t.id)).sort((a, b) => (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || a.order - b.order);
+    return tasks.filter(t => ids.has(t.id)).sort((a, b) => (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || (a.order ?? 0) - (b.order ?? 0));
 });

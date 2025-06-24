@@ -12,6 +12,8 @@ import {
     currentUserAtom,
     currentUserErrorAtom,
     currentUserLoadingAtom,
+    defaultAppearanceSettingsForApi,
+    defaultPreferencesSettingsForApi,
     preferencesSettingsAtom,
     preferencesSettingsErrorAtom,
     preferencesSettingsLoadingAtom,
@@ -23,9 +25,7 @@ import {
     tasksAtom,
     tasksErrorAtom,
     tasksLoadingAtom,
-    userDefinedListsAtom,
-    defaultAppearanceSettingsForApi,
-    defaultPreferencesSettingsForApi,
+    userListsAtom,
 } from './store/atoms';
 import {startOfDay} from "@/utils/dateUtils";
 import {APP_THEMES} from "@/config/themes";
@@ -39,7 +39,8 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 
 const AppLoadingSpinner: React.FC = () => (
-    <div className="fixed inset-0 flex items-center justify-center bg-white/80 dark:bg-grey-deep/80 z-[20000] backdrop-blur-sm">
+    <div
+        className="fixed inset-0 flex items-center justify-center bg-white/80 dark:bg-grey-deep/80 z-[20000] backdrop-blur-sm">
         <Icon name="loader" size={32} className="text-primary dark:text-primary-light animate-spin" strokeWidth={1.5}/>
     </div>
 );
@@ -187,12 +188,16 @@ const GlobalStatusDisplay: React.FC = () => {
     const errors = [errorCurrentUser, errorTasks, errorAppearance, errorPreferences, errorSummaries].filter(Boolean);
     if (!anyLoading && errors.length === 0) return null;
     return (
-        <div className="fixed bottom-4 right-4 z-[10000] p-3 bg-neutral-800 text-white rounded-lg shadow-xl text-xs space-y-1 max-w-sm">
+        <div
+            className="fixed bottom-4 right-4 z-[10000] p-3 bg-neutral-800 text-white rounded-lg shadow-xl text-xs space-y-1 max-w-sm">
             {anyLoading && (
-                <div className="flex items-center"><Icon name="loader" size={14} className="animate-spin mr-2"/>Loading application data...</div>
+                <div className="flex items-center"><Icon name="loader" size={14} className="animate-spin mr-2"/>Loading
+                    application data...</div>
             )}
             {errors.map((error, index) => (
-                <div key={index} className="flex items-start text-red-400"><Icon name="alert-circle" size={14} className="mr-2 mt-px flex-shrink-0"/><span>{error}</span></div>
+                <div key={index} className="flex items-start text-red-400"><Icon name="alert-circle" size={14}
+                                                                                 className="mr-2 mt-px flex-shrink-0"/><span>{error}</span>
+                </div>
             ))}
         </div>
     );
@@ -220,9 +225,9 @@ const App: React.FC = () => {
     // These calls ensure the atoms are initialized and start fetching data on app load if necessary.
     useAtomValue(currentUserAtom);
     useAtomValue(tasksAtom);
+    useAtomValue(userListsAtom);
     useAtomValue(appearanceSettingsAtom);
     useAtomValue(preferencesSettingsAtom);
-    useAtomValue(userDefinedListsAtom);
     useAtomValue(storedSummariesAtom);
     useAtomValue(summarySelectedFieldsAtom);
 

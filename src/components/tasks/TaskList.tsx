@@ -13,7 +13,7 @@ import {
     selectedTaskIdAtom,
     tasksAtom,
     tasksLoadingAtom,
-    userListNamesAtom,
+    userListsAtom,
 } from '@/store/atoms';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
@@ -164,7 +164,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const groupedTasks = useAtomValue(groupedAllTasksAtom);
     const rawSearchResults = useAtomValue(rawSearchResultsAtom);
     const searchTerm = useAtomValue(searchTermAtom);
-    const userLists = useAtomValue(userListNamesAtom);
+    const allUserLists = useAtomValue(userListsAtom); // Get full list objects
     const preferencesData = useAtomValue(preferencesSettingsAtom);
     const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
     const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
@@ -189,7 +189,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const [isAiProcessing, setIsAiProcessing] = useState(false);
 
 
-    const availableListsForNewTask = useMemo(() => userLists.filter(l => l !== 'Trash'), [userLists]);
+    const availableListsForNewTask = useMemo(() => allUserLists?.map(l => l.name).filter(n => n !== 'Trash') ?? [], [allUserLists]);
 
     useEffect(() => {
         if (isLoadingPreferences) return;
@@ -417,6 +417,15 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         const titleToSave = newTaskTitle.trim();
         if (!titleToSave) return;
 
+        const targetList = allUserLists?.find(l => l.name === newTaskListState);
+        const inboxList = allUserLists?.find(l => l.name === 'Inbox');
+        const listIdForNewTask = targetList?.id ?? inboxList?.id ?? null;
+        if (!listIdForNewTask) {
+            console.error("Could not determine a list ID for the new task.");
+            alert("Error: Could not find a valid list for the new task.");
+            return;
+        }
+
         const now = Date.now();
         const topTask = (allTasks ?? [])
             .filter(t => !t.completed && t.listName !== 'Trash')
@@ -430,6 +439,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             completed: false,
             completedAt: null,
             listName: newTaskListState,
+            listId: listIdForNewTask,
             completePercentage: null,
             dueDate: newTaskDueDate ? newTaskDueDate.getTime() : null,
             priority: newTaskPriority,
@@ -463,7 +473,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         newTaskTitleInputRef.current?.focus();
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        setTasks, allTasks, preferences, availableListsForNewTask
+        setTasks, allTasks, preferences, availableListsForNewTask, allUserLists
     ]);
 
     const isRegularNewTaskModeAllowed = useMemo(() =>
@@ -486,9 +496,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             setNewTaskDueDate(defaultDate);
             setNewTaskPriority(preferences.defaultNewTaskPriority);
 
+            const userListNames = allUserLists?.map(l => l.name) ?? [];
             if (currentFilterGlobal.startsWith('list-')) {
                 const listName = currentFilterGlobal.substring(5);
-                if (userLists.includes(listName) && listName !== 'Trash') {
+                if (userListNames.includes(listName) && listName !== 'Trash') {
                     setNewTaskListState(listName);
                 } else {
                     setNewTaskListState(preferences.defaultNewTaskList);
@@ -498,7 +509,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             }
             setTimeout(() => newTaskTitleInputRef.current?.focus(), 0);
         }
-    }, [isAiTaskInputVisible, isAiProcessing, currentFilterGlobal, userLists, preferences]);
+    }, [isAiTaskInputVisible, isAiProcessing, currentFilterGlobal, allUserLists, preferences]);
 
 
     const handleAiTaskCommit = useCallback(async () => {
@@ -509,6 +520,13 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
         try {
             const aiAnalysis = await analyzeTaskInputWithAI(sentence);
+
+            const targetList = allUserLists?.find(l => l.name === newTaskListState);
+            const inboxList = allUserLists?.find(l => l.name === 'Inbox');
+            const listIdForNewTask = targetList?.id ?? inboxList?.id ?? null;
+            if (!listIdForNewTask) {
+                throw new Error("Could not find a valid list for the new AI task.");
+            }
 
             const now = Date.now();
             const topTask = (allTasks ?? []).filter(t => !t.completed && t.listName !== 'Trash').sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0];
@@ -521,6 +539,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                 completed: false,
                 completedAt: null,
                 listName: newTaskListState,
+                listId: listIdForNewTask,
                 completePercentage: null,
                 dueDate: aiAnalysis.dueDate ? new Date(aiAnalysis.dueDate).getTime() : (newTaskDueDate ? newTaskDueDate.getTime() : null),
                 priority: aiAnalysis.priority,
@@ -563,7 +582,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         }
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences
+        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists
     ]);
 
 
