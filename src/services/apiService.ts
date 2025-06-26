@@ -32,40 +32,6 @@ export const setAuthToken = (token: string | null): void => {
     }
 };
 
-// --- Data Transformation Helpers ---
-const toCamel = (s: string): string => s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
-const toSnake = (s: string): string => s.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-
-const isObject = (o: any): o is {
-    [key: string]: any
-} => o === Object(o) && !Array.isArray(o) && typeof o !== 'function';
-
-const keysToCamel = (o: any): any => {
-    if (isObject(o)) {
-        const n: { [key: string]: any } = {};
-        Object.keys(o).forEach((k) => {
-            n[toCamel(k)] = keysToCamel(o[k]);
-        });
-        return n;
-    } else if (Array.isArray(o)) {
-        return o.map(v => keysToCamel(v));
-    }
-    return o;
-};
-
-const keysToSnake = (o: any): any => {
-    if (isObject(o)) {
-        const n: { [key: string]: any } = {};
-        Object.keys(o).forEach((k) => {
-            n[toSnake(k)] = keysToSnake(o[k]);
-        });
-        return n;
-    } else if (Array.isArray(o)) {
-        return o.map(v => keysToSnake(v));
-    }
-    return o;
-};
-
 
 // --- Core API Fetch Utility ---
 interface ApiFetchOptions extends RequestInit {
@@ -93,7 +59,7 @@ const apiFetch = async <T>(endpoint: string, options: ApiFetchOptions = {}): Pro
         if (options.isFormData) {
             config.body = options.body;
         } else {
-            config.body = JSON.stringify(keysToSnake(options.body));
+            config.body = JSON.stringify(options.body);
         }
     }
 
@@ -111,11 +77,11 @@ const apiFetch = async <T>(endpoint: string, options: ApiFetchOptions = {}): Pro
     }
 
     if (response.status === 204) {
-        return {} as T; // For DELETE requests with no content
+        return {} as T;
     }
 
     const data = await response.json();
-    return keysToCamel(data) as T;
+    return data as T;
 };
 
 // --- User & Auth ---
@@ -155,24 +121,16 @@ export const apiRegisterWithCode = async (formData: FormData): Promise<AuthRespo
 
 export const apiLogin = async (identifier: string, password: string): Promise<AuthResponse> => {
     try {
-        const formData = new URLSearchParams();
-        formData.append('username', identifier);
-        formData.append('password', password);
-
-        const response = await fetch(`${API_BASE_URL}/users/login/password`, {
+        const response = await apiFetch<AuthResponse>(`/users/login/password`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: formData.toString(),
+            body: {identifier, password}
         });
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.detail || 'Login failed');
-
-        const camelData = keysToCamel(data) as AuthResponse;
-        if (camelData.success && camelData.token) {
-            setAuthToken(camelData.token);
+        if (response.success && response.token) {
+            setAuthToken(response.token);
         }
-        return camelData;
+        return {...response, success: true};
+
     } catch (e: any) {
         return {success: false, error: e.message};
     }
@@ -280,7 +238,7 @@ export const apiUpdatePreferencesSettings = (settings: PreferencesSettings): Pro
 };
 
 // --- Lists ---
-export const apiFetchLists = (): Promise<List[]> => apiFetch<List[]>('/lists/');
+export const apiFetchLists = (): Promise<List[]> => apiFetch<List[]>('/lists');
 
 export const apiCreateList = (listData: ListCreate): Promise<List> => apiFetch<List>('/lists/', {
     method: 'POST',
@@ -310,7 +268,7 @@ const transformTaskFromApi = (apiTask: any): Task => {
 
     const transformedSubtasks = (subtasks || []).map((sub: any) => ({
         ...sub,
-        dueDate: toMs(sub.dueDate),
+        dueDate: sub.dueDate ? new Date(sub.dueDate).getTime() : null,
         completedAt: toMs(sub.completedAt),
         createdAt: toMs(sub.createdAt),
         updatedAt: toMs(sub.updatedAt),
@@ -319,7 +277,7 @@ const transformTaskFromApi = (apiTask: any): Task => {
     return {
         ...rest,
         listName: list,
-        dueDate: toMs(apiTask.dueDate),
+        dueDate: apiTask.dueDate ? new Date(apiTask.dueDate).getTime() : null,
         completedAt: toMs(apiTask.completedAt),
         createdAt: toMs(apiTask.createdAt),
         updatedAt: toMs(apiTask.updatedAt),
@@ -331,7 +289,7 @@ const transformTaskFromApi = (apiTask: any): Task => {
 // --- Tasks, Subtasks, Tags ---
 export const apiFetchTasks = async (params: { [key: string]: any } = {}): Promise<Task[]> => {
     const query = new URLSearchParams(params).toString();
-    let url = '/tasks/'
+    let url = '/tasks'
     if (query) {
         url += `?${query}`
     }
@@ -340,7 +298,7 @@ export const apiFetchTasks = async (params: { [key: string]: any } = {}): Promis
 };
 
 export const apiCreateTask = async (taskData: TaskCreate): Promise<Task> => {
-    const apiTask = await apiFetch<any>('/tasks/', {
+    const apiTask = await apiFetch<any>('/tasks', {
         method: 'POST',
         body: taskData,
     });
