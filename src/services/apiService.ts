@@ -240,7 +240,7 @@ export const apiUpdatePreferencesSettings = (settings: PreferencesSettings): Pro
 // --- Lists ---
 export const apiFetchLists = (): Promise<List[]> => apiFetch<List[]>('/lists');
 
-export const apiCreateList = (listData: ListCreate): Promise<List> => apiFetch<List>('/lists/', {
+export const apiCreateList = (listData: ListCreate): Promise<List> => apiFetch<List>('/lists', {
     method: 'POST',
     body: listData,
 });

@@ -1,13 +1,14 @@
 // src/components/tasks/TaskDetail.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {useAtomValue, useSetAtom} from 'jotai';
 import {
-    preferencesSettingsAtom, // For confirmDeletions
-    preferencesSettingsLoadingAtom, // Added
+    defaultPreferencesSettingsForApi,
+    preferencesSettingsAtom,
+    preferencesSettingsLoadingAtom,
     selectedTaskAtom,
     selectedTaskIdAtom,
     tasksAtom,
-    userListNamesAtom,
+    userListsAtom,
 } from '@/store/atoms';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
@@ -39,7 +40,6 @@ import {
 import {arrayMove, SortableContext, verticalListSortingStrategy} from "@dnd-kit/sortable";
 import {AnimatePresence, motion} from "framer-motion";
 import SubtaskItemDetail from "./SubtaskItemDetail";
-import { defaultPreferencesSettingsForApi } from '@/store/atoms'; // For default preferences
 
 // --- Helper TagPill Component ---
 interface TagPillProps {
@@ -119,7 +119,7 @@ const TaskDetail: React.FC = () => {
     const selectedTask = useAtomValue(selectedTaskAtom); // This can be Task | null
     const setTasks = useSetAtom(tasksAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
-    const userLists = useAtomValue(userListNamesAtom);
+    const allUserLists = useAtomValue(userListsAtom);
     const preferencesData = useAtomValue(preferencesSettingsAtom);
     const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
     const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
@@ -373,10 +373,13 @@ const TaskDetail: React.FC = () => {
     }, [handleHeaderMenuPopoverOpenChange]);
 
 
-    const handleListChange = useCallback((newList: string) => {
-        updateTask({listName: newList});
+    const handleListChange = useCallback((newListName: string) => {
+        const listObject = allUserLists?.find(l => l.name === newListName);
+        if (listObject) {
+            updateTask({listName: newListName, listId: listObject.id});
+        }
         setIsMoreActionsOpen(false);
-    }, [updateTask]);
+    }, [updateTask, allUserLists]);
 
     const handlePriorityChange = useCallback((newPriority: number | null) => {
         updateTask({priority: newPriority});
@@ -702,7 +705,7 @@ const TaskDetail: React.FC = () => {
         {label: 'Completed', value: 100, icon: 'circle-check' as IconName, iconStroke: 2},
     ], []);
 
-    const availableLists = useMemo(() => (userLists ?? []).filter(l => l !== 'Trash'), [userLists]);
+    const availableLists = useMemo(() => (allUserLists ?? []).filter(l => l.name !== 'Trash'), [allUserLists]); // Changed
 
     const handleMoreActionsDropdownCloseFocus = useCallback((event: Event) => {
         // Prevent Radix from focusing trigger if a sub-popover is still open or was just opened
@@ -720,7 +723,9 @@ const TaskDetail: React.FC = () => {
     }, [selectedTask?.subtasks]);
 
     if (isLoadingPreferences) { // Or a combined loading state for task detail
-        return <div className="h-full flex items-center justify-center"><Icon name="loader" size={24} className="text-primary animate-spin"/></div>;
+        return <div className="h-full flex items-center justify-center"><Icon name="loader" size={24}
+                                                                              className="text-primary animate-spin"/>
+        </div>;
     }
     if (!selectedTask) return null; // Should be handled by placeholder usually
 
@@ -908,7 +913,10 @@ const TaskDetail: React.FC = () => {
                                                 align="start"
                                                 sideOffset={headerMenuSubPopoverSideOffset}
                                                 onOpenAutoFocus={(e) => e.preventDefault()}
-                                                onCloseAutoFocus={(e) => { e.preventDefault(); moreActionsButtonRef.current?.focus(); }}
+                                                onCloseAutoFocus={(e) => {
+                                                    e.preventDefault();
+                                                    moreActionsButtonRef.current?.focus();
+                                                }}
                                                 onFocusOutside={(event) => event.preventDefault()} // Prevent closing if focus moves outside temporarily
                                                 onPointerDownOutside={(event) => {
                                                     // Allow closing if click is outside this popover's trigger or content
@@ -949,7 +957,10 @@ const TaskDetail: React.FC = () => {
                                                 align="start"
                                                 sideOffset={headerMenuSubPopoverSideOffset}
                                                 onOpenAutoFocus={(e) => e.preventDefault()}
-                                                onCloseAutoFocus={(e) => { e.preventDefault(); moreActionsButtonRef.current?.focus(); }}
+                                                onCloseAutoFocus={(e) => {
+                                                    e.preventDefault();
+                                                    moreActionsButtonRef.current?.focus();
+                                                }}
                                                 onFocusOutside={(event) => event.preventDefault()}
                                                 onPointerDownOutside={(event) => {
                                                     const target = event.target as HTMLElement;
@@ -1002,15 +1013,15 @@ const TaskDetail: React.FC = () => {
                                                 >
                                                     {availableLists.map(list => (
                                                         <DropdownMenu.RadioItem
-                                                            key={list}
-                                                            value={list}
-                                                            className={getRadioItemClasses(selectedTask.listName === list)}
+                                                            key={list.id}
+                                                            value={list.name}
+                                                            className={getRadioItemClasses(selectedTask.listName === list.name)}
                                                             disabled={isTrash}
                                                         >
-                                                            <Icon name={list === 'Inbox' ? 'inbox' : 'list'}
+                                                            <Icon name={list.name === 'Inbox' ? 'inbox' : 'list'}
                                                                   size={14} strokeWidth={1.5}
                                                                   className="mr-2 flex-shrink-0 opacity-80"/>
-                                                            <span className="flex-grow">{list}</span>
+                                                            <span className="flex-grow">{list.name}</span>
                                                             <DropdownMenu.ItemIndicator
                                                                 className="absolute right-2 inline-flex items-center">
                                                                 <Icon name="check" size={12} strokeWidth={2}/>

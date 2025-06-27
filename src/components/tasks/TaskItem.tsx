@@ -10,7 +10,7 @@ import {
     searchTermAtom,
     selectedTaskIdAtom,
     tasksAtom,
-    userListNamesAtom
+    userListsAtom
 } from '@/store/atoms';
 import Icon from '../common/Icon';
 import {twMerge} from 'tailwind-merge';
@@ -224,7 +224,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
-    const userLists = useAtomValue(userListNamesAtom);
+    const allUserLists = useAtomValue(userListsAtom);
 
     const preferencesData = useAtomValue(preferencesSettingsAtom);
     const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
@@ -409,11 +409,14 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         setOpenItemId(null);
     }, [updateTask, setOpenItemId]);
 
-    const handleListChange = useCallback((newList: string) => {
-        updateTask({listName: newList});
+    const handleListChange = useCallback((newListName: string) => {
+        const listObject = allUserLists?.find(l => l.name === newListName);
+        if (listObject) {
+            updateTask({listName: newListName, listId: listObject.id});
+        }
         setIsMoreActionsOpen(false);
         setOpenItemId(null);
-    }, [updateTask, setOpenItemId]);
+    }, [updateTask, setOpenItemId, allUserLists]);
 
     const handleDuplicateTask = useCallback(() => {
         const now = Date.now();
@@ -527,7 +530,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     ), [isCompleted, isTrashItem]);
 
     const listIcon: IconName = useMemo(() => task.listName === 'Inbox' ? 'inbox' : (task.listName === 'Trash' ? 'trash' : 'list'), [task.listName]);
-    const availableLists = useMemo(() => (userLists ?? []).filter(l => l !== 'Trash'), [userLists]);
+    const availableLists = useMemo(() => (allUserLists ?? []).filter(l => l.name !== 'Trash'), [allUserLists]); // Changed
 
     const actionsMenuContentClasses = useMemo(() => twMerge(
         'z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700',
@@ -992,13 +995,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                 <DropdownMenu.RadioGroup value={task.listName}
                                                                          onValueChange={handleListChange}>
                                                     {availableLists.map(list => (
-                                                        <DropdownMenu.RadioItem key={list} value={list}
-                                                                                className={getTaskItemMenuRadioItemStyle(task.listName === list)}
+                                                        <DropdownMenu.RadioItem key={list.id} value={list.name}
+                                                                                className={getTaskItemMenuRadioItemStyle(task.listName === list.name)}
                                                                                 disabled={!isInteractive || isTrashItem}>
-                                                            <Icon name={list === 'Inbox' ? 'inbox' : 'list'}
+                                                            <Icon name={list.name === 'Inbox' ? 'inbox' : 'list'}
                                                                   size={14} strokeWidth={1.5}
                                                                   className="mr-2 flex-shrink-0 opacity-80"/>
-                                                            {list}
+                                                            {list.name}
                                                             <DropdownMenu.ItemIndicator
                                                                 className="absolute right-2 inline-flex items-center">
                                                                 <Icon name="check" size={12} strokeWidth={2}/>
