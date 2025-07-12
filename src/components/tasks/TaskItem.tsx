@@ -450,9 +450,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         updateTask({listName: 'Trash', completed: false, completePercentage: null});
         if (isSelected) setSelectedTaskId(null);
         closeDeleteConfirm();
-        setIsMoreActionsOpen(false);
-        setOpenItemId(null);
-    }, [updateTask, isSelected, setSelectedTaskId, closeDeleteConfirm, setOpenItemId]);
+    }, [updateTask, isSelected, setSelectedTaskId, closeDeleteConfirm]);
 
     const handleDeleteTask = useCallback(() => {
         if (isLoadingPreferences) return;
@@ -1022,8 +1020,11 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                     </TaskItemRadixMenuItem>
 
                                     {!isTrashItem && (
-                                        <TaskItemRadixMenuItem icon="trash" onSelect={handleDeleteTask} isDanger
-                                                               disabled={isLoadingPreferences}>
+                                        <TaskItemRadixMenuItem
+                                            icon="trash"
+                                            onSelect={() => setTimeout(() => handleDeleteTask(), 0)}
+                                            isDanger
+                                            disabled={isLoadingPreferences}>
                                             Move to Trash
                                         </TaskItemRadixMenuItem>
                                     )}

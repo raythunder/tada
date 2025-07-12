@@ -403,7 +403,6 @@ const TaskDetail: React.FC = () => {
         updateTask({listName: 'Trash', completePercentage: null});
         setSelectedTaskId(null);
         closeDeleteConfirm();
-        setIsMoreActionsOpen(false);
     }, [selectedTask, updateTask, setSelectedTaskId, closeDeleteConfirm]);
 
     const handleDeleteTask = useCallback(() => {
@@ -1049,7 +1048,10 @@ const TaskDetail: React.FC = () => {
                                             Restore Task
                                         </RadixMenuItem>
                                     ) : (
-                                        <RadixMenuItem icon="trash" onSelect={handleDeleteTask} isDanger>
+                                        <RadixMenuItem
+                                            icon="trash"
+                                            onSelect={() => setTimeout(() => handleDeleteTask(), 0)}
+                                            isDanger>
                                             Move to Trash
                                         </RadixMenuItem>
                                     )}
