@@ -318,12 +318,23 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         });
     }, [setTasks, task.id]);
 
+    // --- 核心修复逻辑在这里 ---
     const cycleCompletionPercentage = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
         event?.stopPropagation();
-        updateTask({completed: !task.completed});
-        if (!task.completed && isSelected) setSelectedTaskId(null);
+        const nextCompleted = !task.completed;
+        // 显式地同时更新 completed 和 completePercentage 以避免歧义
+        updateTask({
+            completed: nextCompleted,
+            completePercentage: nextCompleted ? 100 : 0
+        });
+
+        // 如果任务被标记为已完成，则取消其在详情视图中的选中状态
+        if (nextCompleted && isSelected) {
+            setSelectedTaskId(null);
+        }
         setOpenItemId(null);
-    }, [task.completed, updateTask, isSelected, setSelectedTaskId, setOpenItemId]);
+    }, [task.completed, isSelected, updateTask, setSelectedTaskId, setOpenItemId, task.id]);
+
 
     const handleProgressIndicatorKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
         if (event.key === 'Enter' || event.key === ' ') {

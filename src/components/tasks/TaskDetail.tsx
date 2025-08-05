@@ -290,7 +290,7 @@ const TaskDetail: React.FC = () => {
         }, 700); // Debounce save
     }, [selectedTask, localDueDate, savePendingChanges]);
 
-    const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'completed' | 'subtasks'>>) => {
+    const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'subtasks'>>) => {
         if (!selectedTask || !isMountedRef.current) return;
         // Save any pending debounced changes immediately before applying this direct update
         if (hasUnsavedChangesRef.current) {
@@ -392,15 +392,35 @@ const TaskDetail: React.FC = () => {
     }, [updateTask]);
 
     const handleProgressChange = useCallback((newPercentage: number | null) => {
-        updateTask({completePercentage: newPercentage});
+        updateTask({
+            completePercentage: newPercentage,
+            completed: newPercentage === 100,
+        });
     }, [updateTask]);
 
+    // --- 核心修复逻辑在这里 ---
     const cycleCompletionPercentage = useCallback(() => {
         if (!selectedTask || selectedTask.listName === 'Trash') return;
-        const currentPercentage = selectedTask.completePercentage ?? 0;
-        let nextPercentage: number | null = currentPercentage === 100 ? null : 100;
-        updateTask({completePercentage: nextPercentage});
-    }, [selectedTask, updateTask]);
+
+        // 明确判断当前是否为完成状态
+        const isCurrentlyCompleted = selectedTask.completed || (selectedTask.completePercentage ?? 0) === 100;
+        const nextCompleted = !isCurrentlyCompleted;
+
+        // 设置下一个完成百分比：完成时为100，未完成时为0
+        const nextPercentage = nextCompleted ? 100 : 0;
+
+        // 同时更新 completed 和 completePercentage 两个字段
+        updateTask({
+            completed: nextCompleted,
+            completePercentage: nextPercentage,
+        });
+
+        // 如果任务刚刚被标记为完成，则关闭详情视图
+        if (nextCompleted) {
+            setSelectedTaskId(null);
+        }
+    }, [selectedTask, updateTask, setSelectedTaskId]);
+
 
     const closeDeleteConfirm = useCallback(() => setIsDeleteDialogOpen(false), []);
 
@@ -494,7 +514,7 @@ const TaskDetail: React.FC = () => {
     }, [selectedTask, localTitle, localDueDate, savePendingChanges]);
 
     const isTrash = useMemo(() => selectedTask?.listName === 'Trash', [selectedTask?.listName]);
-    const isCompleted = useMemo(() => (selectedTask?.completePercentage ?? 0) === 100 && !isTrash, [selectedTask?.completePercentage, isTrash]);
+    const isCompleted = useMemo(() => (selectedTask?.completed || (selectedTask?.completePercentage ?? 0) === 100) && !isTrash, [selectedTask?.completed, selectedTask?.completePercentage, isTrash]);
     const isInteractiveDisabled = useMemo(() => isTrash || isCompleted, [isTrash, isCompleted]);
 
     const handleAddSubtask = useCallback(() => {
