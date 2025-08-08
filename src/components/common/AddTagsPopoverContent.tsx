@@ -5,6 +5,7 @@ import {userTagNamesAtom} from '@/store/atoms';
 import Icon from './Icon';
 import {twMerge} from 'tailwind-merge';
 import useDebounce from "@/hooks/useDebounce";
+import {useTranslation} from "react-i18next";
 
 interface AddTagsPopoverContentProps {
     taskId: string;
@@ -19,6 +20,7 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                                                                          onApply,
                                                                          closePopover,
                                                                      }) => {
+    const {t} = useTranslation();
     const allUserTags = useAtomValue(userTagNamesAtom);
     const [inputValue, setInputValue] = useState('');
     const debouncedInputForFiltering = useDebounce(inputValue.toLowerCase().trim(), 150);
@@ -27,30 +29,24 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
     const listContainerRef = useRef<HTMLDivElement>(null);
     const isInitialMountOrTaskChangeRef = useRef(true);
 
-    // Effect to reset state and focus when initialTags or taskId changes (popover opens/task context changes)
     useEffect(() => {
         setSelectedTags(new Set(initialTags));
         setInputValue('');
-        isInitialMountOrTaskChangeRef.current = true; // Signal that the next selectedTags change is due to initialization
+        isInitialMountOrTaskChangeRef.current = true;
 
-        if (taskId) { // taskId implies the popover should be active and focused
-            const timer = setTimeout(() => inputRef.current?.focus(), 50); // Slight delay for focus
+        if (taskId) {
+            const timer = setTimeout(() => inputRef.current?.focus(), 50);
             return () => clearTimeout(timer);
         }
     }, [initialTags, taskId]);
 
-    // Effect to auto-apply changes when selectedTags are modified by the user
     useEffect(() => {
         if (isInitialMountOrTaskChangeRef.current) {
-            isInitialMountOrTaskChangeRef.current = false; // Consume the flag after initial setup
-            return; // Don't apply on the initial set from props or task change
+            isInitialMountOrTaskChangeRef.current = false;
+            return;
         }
-
-        // This will run for any subsequent user-driven changes to selectedTags
         onApply(Array.from(selectedTags).sort((a, b) => a.localeCompare(b)));
-
     }, [selectedTags, onApply]);
-
 
     const toggleTagInList = useCallback((tag: string) => {
         setSelectedTags(prev => {
@@ -83,7 +79,7 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                 return newSet;
             });
             setInputValue('');
-            setTimeout(() => { // Ensure DOM update before scrolling
+            setTimeout(() => {
                 if (listContainerRef.current) {
                     listContainerRef.current.scrollTop = listContainerRef.current.scrollHeight;
                 }
@@ -98,9 +94,9 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
             .sort((a, b) => {
                 const aSelected = selectedTags.has(a);
                 const bSelected = selectedTags.has(b);
-                if (aSelected && !bSelected) return -1; // Selected tags first
+                if (aSelected && !bSelected) return -1;
                 if (!aSelected && bSelected) return 1;
-                return a.localeCompare(b); // Then sort alphabetically
+                return a.localeCompare(b);
             });
     }, [allUserTags, debouncedInputForFiltering, selectedTags]);
 
@@ -119,15 +115,14 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                 "border border-grey-light dark:border-neutral-700",
                 "rounded-base shadow-popover"
             )}
-            onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing parent popovers
+            onClick={(e) => e.stopPropagation()}
         >
-            {/* Input Section Wrapper */}
             <div className="p-2">
                 <div
                     className={twMerge(
                         "flex flex-wrap items-center gap-1.5 p-1.5 rounded-base min-h-[36px]",
                         "bg-grey-ultra-light dark:bg-neutral-750",
-                        "cursor-text" // Make the whole area feel like a text input
+                        "cursor-text"
                     )}
                     onClick={() => inputRef.current?.focus()}
                 >
@@ -143,7 +138,7 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                             <button
                                 type="button"
                                 onClick={(e) => {
-                                    e.stopPropagation(); // Prevent focusing input when removing pill
+                                    e.stopPropagation();
                                     removeTagPill(tag);
                                 }}
                                 className={twMerge(
@@ -162,7 +157,7 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                         type="text"
                         value={inputValue}
                         onChange={(e) => setInputValue(e.target.value)}
-                        placeholder={selectedTags.size === 0 ? "Add tag..." : ""}
+                        placeholder={selectedTags.size === 0 ? t('taskDetail.addTags') : ""}
                         className={twMerge(
                             "flex-grow bg-transparent text-xs p-0 m-0 h-[22px]",
                             "text-grey-dark dark:text-neutral-200 placeholder:text-grey-medium dark:placeholder:text-neutral-500",
@@ -174,13 +169,12 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                                 if (canCreateCurrentInput) {
                                     createNewTag();
                                 } else if (inputValue.trim()) {
-                                    // If input matches an existing tag not yet selected, select it
                                     const existingTag = allUserTags.find(t => t.toLowerCase() === inputValue.trim().toLowerCase());
                                     if (existingTag && !selectedTags.has(existingTag)) {
                                         toggleTagInList(existingTag);
-                                        setInputValue(''); // Clear input after selecting
+                                        setInputValue('');
                                     } else if (existingTag && selectedTags.has(existingTag)) {
-                                        setInputValue(''); // Clear input if already selected
+                                        setInputValue('');
                                     }
                                 }
                             }
@@ -197,13 +191,9 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                     />
                 </div>
             </div>
-
-            {/* Divider between Input and List */}
             <div className="px-2">
                 <div className="h-px bg-grey-light/70 dark:bg-neutral-700/50"></div>
             </div>
-
-            {/* List Section */}
             <div
                 ref={listContainerRef}
                 className="max-h-[160px] overflow-y-auto styled-scrollbar-thin p-1.5 space-y-0.5"

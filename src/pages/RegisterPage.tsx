@@ -6,9 +6,10 @@ import {currentUserAtom} from '@/store/atoms';
 import * as apiService from '@/services/apiService';
 import Button from '@/components/common/Button';
 import Icon from '@/components/common/Icon';
-import {twMerge} from 'tailwind-merge';
+import {useTranslation} from "react-i18next";
 
 const RegisterPage: React.FC = () => {
+    const {t} = useTranslation();
     const [username, setUsername] = useState('');
     const [identifier, setIdentifier] = useState(''); // Can be email or phone
     const [password, setPassword] = useState('');
@@ -86,7 +87,7 @@ const RegisterPage: React.FC = () => {
                 <div className="text-center">
                     <Icon name="user" size={40} className="mx-auto text-primary dark:text-primary-light mb-3" strokeWidth={1.5}/>
                     <h1 className="text-xl sm:text-2xl font-medium text-grey-dark dark:text-neutral-100">
-                        Create your Tada Account
+                        {t('register.title')}
                     </h1>
                 </div>
 
@@ -99,7 +100,7 @@ const RegisterPage: React.FC = () => {
                         <label htmlFor="identifier-reg" className="sr-only">Email or Phone number</label>
                         <input id="identifier-reg" name="identifier" type="text" required
                                value={identifier} onChange={(e) => setIdentifier(e.target.value)}
-                               className={inputBaseClasses} placeholder="Email or Phone number"
+                               className={inputBaseClasses} placeholder={t('register.identifierPlaceholder')}
                                disabled={isLoading || isSendingCode || isCodeSent}/>
                     </div>
 
@@ -107,7 +108,7 @@ const RegisterPage: React.FC = () => {
                         <Button type="button" variant="secondary" fullWidth onClick={handleSendCode} loading={isSendingCode}
                                 disabled={isLoading || isSendingCode || !identifier.trim()}
                                 className="!h-10">
-                            Send Verification Code
+                            {t('register.sendCode')}
                         </Button>
                     )}
 
@@ -117,40 +118,40 @@ const RegisterPage: React.FC = () => {
                                 <label htmlFor="verificationCode-reg" className="sr-only">Verification Code</label>
                                 <input id="verificationCode-reg" name="verificationCode" type="text" inputMode="numeric" autoComplete="one-time-code" required
                                        value={verificationCode} onChange={(e) => setVerificationCode(e.target.value)}
-                                       className={inputBaseClasses} placeholder="Verification Code" disabled={isLoading}/>
+                                       className={inputBaseClasses} placeholder={t('register.codePlaceholder')} disabled={isLoading}/>
                             </div>
                             <div>
                                 <label htmlFor="name" className="sr-only">Username</label>
                                 <input id="name" name="name" type="text" autoComplete="username" required
                                        value={username} onChange={(e) => setUsername(e.target.value)}
-                                       className={inputBaseClasses} placeholder="Username" disabled={isLoading}/>
+                                       className={inputBaseClasses} placeholder={t('register.usernamePlaceholder')} disabled={isLoading}/>
                             </div>
                             <div>
                                 <label htmlFor="password-reg" className="sr-only">Password</label>
                                 <input id="password-reg" name="password" type="password" autoComplete="new-password" required
                                        value={password} onChange={(e) => setPassword(e.target.value)}
-                                       className={inputBaseClasses} placeholder="Password (min. 8 characters)" disabled={isLoading}/>
+                                       className={inputBaseClasses} placeholder={t('register.passwordPlaceholder')} disabled={isLoading}/>
                             </div>
                             <div>
                                 <label htmlFor="confirmPassword-reg" className="sr-only">Confirm Password</label>
                                 <input id="confirmPassword-reg" name="confirmPassword" type="password" autoComplete="new-password" required
                                        value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                                       className={inputBaseClasses} placeholder="Confirm Password" disabled={isLoading}/>
+                                       className={inputBaseClasses} placeholder={t('register.confirmPasswordPlaceholder')} disabled={isLoading}/>
                             </div>
 
                             {error && (<p className="text-xs text-error dark:text-red-400 text-center bg-error/10 p-2 rounded-base">{error}</p>)}
 
                             <Button type="submit" variant="primary" fullWidth size="lg" loading={isLoading} disabled={isLoading} className="!h-10">
-                                Create Account
+                                {t('register.createAccount')}
                             </Button>
                         </>
                     )}
                 </form>
 
                 <p className="mt-8 text-center text-xs text-grey-medium dark:text-neutral-400">
-                    Already have an account?{' '}
+                    {t('register.hasAccount')}{' '}
                     <RouterLink to="/login" className="font-medium text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary transition-colors">
-                        Sign in
+                        {t('register.signIn')}
                     </RouterLink>
                 </p>
             </div>

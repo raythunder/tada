@@ -1,0 +1,361 @@
+{
+  "global": {
+    "loading": "Loading application data..."
+  },
+  "common": {
+    "priority": "Priority",
+    "none": "None",
+    "untitledTask": "Untitled Task",
+    "untitledSubtask": "Untitled Subtask",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "apply": "Apply",
+    "ok": "OK",
+    "clear": "Clear",
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  },
+  "priorityLabels": {
+    "none": "No Priority",
+    "1": "High Priority",
+    "2": "Medium Priority",
+    "3": "Low Priority"
+  },
+  "sidebar": {
+    "searchPlaceholder": "Search Tasks...",
+    "allTasks": "All Tasks",
+    "today": "Today",
+    "next7Days": "Next 7 Days",
+    "inbox": "Inbox",
+    "myLists": "My Lists",
+    "noCustomLists": "No custom lists yet.",
+    "addNewList": "Add New List",
+    "tags": "Tags",
+    "system": "System",
+    "completed": "Completed",
+    "trash": "Trash",
+    "searchResults": "{{count}} result",
+    "searchResults_plural": "{{count}} results",
+    "noSearchResults": "No tasks found matching \"{{searchTerm}}\"."
+  },
+  "iconBar": {
+    "allTasks": "All Tasks",
+    "calendar": "Calendar",
+    "aiSummary": "AI Summary",
+    "accountSettings": "Account Settings"
+  },
+  "addListModal": {
+    "title": "Create New List",
+    "placeholder": "e.g., Groceries, Project X",
+    "label": "List Name",
+    "createButton": "Create List",
+    "errorEmpty": "List name cannot be empty.",
+    "errorExists": "List \"{{name}}\" already exists.",
+    "errorReserved": "\"{{name}}\" is a reserved system name."
+  },
+  "confirmDeleteModal": {
+    "title": "Delete Item?",
+    "description": "Are you sure you want to delete \"{{itemTitle}}\"? This action cannot be undone.",
+    "confirmText": "Delete",
+    "list": {
+      "title": "Delete List?",
+      "description": "Are you sure you want to delete the list \"{{itemTitle}}\"? All tasks within this list will be moved to your Inbox.",
+      "confirmText": "Delete List"
+    },
+    "subtask": {
+      "title": "Delete Subtask?",
+      "description": "Are you sure you want to permanently delete the subtask \"{{itemTitle}}\"? This action cannot be undone."
+    },
+    "task": {
+      "title": "Move to Trash?",
+      "description": "Are you sure you want to move \"{{itemTitle}}\" to trash?",
+      "confirmText": "Move to Trash"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "account": {
+      "title": "Account",
+      "username": "Username",
+      "email": "Email Address",
+      "emailDescription": "Used for login and notifications.",
+      "phone": "Phone Number",
+      "phoneDescription": "Used for login and notifications.",
+      "password": "Password",
+      "changePassword": "Change Password",
+      "logout": "Logout",
+      "premiumMember": "Premium Member",
+      "uploadAvatar": "Upload new avatar",
+      "deleteAvatar": "Delete avatar",
+      "editNameError": "Error updating name: {{message}}",
+      "changePasswordError": "Error changing password: {{message}}",
+      "uploadAvatarError": "Error uploading avatar: {{message}}",
+      "deleteAvatarError": "Error deleting avatar: {{message}}",
+      "confirmDeleteAvatar": "Are you sure you want to delete your avatar?"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "mode": "Appearance Mode",
+      "modeDescription": "Choose your preferred interface look.",
+      "darkModeOptions": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      },
+      "themeColor": "Theme Color",
+      "themeColorDescription": "Choose an accent color for the application.",
+      "backgroundImage": "Background Image",
+      "backgroundImageDescription": "Select a predefined background or set a custom one.",
+      "customUrlPlaceholder": "Enter custom image URL (http://... or data:image/...)",
+      "applyUrl": "Apply URL",
+      "backgroundBlur": "Background Blur",
+      "backgroundBlurDescription": "Adjust background image blurriness.",
+      "backgroundBrightness": "Background Brightness",
+      "backgroundBrightnessDescription": "Adjust background image brightness.",
+      "invalidUrlError": "Please enter a valid image URL (starting with http://, https://, or data:image)."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "language": "Language",
+      "languageDescription": "Change the application display language.",
+      "languages": {
+        "en": "English",
+        "zh-CN": "简体中文"
+      },
+      "defaultDueDate": "Default Due Date",
+      "defaultDueDateDescription": "Set the default due date for newly created tasks.",
+      "dueDateOptions": {
+        "none": "None",
+        "today": "Today",
+        "tomorrow": "Tomorrow"
+      },
+      "defaultPriority": "Default Priority",
+      "defaultPriorityDescription": "Set the default priority for newly created tasks.",
+      "priorityOptions": {
+        "none": "No Priority",
+        "1": "High (P1)",
+        "2": "Medium (P2)",
+        "3": "Low (P3)"
+      },
+      "defaultList": "Default List",
+      "defaultListDescription": "Set the default list for newly created tasks.",
+      "confirmDeletions": "Confirm Deletions",
+      "confirmDeletionsDescription": "Show a confirmation dialog before moving tasks to trash."
+    },
+    "premium": {
+      "title": "Premium",
+      "unlock": "Unlock Premium Features",
+      "supercharge": "Supercharge your productivity with exclusive features.",
+      "youArePremium": "You are a Premium Member!",
+      "activeUntil": "Your subscription is active until {{date}}.",
+      "freeTier": {
+        "name": "Free Tier",
+        "price": "Free",
+        "features": [
+          "Basic Task Management",
+          "Up to 3 Lists",
+          "Standard AI Summary"
+        ]
+      },
+      "proTier": {
+        "name": "Pro Tier",
+        "price": "$5/month",
+        "features": [
+          "Unlimited Lists & Tasks",
+          "Advanced AI Summary Options",
+          "Priority Support",
+          "Cloud Backup & Sync"
+        ]
+      },
+      "upgradeToPro": "Upgrade to Pro",
+      "manageSubscription": "Manage Subscription"
+    },
+    "about": {
+      "title": "About",
+      "version": "Application Version",
+      "changelog": "Changelog",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfUse": "Terms of Use",
+      "view": "View",
+      "hide": "Hide",
+      "feedback": "Feedback & Suggestions",
+      "feedbackDescription": "We'd love to hear from you!",
+      "sendEmail": "Send Email",
+      "reportIssue": "Report an Issue",
+      "reportIssueDescription": "Found a bug? Let us know.",
+      "reportButton": "Report Issue"
+    }
+  },
+  "taskList": {
+    "rescheduleAll": "Reschedule All",
+    "addTaskPlaceholder": "Add task to \"{{listName}}\"",
+    "aiTaskPlaceholder": "Describe task for AI (e.g., \"Plan a team building event next month\")",
+    "aiTaskButton": {
+      "label": "AI Task",
+      "processing": "Processing..."
+    },
+    "moreOptions": "More task options",
+    "addToList": "Add to List",
+    "aiCreationError": "AI Task creation failed: {{message}}"
+  },
+  "taskGroup": {
+    "overdue": "Overdue",
+    "today": "Today",
+    "next7days": "Next 7 Days",
+    "later": "Later",
+    "nodate": "No Date"
+  },
+  "emptyState": {
+    "title": {
+      "search": "No results for \"{{searchTerm}}\"",
+      "trash": "Trash is empty",
+      "completed": "No completed tasks yet",
+      "list": "No active tasks in \"{{pageTitle}}\"",
+      "default": "No tasks for \"{{pageTitle}}\""
+    },
+    "addTaskHint": "Use the input bar above to add a new task."
+  },
+  "taskDetail": {
+    "titlePlaceholder": "Task title...",
+    "notesPlaceholder": "Add notes, links, or details here... Markdown is supported.",
+    "setDueDate": "Set Due Date",
+    "moreActions": "More actions",
+    "close": "Close task details",
+    "progress": "Progress",
+    "progressLabels": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "mostlyDone": "Mostly Done",
+      "completed": "Completed"
+    },
+    "addTags": "Add Tags...",
+    "moveTo": "Move to List",
+    "duplicate": "Duplicate Task",
+    "moveToTrash": "Move to Trash",
+    "restore": "Restore Task",
+    "taskInfo": "Task Information",
+    "created": "Created",
+    "updated": "Updated",
+    "subtasks": "Subtasks",
+    "subtasksCompleted": "({{completed}} of {{total}} completed)",
+    "addSubtask": "Add subtask...",
+    "addSubtaskButton": "Add",
+    "deleteModal": {
+      "title": "Move to Trash?"
+    }
+  },
+  "subtask": {
+    "setDueDate": "Set subtask due date",
+    "delete": "Delete subtask",
+    "deleteModal": {
+      "title": "Delete Subtask?"
+    }
+  },
+  "taskDetailPlaceholder": {
+    "title": "No Task Selected",
+    "description": "Select a task from the list to view its details."
+  },
+  "login": {
+    "title": "Welcome Back to Tada",
+    "passwordLogin": "Password Login",
+    "codeLogin": "Code Login",
+    "identifierPlaceholder": "Email, Phone, or Username",
+    "passwordPlaceholder": "Password",
+    "forgotPassword": "Forgot password?",
+    "signIn": "Sign In",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up here",
+    "codePlaceholder": "Verification Code",
+    "sendCode": "Send Code",
+    "resendCode": "Resend"
+  },
+  "register": {
+    "title": "Create your Tada Account",
+    "identifierPlaceholder": "Email or Phone number",
+    "sendCode": "Send Verification Code",
+    "codePlaceholder": "Verification Code",
+    "usernamePlaceholder": "Username",
+    "passwordPlaceholder": "Password (min. 8 characters)",
+    "confirmPasswordPlaceholder": "Confirm Password",
+    "createAccount": "Create Account",
+    "hasAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "forgotPassword": {
+    "title": "Reset Password",
+    "description": "Enter your email or phone number to receive a verification code.",
+    "identifierPlaceholder": "you@example.com or +1234567890",
+    "sendCode": "Send Verification Code",
+    "codePlaceholder": "Verification Code",
+    "passwordPlaceholder": "Enter new password (min. 8)",
+    "resetButton": "Reset Password",
+    "rememberPassword": "Remember your password?",
+    "signIn": "Sign in",
+    "successMessage": "Password reset successfully. Redirecting to login..."
+  },
+  "theme": {
+    "coralRed": "Coral Red",
+    "oceanBlue": "Ocean Blue",
+    "forestGreen": "Forest Green",
+    "sunsetOrange": "Sunset Orange",
+    "royalPurple": "Royal Purple",
+    "graphiteGrey": "Graphite Grey",
+    "bgNone": "None",
+    "bgBrownGrassSunset": "Brown Grass Sunset",
+    "bgSailboatOnSea": "Sailboat On Sea",
+    "bgGreenGrassField": "Green Grass Field",
+    "bgSnowyCabinDawn": "Snowy Cabin Dawn",
+    "bgBurrataSaladBowl": "Burrata Salad Bowl",
+    "bgCappadociaBalloons": "Cappadocia Balloons",
+    "bgRedOrangePoppy": "Red Orange Poppy"
+  },
+  "summary": {
+    "history": {
+      "title": "Summary History",
+      "tooltip": "View All Generated Summaries",
+      "close": "Close history",
+      "description": "Browse and search through summaries.",
+      "searchPlaceholder": "Search history...",
+      "emptyState": "No summaries generated yet.",
+      "noResults": "No summaries match \"{{searchTerm}}\".",
+      "selectPrompt": "Select a summary to view details."
+    },
+    "periods": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisWeek": "This Week",
+      "lastWeek": "Last Week",
+      "thisMonth": "This Month",
+      "lastMonth": "Last Month",
+      "custom": "Custom Range...",
+      "select": "Select Period"
+    },
+    "lists": {
+      "all": "All Lists",
+      "select": "Select List"
+    },
+    "generate": "Generate",
+    "generating": "Generating...",
+    "tasksTitle": "Tasks",
+    "selectAll": "Select all tasks",
+    "deselectAll": "Deselect all tasks",
+    "deselectSome": "Deselect some tasks",
+    "noTasks": {
+      "title": "No relevant tasks found",
+      "description": "Adjust filters or check task status/progress."
+    },
+    "newSummary": "New Summary",
+    "title": "Summary",
+    "generated": "Generated",
+    "doneEditing": "Done",
+    "tasksUsed": "{{count}} task used",
+    "tasksUsed_plural": "{{count}} tasks used",
+    "referencedTasks": "Referenced Tasks",
+    "noReferencedTasks": "No referenced tasks found.",
+    "older": "Older summary",
+    "newer": "Newer summary",
+    "saving": "saving..."
+  }
+}

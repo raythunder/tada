@@ -19,6 +19,7 @@ import {
     subMonths
 } from '@/utils/dateUtils';
 import Button from './Button';
+import {useTranslation} from "react-i18next";
 
 interface CustomDateRangePickerContentProps {
     initialStartDate: Date | undefined;
@@ -33,6 +34,7 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
                                                                                                          onApplyRange,
                                                                                                          closePopover,
                                                                                                      }) => {
+    const {t} = useTranslation();
     const today = useMemo(() => startOfDay(new Date()), []);
     const [viewDate, setViewDate] = useState(initialStartDate && isValid(initialStartDate) ? startOfDay(initialStartDate) : today);
     const [startDate, setStartDate] = useState<Date | undefined>(initialStartDate && isValid(initialStartDate) ? startOfDay(initialStartDate) : undefined);
@@ -178,11 +180,11 @@ export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContent
             <div className="flex space-x-2 mt-2 border-t border-grey-light dark:border-neutral-700 pt-3">
                 <Button variant="secondary" size="md"
                         className="flex-1 justify-center text-grey-medium dark:text-neutral-300"
-                        onClick={handleClear}> Clear </Button>
+                        onClick={handleClear}> {t('common.clear')} </Button>
                 <Button variant="secondary" size="md" className="flex-1 justify-center"
-                        onClick={closePopover}> Cancel </Button>
+                        onClick={closePopover}> {t('common.cancel')} </Button>
                 <Button variant="primary" size="md" className="flex-1 justify-center" onClick={handleApply}
-                        disabled={isApplyDisabled}> Apply </Button>
+                        disabled={isApplyDisabled}> {t('common.apply')} </Button>
             </div>
         </div>
     );

@@ -6,12 +6,14 @@ import Button from './Button';
 import {twMerge} from 'tailwind-merge';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as service from '@/services/apiService';
+import {useTranslation} from "react-i18next";
 
 interface AddListModalProps {
     onAddSuccess: () => void;
 }
 
 const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
+    const {t} = useTranslation();
     const [isOpen, setIsOpen] = useAtom(isAddListModalOpenAtom);
     const allListNames = useAtomValue(userListNamesAtom);
     const [listName, setListName] = useState('');
@@ -42,19 +44,19 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
         const trimmedName = listName.trim();
 
         if (!trimmedName) {
-            setError("List name cannot be empty.");
+            setError(t('addListModal.errorEmpty'));
             inputRef.current?.focus();
             return;
         }
         const lowerTrimmedName = trimmedName.toLowerCase();
         if (allListNames.some(name => name.toLowerCase() === lowerTrimmedName)) {
-            setError(`List "${trimmedName}" already exists.`);
+            setError(t('addListModal.errorExists', {name: trimmedName}));
             inputRef.current?.select();
             return;
         }
         const reservedNames = ['inbox', 'trash', 'archive', 'all', 'today', 'next 7 days', 'completed', 'later', 'nodate', 'overdue'];
         if (reservedNames.includes(lowerTrimmedName)) {
-            setError(`"${trimmedName}" is a reserved system name.`);
+            setError(t('addListModal.errorReserved', {name: trimmedName}));
             inputRef.current?.select();
             return;
         }
@@ -72,7 +74,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
             setIsLoading(false);
         }
 
-    }, [listName, allListNames, onAddSuccess, handleOpenChange]);
+    }, [listName, allListNames, onAddSuccess, handleOpenChange, t]);
 
     const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setListName(e.target.value);
@@ -87,7 +89,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
-                        "bg-white dark:bg-neutral-800 w-full max-w-md rounded-base shadow-modal flex flex-col", // Dark mode background
+                        "bg-white dark:bg-neutral-800 w-full max-w-md rounded-base shadow-modal flex flex-col",
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}
                     style={{
@@ -101,7 +103,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
                 >
                     <div className="flex justify-between items-center mb-4">
                         <Dialog.Title className="text-[16px] font-normal text-grey-dark dark:text-neutral-100">
-                            Create New List
+                            {t('addListModal.title')}
                         </Dialog.Title>
                         <Dialog.Close asChild>
                             <Button variant="ghost" size="icon" icon="x"
@@ -119,17 +121,17 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
                                 type="text"
                                 value={listName}
                                 onChange={handleInputChange}
-                                placeholder="e.g., Groceries, Project X"
-                                aria-label="List Name"
+                                placeholder={t('addListModal.placeholder')}
+                                aria-label={t('addListModal.label')}
                                 className={twMerge(
                                     "w-full h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
-                                    "bg-grey-ultra-light dark:bg-neutral-700", // Dark mode input background
+                                    "bg-grey-ultra-light dark:bg-neutral-700",
                                     "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
                                     "text-grey-dark dark:text-neutral-100",
                                     "transition-colors duration-200 ease-in-out",
                                     error
                                         ? "border border-error focus:ring-1 focus:ring-error dark:border-error dark:focus:ring-error"
-                                        : "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light" // Subtle border in normal state
+                                        : "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
                                 )}
                                 required
                                 aria-required="true"
@@ -144,12 +146,12 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
                         </div>
                         <div className="flex justify-end space-x-2 pt-2">
                             <Dialog.Close asChild>
-                                <Button variant="secondary" size="md"> Cancel </Button>
+                                <Button variant="secondary" size="md"> {t('common.cancel')} </Button>
                             </Dialog.Close>
                             <Button type="submit" variant="primary" size="md"
                                     disabled={!listName.trim() || !!error || isLoading}
                                     loading={isLoading}
-                            > Create List </Button>
+                            > {t('addListModal.createButton')} </Button>
                         </div>
                     </form>
                 </Dialog.Content>

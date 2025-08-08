@@ -7,14 +7,14 @@ export interface ThemeColors {
 
 export interface AppTheme {
     id: string;
-    name: string;
+    nameKey: string; // Changed from name to nameKey for i18n
     colors: ThemeColors;
 }
 
 export const APP_THEMES: AppTheme[] = [
     {
         id: 'default-coral',
-        name: 'Coral Red',
+        nameKey: 'theme.coralRed',
         colors: {
             primary: '3 76% 58%', // #E34C45
             light: '5 100% 89%',  // #FFCBC7
@@ -23,7 +23,7 @@ export const APP_THEMES: AppTheme[] = [
     },
     {
         id: 'ocean-blue',
-        name: 'Ocean Blue',
+        nameKey: 'theme.oceanBlue',
         colors: {
             primary: '207 82% 56%', // #3B82F6 (Tailwind blue-500 like)
             light: '207 90% 88%',   // #BFDBFE (Tailwind blue-200 like)
@@ -32,7 +32,7 @@ export const APP_THEMES: AppTheme[] = [
     },
     {
         id: 'forest-green',
-        name: 'Forest Green',
+        nameKey: 'theme.forestGreen',
         colors: {
             primary: '145 63% 40%', // #2F855A (Tailwind green-600 like)
             light: '145 63% 85%',   // #C6F6D5 (Tailwind green-200 like)
@@ -41,7 +41,7 @@ export const APP_THEMES: AppTheme[] = [
     },
     {
         id: 'sunset-orange',
-        name: 'Sunset Orange',
+        nameKey: 'theme.sunsetOrange',
         colors: {
             primary: '24 94% 51%', // #F97316 (Tailwind orange-500 like)
             light: '24 94% 88%',   // #FED7AA (Tailwind orange-200 like)
@@ -50,7 +50,7 @@ export const APP_THEMES: AppTheme[] = [
     },
     {
         id: 'royal-purple',
-        name: 'Royal Purple',
+        nameKey: 'theme.royalPurple',
         colors: {
             primary: '262 68% 50%', // #7C3AED (Tailwind violet-600 like)
             light: '262 86% 88%',   // #DDD6FE (Tailwind violet-200 like)
@@ -59,7 +59,7 @@ export const APP_THEMES: AppTheme[] = [
     },
     {
         id: 'graphite-grey',
-        name: 'Graphite Grey',
+        nameKey: 'theme.graphiteGrey',
         colors: {
             primary: '210 10% 40%', // #596373 (A neutral grey)
             light: '210 10% 85%',   // #D0D5DB (A lighter neutral grey)
@@ -71,52 +71,52 @@ export const APP_THEMES: AppTheme[] = [
 
 export const PREDEFINED_BACKGROUND_IMAGES: {
     id: string;
-    name: string;
+    nameKey: string; // Changed from name to nameKey for i18n
     url: string;
     author?: string;
     authorUrl?: string;
     isLight?: boolean
 }[] = [
-    {id: 'none', name: 'None', url: 'none', isLight: true},
+    {id: 'none', nameKey: 'theme.bgNone', url: 'none', isLight: true},
     {
         "id": "brown-grass-sunset",
-        "name": "Brown Grass Sunset",
+        "nameKey": "theme.bgBrownGrassSunset",
         "url": "/backgrounds/1.jpg",
         "isLight": true
     },
     {
         "id": "sailboat-on-sea",
-        "name": "Sailboat On Sea",
+        "nameKey": "theme.bgSailboatOnSea",
         "url": "/backgrounds/2.jpg",
         "isLight": true
     },
     {
         "id": "green-grass-field",
-        "name": "Green Grass Field",
+        "nameKey": "theme.bgGreenGrassField",
         "url": "/backgrounds/3.jpg",
         "isLight": true
     },
     {
         "id": "snowy-cabin-dawn",
-        "name": "Snowy Cabin Dawn",
+        "nameKey": "theme.bgSnowyCabinDawn",
         "url": "/backgrounds/4.webp",
         "isLight": true
     },
     {
         "id": "burrata-salad-bowl",
-        "name": "Burrata Salad Bowl",
+        "nameKey": "theme.bgBurrataSaladBowl",
         "url": "/backgrounds/5.webp",
         "isLight": true
     },
     {
         "id": "cappadocia-balloons",
-        "name": "Cappadocia Balloons",
+        "nameKey": "theme.bgCappadociaBalloons",
         "url": "/backgrounds/6.webp",
         "isLight": true
     },
     {
         "id": "red-orange-poppy",
-        "name": "Red Orange Poppy",
+        "nameKey": "theme.bgRedOrangePoppy",
         "url": "/backgrounds/7.webp",
         "isLight": true
     }

@@ -31,6 +31,7 @@ import {APP_THEMES} from "@/config/themes";
 import Icon from "@/components/common/Icon";
 import {AnimatePresence, motion} from "framer-motion";
 import {twMerge} from "tailwind-merge";
+import {useTranslation} from "react-i18next";
 
 const MainPage = lazy(() => import('./pages/MainPage'));
 const SummaryPage = lazy(() => import('./pages/SummaryPage'));
@@ -49,6 +50,7 @@ const AppLoadingSpinner: React.FC = () => (
 const SettingsApplicator: React.FC = () => {
     const loadedAppearance = useAtomValue(appearanceSettingsAtom);
     const loadedPreferences = useAtomValue(preferencesSettingsAtom);
+    const { i18n } = useTranslation();
 
     const appearance = loadedAppearance ?? defaultAppearanceSettingsForApi();
     const preferences = loadedPreferences ?? defaultPreferencesSettingsForApi();
@@ -98,8 +100,13 @@ const SettingsApplicator: React.FC = () => {
     }, [appearance]);
 
     useEffect(() => {
-        document.documentElement.lang = preferences.language;
-    }, [preferences]);
+        if (document.documentElement.lang !== preferences.language) {
+            document.documentElement.lang = preferences.language;
+        }
+        if (i18n.language !== preferences.language) {
+            i18n.changeLanguage(preferences.language);
+        }
+    }, [preferences, i18n]);
 
     return null;
 };
@@ -128,11 +135,13 @@ const RouteChangeHandler: React.FC = () => {
 RouteChangeHandler.displayName = 'RouteChangeHandler';
 
 const ListPageWrapper: React.FC = () => {
+    const {t} = useTranslation();
     const {listName} = useParams<{ listName: string }>();
     const decodedListName = listName ? decodeURIComponent(listName) : 'Inbox';
     if (!decodedListName) return <Navigate to="/list/Inbox" replace/>;
     const filter: TaskFilter = `list-${decodedListName}`;
-    return <MainPage title={decodedListName} filter={filter}/>;
+    const title = decodedListName === 'Inbox' ? t('sidebar.inbox') : decodedListName;
+    return <MainPage title={title} filter={filter}/>;
 };
 ListPageWrapper.displayName = 'ListPageWrapper';
 
@@ -176,6 +185,7 @@ interface Notification {
 }
 
 const GlobalStatusDisplay: React.FC = () => {
+    const {t} = useTranslation();
     const isLoadingCurrentUser = useAtomValue(currentUserLoadingAtom);
     const isLoadingTasks = useAtomValue(tasksLoadingAtom);
     const isLoadingAppearance = useAtomValue(appearanceSettingsLoadingAtom);
@@ -240,7 +250,7 @@ const GlobalStatusDisplay: React.FC = () => {
                         className="p-3 bg-neutral-800 text-white rounded-lg shadow-xl text-xs flex items-center w-fit"
                     >
                         <Icon name="loader" size={14} className="animate-spin mr-2"/>
-                        <span>Loading application data...</span>
+                        <span>{t('global.loading')}</span>
                     </motion.div>
                 )}
                 {notifications.map((notification) => (
@@ -291,6 +301,40 @@ const ProtectedRoute: React.FC = () => {
 };
 ProtectedRoute.displayName = 'ProtectedRoute';
 
+const AppRoutes: React.FC = () => {
+    const { t } = useTranslation();
+
+    return (
+        <Routes>
+            <Route path="/login" element={<LoginPage/>}/>
+            <Route path="/register" element={<RegisterPage/>}/>
+            <Route path="/forgot-password" element={<ForgotPasswordPage/>}/>
+            {/* The /reset-password/:token route is removed as the flow is now handled by forgot-password */}
+
+            <Route element={<ProtectedRoute/>}>
+                <Route path="/" element={<MainLayout/>}>
+                    <Route element={<RouteChangeHandler/>}>
+                        <Route index element={<Navigate to="/all" replace/>}/>
+                        <Route path="all" element={<MainPage title={t('sidebar.allTasks')} filter="all"/>}/>
+                        <Route path="today" element={<MainPage title={t('sidebar.today')} filter="today"/>}/>
+                        <Route path="next7days" element={<MainPage title={t('sidebar.next7Days')} filter="next7days"/>}/>
+                        <Route path="completed" element={<MainPage title={t('sidebar.completed')} filter="completed"/>}/>
+                        <Route path="trash" element={<MainPage title={t('sidebar.trash')} filter="trash"/>}/>
+                        <Route path="summary" element={<SummaryPage/>}/>
+                        <Route path="calendar" element={<CalendarPage/>}/>
+                        <Route path="list/:listName" element={<ListPageWrapper/>}/>
+                        <Route path="list/" element={<Navigate to="/list/Inbox" replace/>}/>
+                        <Route path="tag/:tagName" element={<TagPageWrapper/>}/>
+                        <Route path="tag/" element={<Navigate to="/all" replace/>}/>
+                        <Route path="*" element={<Navigate to="/all" replace/>}/>
+                    </Route>
+                </Route>
+            </Route>
+            <Route path="*" element={<Navigate to="/login" replace/>}/>
+        </Routes>
+    );
+}
+
 const App: React.FC = () => {
     // These calls ensure the atoms are initialized and start fetching data on app load if necessary.
     useAtomValue(currentUserAtom);
@@ -306,33 +350,7 @@ const App: React.FC = () => {
             <DailyTaskRefresh/>
             <GlobalStatusDisplay/>
             <Suspense fallback={<AppLoadingSpinner/>}>
-                <Routes>
-                    <Route path="/login" element={<LoginPage/>}/>
-                    <Route path="/register" element={<RegisterPage/>}/>
-                    <Route path="/forgot-password" element={<ForgotPasswordPage/>}/>
-                    {/* The /reset-password/:token route is removed as the flow is now handled by forgot-password */}
-
-                    <Route element={<ProtectedRoute/>}>
-                        <Route path="/" element={<MainLayout/>}>
-                            <Route element={<RouteChangeHandler/>}>
-                                <Route index element={<Navigate to="/all" replace/>}/>
-                                <Route path="all" element={<MainPage title="All Tasks" filter="all"/>}/>
-                                <Route path="today" element={<MainPage title="Today" filter="today"/>}/>
-                                <Route path="next7days" element={<MainPage title="Next 7 Days" filter="next7days"/>}/>
-                                <Route path="completed" element={<MainPage title="Completed" filter="completed"/>}/>
-                                <Route path="trash" element={<MainPage title="Trash" filter="trash"/>}/>
-                                <Route path="summary" element={<SummaryPage/>}/>
-                                <Route path="calendar" element={<CalendarPage/>}/>
-                                <Route path="list/:listName" element={<ListPageWrapper/>}/>
-                                <Route path="list/" element={<Navigate to="/list/Inbox" replace/>}/>
-                                <Route path="tag/:tagName" element={<TagPageWrapper/>}/>
-                                <Route path="tag/" element={<Navigate to="/all" replace/>}/>
-                                <Route path="*" element={<Navigate to="/all" replace/>}/>
-                            </Route>
-                        </Route>
-                    </Route>
-                    <Route path="*" element={<Navigate to="/login" replace/>}/>
-                </Routes>
+                <AppRoutes />
             </Suspense>
         </>
     );

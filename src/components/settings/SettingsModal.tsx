@@ -32,19 +32,20 @@ import {
     TERMS_OF_USE_HTML
 } from '@/config/themes';
 import * as apiService from '@/services/apiService';
+import {useTranslation} from "react-i18next";
 
 interface SettingsItem {
     id: SettingsTab;
-    label: string;
+    labelKey: string; // Changed to key for translation
     icon: IconName;
 }
 
 const settingsSections: SettingsItem[] = [
-    {id: 'account', label: 'Account', icon: 'user'},
-    {id: 'appearance', label: 'Appearance', icon: 'settings'},
-    {id: 'preferences', label: 'Preferences', icon: 'sliders'},
-    {id: 'premium', label: 'Premium', icon: 'crown'},
-    {id: 'about', label: 'About', icon: 'info'},
+    {id: 'account', labelKey: 'settings.account.title', icon: 'user'},
+    {id: 'appearance', labelKey: 'settings.appearance.title', icon: 'settings'},
+    {id: 'preferences', labelKey: 'settings.preferences.title', icon: 'sliders'},
+    {id: 'premium', labelKey: 'settings.premium.title', icon: 'crown'},
+    {id: 'about', labelKey: 'settings.about.title', icon: 'info'},
 ];
 
 const SettingsRow: React.FC<{
@@ -77,10 +78,11 @@ const DarkModeSelector: React.FC<{ value: DarkModeOption; onChange: (value: Dark
                                                                                                                     value,
                                                                                                                     onChange
                                                                                                                 }) => {
+    const {t} = useTranslation();
     const options: { value: DarkModeOption; label: string; icon: IconName }[] = [
-        {value: 'light', label: 'Light', icon: 'sun'},
-        {value: 'dark', label: 'Dark', icon: 'moon'},
-        {value: 'system', label: 'System', icon: 'settings'},
+        {value: 'light', label: t('settings.appearance.darkModeOptions.light'), icon: 'sun'},
+        {value: 'dark', label: t('settings.appearance.darkModeOptions.dark'), icon: 'moon'},
+        {value: 'system', label: t('settings.appearance.darkModeOptions.system'), icon: 'settings'},
     ];
 
     return (
@@ -172,6 +174,7 @@ BackgroundImagePreview.displayName = 'BackgroundImagePreview';
 
 // Account Settings
 const AccountSettings: React.FC = memo(() => {
+    const {t} = useTranslation();
     const [currentUser, setCurrentUserGlobally] = useAtom(currentUserAtom);
     const [isEditingName, setIsEditingName] = useState(false);
     const [newName, setNewName] = useState(currentUser?.username || '');
@@ -201,12 +204,14 @@ const AccountSettings: React.FC = memo(() => {
             setCurrentUserGlobally(updatedUser);
             setIsEditingName(false);
         } catch (e: any) {
-            alert(`Error updating name: ${e.message}`);
+            alert(t('settings.account.editNameError', {message: e.message}));
         }
         setIsLoading(false);
     };
 
     const handleChangePassword = async () => {
+        // Prompts are not ideal for production apps, but keeping for simplicity.
+        // They are also not translatable.
         const currentPassword = prompt("Enter current password:");
         if (!currentPassword) return;
         const newPassword = prompt("Enter new password (min. 8 characters):");
@@ -220,7 +225,7 @@ const AccountSettings: React.FC = memo(() => {
             const response = await apiService.apiChangePassword(currentPassword, newPassword);
             alert(response.message);
         } catch (e: any) {
-            alert(`Error changing password: ${e.message}`);
+            alert(t('settings.account.changePasswordError', {message: e.message}));
         }
         setIsLoading(false);
     };
@@ -236,7 +241,7 @@ const AccountSettings: React.FC = memo(() => {
             const updatedUser = await apiService.apiUploadAvatar(file);
             setCurrentUserGlobally(updatedUser);
         } catch (e: any) {
-            alert(`Error uploading avatar: ${e.message}`);
+            alert(t('settings.account.uploadAvatarError', {message: e.message}));
         }
         setIsLoading(false);
         if (event.target) event.target.value = '';
@@ -244,13 +249,13 @@ const AccountSettings: React.FC = memo(() => {
 
     const handleDeleteAvatar = async () => {
         if (!currentUser?.avatarUrl) return;
-        if (confirm("Are you sure you want to delete your avatar?")) {
+        if (confirm(t('settings.account.confirmDeleteAvatar'))) {
             setIsLoading(true);
             try {
                 const updatedUser = await apiService.apiDeleteAvatar();
                 setCurrentUserGlobally(updatedUser);
             } catch (e: any) {
-                alert(`Error deleting avatar: ${e.message}`);
+                alert(t('settings.account.deleteAvatarError', {message: e.message}));
             }
             setIsLoading(false);
         }
@@ -291,9 +296,10 @@ const AccountSettings: React.FC = memo(() => {
                     className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
                     <input type="file" ref={avatarInputRef} onChange={handleAvatarFileChange} accept="image/*" hidden/>
                     <Button variant="ghost" size="icon" icon="upload" onClick={handleAvatarUploadClick}
-                            className="text-white hover:bg-white/20" title="Upload new avatar"/>
+                            className="text-white hover:bg-white/20" title={t('settings.account.uploadAvatar')}/>
                     {avatarSrc && <Button variant="ghost" size="icon" icon="trash" onClick={handleDeleteAvatar}
-                                          className="text-white hover:bg-white/20" title="Delete avatar"/>}
+                                          className="text-white hover:bg-white/20"
+                                          title={t('settings.account.deleteAvatar')}/>}
                 </div>
             </div>
             <div>
@@ -304,7 +310,7 @@ const AccountSettings: React.FC = memo(() => {
                         className="text-[11px] text-primary dark:text-primary-light flex items-center mt-1.5 font-normal bg-primary-light dark:bg-primary-dark/30 px-2 py-0.5 rounded-full w-fit">
                         <Icon name="crown" size={12} className="mr-1 text-primary dark:text-primary-light"
                               strokeWidth={1.5}/>
-                        <span>Premium Member</span>
+                        <span>{t('settings.account.premiumMember')}</span>
                     </div>
                 )}
             </div>
@@ -312,7 +318,7 @@ const AccountSettings: React.FC = memo(() => {
 
         <div className="space-y-0">
             {isEditingName ? (
-                <SettingsRow label="Username">
+                <SettingsRow label={t('settings.account.username')}>
                     <input
                         type="text"
                         value={newName}
@@ -320,28 +326,32 @@ const AccountSettings: React.FC = memo(() => {
                         className="flex-grow h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light mr-2 w-full sm:w-auto"
                         disabled={isLoading}
                     />
-                    <Button variant="primary" size="sm" onClick={handleSaveName} disabled={isLoading}>Save</Button>
+                    <Button variant="primary" size="sm" onClick={handleSaveName}
+                            disabled={isLoading}>{t('common.save')}</Button>
                     <Button variant="ghost" size="sm" onClick={handleCancelEditName} className="ml-1"
-                            disabled={isLoading}>Cancel</Button>
+                            disabled={isLoading}>{t('common.cancel')}</Button>
                 </SettingsRow>
             ) : (
-                <SettingsRow label="Username" value={userName}
+                <SettingsRow label={t('settings.account.username')} value={userName}
                              action={<Button variant="link" size="sm" onClick={handleEditName}
-                                             disabled={isLoading}>Edit</Button>}/>
+                                             disabled={isLoading}>{t('common.edit')}</Button>}/>
             )}
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             {userEmail &&
-                <SettingsRow label="Email Address" value={userEmail} description="Used for login and notifications."/>}
+                <SettingsRow label={t('settings.account.email')} value={userEmail}
+                             description={t('settings.account.emailDescription')}/>}
             {userPhone &&
-                <SettingsRow label="Phone Number" value={userPhone} description="Used for login and notifications."/>}
+                <SettingsRow label={t('settings.account.phone')} value={userPhone}
+                             description={t('settings.account.phoneDescription')}/>}
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Password" action={<Button variant="link" size="sm" onClick={handleChangePassword}
-                                                          disabled={isLoading}>Change Password</Button>}/>
+            <SettingsRow label={t('settings.account.password')} action={<Button variant="link" size="sm"
+                                                                                onClick={handleChangePassword}
+                                                                                disabled={isLoading}>{t('settings.account.changePassword')}</Button>}/>
         </div>
 
         <div className="mt-8">
             <Button variant="secondary" size="md" icon="logout" onClick={handleLogout}
-                    className="w-full sm:w-auto" disabled={isLoading}>Logout</Button>
+                    className="w-full sm:w-auto" disabled={isLoading}>{t('settings.account.logout')}</Button>
         </div>
     </div>);
 });
@@ -350,6 +360,7 @@ AccountSettings.displayName = 'AccountSettings';
 const defaultAppearanceSettingsFromAtoms = defaultAppearanceSettingsForApi();
 
 const AppearanceSettings: React.FC = memo(() => {
+    const {t} = useTranslation();
     const [appearance, setAppearance] = useAtom(appearanceSettingsAtom);
     const [customBgUrl, setCustomBgUrl] = useState('');
     const customBgUrlInputRef = useRef<HTMLInputElement>(null);
@@ -389,7 +400,7 @@ const AppearanceSettings: React.FC = memo(() => {
             if (customBgUrl.startsWith('http://') || customBgUrl.startsWith('https://') || customBgUrl.startsWith('data:image')) {
                 handleBgImageChange(customBgUrl.trim());
             } else {
-                alert("Please enter a valid image URL (starting with http://, https://, or data:image).");
+                alert(t('settings.appearance.invalidUrlError'));
                 customBgUrlInputRef.current?.focus();
             }
         }
@@ -412,12 +423,13 @@ const AppearanceSettings: React.FC = memo(() => {
 
     return (
         <div className="space-y-6">
-            <SettingsRow label="Appearance Mode" description="Choose your preferred interface look.">
+            <SettingsRow label={t('settings.appearance.mode')} description={t('settings.appearance.modeDescription')}>
                 <DarkModeSelector value={currentAppearance.darkMode} onChange={handleDarkModeChange}/>
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
 
-            <SettingsRow label="Theme Color" description="Choose an accent color for the application.">
+            <SettingsRow label={t('settings.appearance.themeColor')}
+                         description={t('settings.appearance.themeColorDescription')}>
                 <div className="flex space-x-2">
                     {APP_THEMES.map(theme => (
                         <ColorSwatch
@@ -433,8 +445,8 @@ const AppearanceSettings: React.FC = memo(() => {
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
 
             <div>
-                <SettingsRow label="Background Image"
-                             description="Select a predefined background or set a custom one."/>
+                <SettingsRow label={t('settings.appearance.backgroundImage')}
+                             description={t('settings.appearance.backgroundImageDescription')}/>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1 mb-4">
                     {PREDEFINED_BACKGROUND_IMAGES.map(img => (
                         <BackgroundImagePreview
@@ -452,7 +464,7 @@ const AppearanceSettings: React.FC = memo(() => {
                         type="url"
                         value={customBgUrl}
                         onChange={(e) => setCustomBgUrl(e.target.value)}
-                        placeholder="Enter custom image URL (http://... or data:image/...)"
+                        placeholder={t('settings.appearance.customUrlPlaceholder')}
                         className={twMerge(
                             "flex-grow h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
                             "bg-grey-ultra-light dark:bg-neutral-700",
@@ -462,15 +474,15 @@ const AppearanceSettings: React.FC = memo(() => {
                         )}
                     />
                     <Button variant="secondary" size="md" onClick={handleCustomBgUrlApply}
-                            className="flex-shrink-0">Apply URL</Button>
+                            className="flex-shrink-0">{t('settings.appearance.applyUrl')}</Button>
                 </div>
             </div>
 
             {currentAppearance.backgroundImageUrl && currentAppearance.backgroundImageUrl !== 'none' && (
                 <>
                     <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-                    <SettingsRow label="Background Blur" htmlFor="bgBlurSlider"
-                                 description="Adjust background image blurriness.">
+                    <SettingsRow label={t('settings.appearance.backgroundBlur')} htmlFor="bgBlurSlider"
+                                 description={t('settings.appearance.backgroundBlurDescription')}>
                         <div className="flex items-center space-x-2 w-[180px]">
                             <input id="bgBlurSlider" type="range" min="0" max="20" step="1"
                                    value={currentAppearance.backgroundImageBlur}
@@ -480,8 +492,8 @@ const AppearanceSettings: React.FC = memo(() => {
                                 className="text-xs text-grey-medium dark:text-neutral-300 w-8 text-right tabular-nums">{currentAppearance.backgroundImageBlur}px</span>
                         </div>
                     </SettingsRow>
-                    <SettingsRow label="Background Brightness" htmlFor="bgBrightnessSlider"
-                                 description="Adjust background image brightness.">
+                    <SettingsRow label={t('settings.appearance.backgroundBrightness')} htmlFor="bgBrightnessSlider"
+                                 description={t('settings.appearance.backgroundBrightnessDescription')}>
                         <div className="flex items-center space-x-2 w-[180px]">
                             <input id="bgBrightnessSlider" type="range" min="0" max="200" step="5"
                                    value={currentAppearance.backgroundImageBrightness}
@@ -502,6 +514,7 @@ AppearanceSettings.displayName = 'AppearanceSettings';
 const defaultPreferencesFromAtoms = defaultPreferencesSettingsForApi();
 
 const PreferencesSettings: React.FC = memo(() => {
+    const {t} = useTranslation();
     const [preferences, setPreferences] = useAtom(preferencesSettingsAtom);
     const userLists = useAtomValue(userListNamesAtom) ?? [];
 
@@ -534,15 +547,15 @@ const PreferencesSettings: React.FC = memo(() => {
 
 
     const dueDateOptions = [
-        {value: 'none', label: 'None'},
-        {value: 'today', label: 'Today'},
-        {value: 'tomorrow', label: 'Tomorrow'},
+        {value: 'none', label: t('settings.preferences.dueDateOptions.none')},
+        {value: 'today', label: t('settings.preferences.dueDateOptions.today')},
+        {value: 'tomorrow', label: t('settings.preferences.dueDateOptions.tomorrow')},
     ];
     const priorityOptions = [
-        {value: 'none', label: 'No Priority'},
-        {value: '1', label: 'High (P1)'},
-        {value: '2', label: 'Medium (P2)'},
-        {value: '3', label: 'Low (P3)'},
+        {value: 'none', label: t('settings.preferences.priorityOptions.none')},
+        {value: '1', label: t('settings.preferences.priorityOptions.1')},
+        {value: '2', label: t('settings.preferences.priorityOptions.2')},
+        {value: '3', label: t('settings.preferences.priorityOptions.3')},
     ];
     const listOptions = useMemo(() => {
         return userLists.map(l => ({
@@ -592,31 +605,35 @@ const PreferencesSettings: React.FC = memo(() => {
 
     return (
         <div className="space-y-0">
-            <SettingsRow label="Language" description="Change the application display language."
+            <SettingsRow label={t('settings.preferences.language')}
+                         description={t('settings.preferences.languageDescription')}
                          htmlFor="languageSelect">
-                {renderSelect('languageSelect', currentPreferences.language, handleLanguageChange, [{
-                    value: 'en',
-                    label: 'English'
-                }, {value: 'zh-CN', label: '简体中文'}], "Select Language")}
+                {renderSelect('languageSelect', currentPreferences.language, handleLanguageChange, [
+                    {value: 'en', label: t('settings.preferences.languages.en')},
+                    {value: 'zh-CN', label: t('settings.preferences.languages.zh-CN')}
+                ], "Select Language")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Default Due Date" description="Set the default due date for newly created tasks."
+            <SettingsRow label={t('settings.preferences.defaultDueDate')}
+                         description={t('settings.preferences.defaultDueDateDescription')}
                          htmlFor="defaultDueDateSelect">
                 {renderSelect('defaultDueDateSelect', currentPreferences.defaultNewTaskDueDate, handleDefaultDueDateChange, dueDateOptions, "Select Due Date")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Default Priority" description="Set the default priority for newly created tasks."
+            <SettingsRow label={t('settings.preferences.defaultPriority')}
+                         description={t('settings.preferences.defaultPriorityDescription')}
                          htmlFor="defaultPrioritySelect">
                 {renderSelect('defaultPrioritySelect', currentPreferences.defaultNewTaskPriority?.toString() ?? 'none', handleDefaultPriorityChange, priorityOptions, "Select Priority")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Default List" description="Set the default list for newly created tasks."
+            <SettingsRow label={t('settings.preferences.defaultList')}
+                         description={t('settings.preferences.defaultListDescription')}
                          htmlFor="defaultListSelect">
                 {renderSelect('defaultListSelect', currentPreferences.defaultNewTaskList, handleDefaultListChange, listOptions, "Select List")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Confirm Deletions"
-                         description="Show a confirmation dialog before moving tasks to trash."
+            <SettingsRow label={t('settings.preferences.confirmDeletions')}
+                         description={t('settings.preferences.confirmDeletionsDescription')}
                          htmlFor="confirmDeletionsToggle">
                 <RadixSwitch.Root
                     id="confirmDeletionsToggle"
@@ -638,6 +655,7 @@ const PreferencesSettings: React.FC = memo(() => {
 PreferencesSettings.displayName = 'PreferencesSettings';
 
 const PremiumSettings: React.FC = memo(() => {
+    const {t} = useTranslation();
     const premiumInfo = useAtomValue(premiumSettingsAtom);
     const currentUser = useAtomValue(currentUserAtom);
     const [isLoading, setIsLoading] = useState(false);
@@ -648,16 +666,9 @@ const PremiumSettings: React.FC = memo(() => {
             return;
         }
         setIsLoading(true);
-        // This would call a real backend endpoint to get a checkout URL
-        // const response = await apiService.apiUpgradeToPro(currentUser.id, tierId);
-        await new Promise(res => setTimeout(res, 1000)); // Simulate network
+        await new Promise(res => setTimeout(res, 1000));
         setIsLoading(false);
-        // if (response.success && response.checkoutUrl) {
         alert(`Simulating redirect to upgrade page for tier ${tierId}.`);
-        // window.open(response.checkoutUrl, '_blank');
-        // } else {
-        //     alert(`Upgrade failed: ${response.error || 'Could not initiate upgrade process.'}`);
-        // }
     };
 
     const handleManageSubscription = async () => {
@@ -666,31 +677,24 @@ const PremiumSettings: React.FC = memo(() => {
             return;
         }
         setIsLoading(true);
-        // This would call a real backend endpoint to get a portal URL
-        // const response = await apiService.apiManageSubscription(currentUser.id);
-        await new Promise(res => setTimeout(res, 1000)); // Simulate network
+        await new Promise(res => setTimeout(res, 1000));
         setIsLoading(false);
-        // if (response.success && response.portalUrl) {
         alert(`Simulating redirect to subscription management portal.`);
-        // window.open(response.portalUrl, '_blank');
-        // } else {
-        //     alert(`Could not open subscription portal: ${response.error || 'Unknown error.'}`);
-        // }
     };
 
     const premiumTiers = [
         {
             id: "free",
-            name: "Free Tier",
-            price: "Free",
-            features: ["Basic Task Management", "Up to 3 Lists", "Standard AI Summary"],
+            name: t('settings.premium.freeTier.name'),
+            price: t('settings.premium.freeTier.price'),
+            features: t('settings.premium.freeTier.features', {returnObjects: true}) as string[],
             current: premiumInfo.tier === 'free'
         },
         {
             id: "pro",
-            name: "Pro Tier",
-            price: "$5/month",
-            features: ["Unlimited Lists & Tasks", "Advanced AI Summary Options", "Priority Support", "Cloud Backup & Sync"],
+            name: t('settings.premium.proTier.name'),
+            price: t('settings.premium.proTier.price'),
+            features: t('settings.premium.proTier.features', {returnObjects: true}) as string[],
             current: premiumInfo.tier === 'pro'
         },
     ];
@@ -706,17 +710,16 @@ const PremiumSettings: React.FC = memo(() => {
                     <Icon name="crown" size={24} className="text-primary dark:text-primary-light mr-3"/>
                     <div>
                         <h3 className="text-md font-medium text-primary dark:text-primary-light">
-                            {premiumInfo.tier === 'pro' ? "You are a Premium Member!" : "Unlock Premium Features"}
+                            {premiumInfo.tier === 'pro' ? t('settings.premium.youArePremium') : t('settings.premium.unlock')}
                         </h3>
                         {premiumInfo.tier === 'pro' && premiumInfo.subscribedUntil && (
                             <p className="text-xs text-primary/80 dark:text-primary-light/80">
-                                Your subscription is active
-                                until {new Date(premiumInfo.subscribedUntil).toLocaleDateString()}.
+                                {t('settings.premium.activeUntil', {date: new Date(premiumInfo.subscribedUntil).toLocaleDateString()})}
                             </p>
                         )}
                         {premiumInfo.tier !== 'pro' && (
                             <p className="text-xs text-primary/80 dark:text-primary-light/80">
-                                Supercharge your productivity with exclusive features.
+                                {t('settings.premium.supercharge')}
                             </p>
                         )}
                     </div>
@@ -742,11 +745,11 @@ const PremiumSettings: React.FC = memo(() => {
                         </ul>
                         {premiumInfo.tier === 'free' && tier.id === "pro" && (
                             <Button variant="primary" fullWidth onClick={() => handleUpgrade(tier.id)}
-                                    disabled={isLoading}>Upgrade to Pro</Button>
+                                    disabled={isLoading}>{t('settings.premium.upgradeToPro')}</Button>
                         )}
                         {premiumInfo.tier === 'pro' && tier.id === "pro" && (
                             <Button variant="secondary" fullWidth onClick={handleManageSubscription}
-                                    disabled={isLoading}>Manage Subscription</Button>
+                                    disabled={isLoading}>{t('settings.premium.manageSubscription')}</Button>
                         )}
                     </div>
                 ))}
@@ -757,6 +760,7 @@ const PremiumSettings: React.FC = memo(() => {
 PremiumSettings.displayName = 'PremiumSettings';
 
 const AboutSettings: React.FC = memo(() => {
+    const {t} = useTranslation();
     const [activeContent, setActiveContent] = useState<'changelog' | 'privacy' | 'terms' | null>(null);
 
     const contentMap = {
@@ -778,45 +782,47 @@ const AboutSettings: React.FC = memo(() => {
 
     return (
         <div className="space-y-0">
-            <SettingsRow label="Application Version" value={APP_VERSION}/>
+            <SettingsRow label={t('settings.about.version')} value={APP_VERSION}/>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Changelog" action={
+            <SettingsRow label={t('settings.about.changelog')} action={
                 <Button variant="link" size="sm"
                         onClick={() => setActiveContent(activeContent === 'changelog' ? null : 'changelog')}>
-                    {activeContent === 'changelog' ? "Hide" : "View"}
+                    {activeContent === 'changelog' ? t('settings.about.hide') : t('settings.about.view')}
                 </Button>
             }/>
             {activeContent === 'changelog' && renderContent()}
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Privacy Policy" action={
+            <SettingsRow label={t('settings.about.privacyPolicy')} action={
                 <Button variant="link" size="sm"
                         onClick={() => setActiveContent(activeContent === 'privacy' ? null : 'privacy')}>
-                    {activeContent === 'privacy' ? "Hide" : "View"}
+                    {activeContent === 'privacy' ? t('settings.about.hide') : t('settings.about.view')}
                 </Button>
             }/>
             {activeContent === 'privacy' && renderContent()}
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Terms of Use" action={
+            <SettingsRow label={t('settings.about.termsOfUse')} action={
                 <Button variant="link" size="sm"
                         onClick={() => setActiveContent(activeContent === 'terms' ? null : 'terms')}>
-                    {activeContent === 'terms' ? "Hide" : "View"}
+                    {activeContent === 'terms' ? t('settings.about.hide') : t('settings.about.view')}
                 </Button>
             }/>
             {activeContent === 'terms' && renderContent()}
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Feedback & Suggestions" description="We'd love to hear from you!">
+            <SettingsRow label={t('settings.about.feedback')}
+                         description={t('settings.about.feedbackDescription')}>
                 <Button as="a" href="mailto:feedback@tada-app.example.com?subject=Tada App Feedback"
                         variant="secondary"
                         size="sm" icon="mail">
-                    Send Email
+                    {t('settings.about.sendEmail')}
                 </Button>
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label="Report an Issue" description="Found a bug? Let us know.">
+            <SettingsRow label={t('settings.about.reportIssue')}
+                         description={t('settings.about.reportIssueDescription')}>
                 <Button as="a" href="mailto:support@tada-app.example.com?subject=Tada App Issue Report"
                         variant="secondary" size="sm" icon="alert-circle"
                         className="text-warning hover:!bg-warning/10 dark:text-warning dark:hover:!bg-warning/20">
-                    Report Issue
+                    {t('settings.about.reportButton')}
                 </Button>
             </SettingsRow>
         </div>
@@ -826,6 +832,7 @@ AboutSettings.displayName = 'AboutSettings';
 
 
 const SettingsModal: React.FC = () => {
+    const {t} = useTranslation();
     const [isOpen, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
     const [selectedTab, setSelectedTab] = useAtom(settingsSelectedTabAtom);
     const handleOpenChange = useCallback((open: boolean) => {
@@ -848,7 +855,10 @@ const SettingsModal: React.FC = () => {
                 return <AccountSettings/>;
         }
     }, [selectedTab]);
-    const modalTitle = useMemo(() => settingsSections.find(s => s.id === selectedTab)?.label ?? 'Settings', [selectedTab]);
+    const modalTitle = useMemo(() => {
+        const section = settingsSections.find(s => s.id === selectedTab);
+        return section ? t(section.labelKey) : t('settings.title');
+    }, [selectedTab, t]);
 
     return (
         <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
@@ -879,7 +889,7 @@ const SettingsModal: React.FC = () => {
                                     <Icon name={item.icon} size={16} strokeWidth={1}
                                           className="mr-2.5 opacity-90"
                                           aria-hidden="true"/>
-                                    <span>{item.label}</span>
+                                    <span>{t(item.labelKey)}</span>
                                 </button>
                             ))}
                         </nav>

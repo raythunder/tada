@@ -4,9 +4,10 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import * as apiService from '@/services/apiService';
 import Button from '@/components/common/Button';
 import Icon from '@/components/common/Icon';
-import { twMerge } from 'tailwind-merge';
+import { useTranslation } from 'react-i18next';
 
 const ForgotPasswordPage: React.FC = () => {
+    const { t } = useTranslation();
     const [identifier, setIdentifier] = useState('');
     const [code, setCode] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -51,12 +52,12 @@ const ForgotPasswordPage: React.FC = () => {
         setIsLoading(false);
 
         if (response.success) {
-            setMessage(response.message || 'Password reset successfully. Redirecting to login...');
+            setMessage(t('forgotPassword.successMessage'));
             setTimeout(() => navigate('/login'), 3000);
         } else {
             setError(response.error || 'Failed to reset password. The code may be invalid or expired.');
         }
-    }, [identifier, code, newPassword, navigate]);
+    }, [identifier, code, newPassword, navigate, t]);
 
     const inputBaseClasses = "w-full h-10 px-3 text-sm font-light rounded-base focus:outline-none bg-grey-ultra-light dark:bg-neutral-700 placeholder:text-grey-medium dark:placeholder:text-neutral-400 text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light focus:ring-1 focus:ring-primary dark:focus:ring-primary-light";
 
@@ -66,7 +67,7 @@ const ForgotPasswordPage: React.FC = () => {
                 <div className="text-center">
                     <Icon name="lock" size={40} className="mx-auto text-primary dark:text-primary-light mb-3" strokeWidth={1.5}/>
                     <h1 className="text-2xl font-medium text-grey-dark dark:text-neutral-100">
-                        Reset Password
+                        {t('forgotPassword.title')}
                     </h1>
                 </div>
 
@@ -82,19 +83,19 @@ const ForgotPasswordPage: React.FC = () => {
                 {step === 1 && (
                     <form onSubmit={handleSendCode} className="space-y-6">
                         <p className="text-sm text-grey-medium dark:text-neutral-400 text-center">
-                            Enter your email or phone number to receive a verification code.
+                            {t('forgotPassword.description')}
                         </p>
                         <div>
                             <label htmlFor="identifier" className="sr-only">Email or Phone Number</label>
                             <input
                                 id="identifier" name="identifier" type="text" autoComplete="email" required
                                 value={identifier} onChange={(e) => setIdentifier(e.target.value)}
-                                className={inputBaseClasses} placeholder="you@example.com or +1234567890"
+                                className={inputBaseClasses} placeholder={t('forgotPassword.identifierPlaceholder')}
                                 disabled={isSendingCode}
                             />
                         </div>
                         <Button type="submit" variant="primary" fullWidth size="lg" loading={isSendingCode} disabled={isSendingCode || !identifier.trim()} className="!h-10">
-                            Send Verification Code
+                            {t('forgotPassword.sendCode')}
                         </Button>
                     </form>
                 )}
@@ -104,23 +105,23 @@ const ForgotPasswordPage: React.FC = () => {
                         <div>
                             <label htmlFor="code" className="sr-only">Verification Code</label>
                             <input id="code" name="code" type="text" inputMode="numeric" required value={code} onChange={(e) => setCode(e.target.value)}
-                                   className={inputBaseClasses} placeholder="Verification Code" disabled={isLoading} />
+                                   className={inputBaseClasses} placeholder={t('forgotPassword.codePlaceholder')} disabled={isLoading} />
                         </div>
                         <div>
                             <label htmlFor="newPassword" className="sr-only">New Password</label>
                             <input id="newPassword" name="newPassword" type="password" required value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                                   className={inputBaseClasses} placeholder="Enter new password (min. 8)" disabled={isLoading} />
+                                   className={inputBaseClasses} placeholder={t('forgotPassword.passwordPlaceholder')} disabled={isLoading} />
                         </div>
                         <Button type="submit" variant="primary" fullWidth size="lg" loading={isLoading} disabled={isLoading || !code.trim() || !newPassword.trim()} className="!h-10 !mt-6">
-                            Reset Password
+                            {t('forgotPassword.resetButton')}
                         </Button>
                     </form>
                 )}
 
                 <p className="mt-6 text-center text-xs text-grey-medium dark:text-neutral-400">
-                    Remember your password?{' '}
+                    {t('forgotPassword.rememberPassword')}{' '}
                     <RouterLink to="/login" className="font-medium text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary transition-colors">
-                        Sign in
+                        {t('forgotPassword.signIn')}
                     </RouterLink>
                 </p>
             </div>

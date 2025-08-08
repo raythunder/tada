@@ -7,12 +7,14 @@ import * as apiService from '@/services/apiService';
 import Button from '@/components/common/Button';
 import Icon from '@/components/common/Icon';
 import {twMerge} from 'tailwind-merge';
+import {useTranslation} from "react-i18next";
 
 type LoginMethod = 'password' | 'code';
 
 const LoginPage: React.FC = () => {
+    const {t} = useTranslation();
     const [loginMethod, setLoginMethod] = useState<LoginMethod>('password');
-    const [identifier, setIdentifier] = useState(''); // For both email/phone
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
 
@@ -53,7 +55,7 @@ const LoginPage: React.FC = () => {
 
         if (loginMethod === 'password') {
             response = await apiService.apiLogin(identifier, password);
-        } else { // code
+        } else {
             response = await apiService.apiLoginWithCode(identifier, verificationCode);
         }
 
@@ -78,15 +80,15 @@ const LoginPage: React.FC = () => {
                 <div className="text-center">
                     <Icon name="check-square" size={48} className="mx-auto text-primary dark:text-primary-light mb-3"/>
                     <h1 className="text-xl sm:text-2xl font-medium text-grey-dark dark:text-neutral-100">
-                        Welcome Back to Tada
+                        {t('login.title')}
                     </h1>
                 </div>
 
                 <div className="flex justify-center space-x-1 border border-grey-light dark:border-neutral-700 rounded-lg p-1 bg-grey-ultra-light/50 dark:bg-neutral-750">
                     <button onClick={() => setLoginMethod('password')}
-                            className={tabButtonClasses(loginMethod === 'password')}>Password Login</button>
+                            className={tabButtonClasses(loginMethod === 'password')}>{t('login.passwordLogin')}</button>
                     <button onClick={() => setLoginMethod('code')}
-                            className={tabButtonClasses(loginMethod === 'code')}>Code Login</button>
+                            className={tabButtonClasses(loginMethod === 'code')}>{t('login.codeLogin')}</button>
                 </div>
 
                 {message && !error && (
@@ -100,13 +102,13 @@ const LoginPage: React.FC = () => {
                                 <label htmlFor="identifier-pass" className="sr-only">Email, Phone, or Username</label>
                                 <input id="identifier-pass" name="identifier" type="text" autoComplete="username" required
                                        value={identifier} onChange={(e) => setIdentifier(e.target.value)}
-                                       className={inputBaseClasses} placeholder="Email, Phone, or Username" disabled={isLoading}/>
+                                       className={inputBaseClasses} placeholder={t('login.identifierPlaceholder')} disabled={isLoading}/>
                             </div>
                             <div>
                                 <label htmlFor="password-email" className="sr-only">Password</label>
                                 <input id="password-email" name="password" type="password" autoComplete="current-password"
                                        required value={password} onChange={(e) => setPassword(e.target.value)}
-                                       className={inputBaseClasses} placeholder="Password" disabled={isLoading}/>
+                                       className={inputBaseClasses} placeholder={t('login.passwordPlaceholder')} disabled={isLoading}/>
                             </div>
                         </>
                     )}
@@ -117,7 +119,7 @@ const LoginPage: React.FC = () => {
                                 <label htmlFor="identifier-code" className="sr-only">Email or Phone number</label>
                                 <input id="identifier-code" name="identifier" type="text" required
                                        value={identifier} onChange={(e) => setIdentifier(e.target.value)}
-                                       className={inputBaseClasses} placeholder="Email or Phone number"
+                                       className={inputBaseClasses} placeholder={t('register.identifierPlaceholder')}
                                        disabled={isLoading || isSendingCode || isCodeSent}/>
                             </div>
                             <div>
@@ -126,12 +128,12 @@ const LoginPage: React.FC = () => {
                                     <input id="verificationCode" name="verificationCode" type="text" inputMode="numeric"
                                            autoComplete="one-time-code" required value={verificationCode}
                                            onChange={(e) => setVerificationCode(e.target.value)}
-                                           className={twMerge(inputBaseClasses, "flex-grow")} placeholder="Verification Code"
+                                           className={twMerge(inputBaseClasses, "flex-grow")} placeholder={t('login.codePlaceholder')}
                                            disabled={isLoading || !isCodeSent}/>
                                     <Button type="button" variant="secondary" onClick={handleSendCode} loading={isSendingCode}
                                             disabled={isLoading || isSendingCode || !identifier.trim() || isCodeSent}
                                             className="!h-10 flex-shrink-0 !px-3 text-xs">
-                                        {isCodeSent ? 'Resend' : 'Send Code'}
+                                        {isCodeSent ? t('login.resendCode') : t('login.sendCode')}
                                     </Button>
                                 </div>
                             </div>
@@ -142,19 +144,19 @@ const LoginPage: React.FC = () => {
 
                     <div className="flex items-center justify-end text-xs">
                         <RouterLink to="/forgot-password" className="font-medium text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary transition-colors">
-                            Forgot password?
+                            {t('login.forgotPassword')}
                         </RouterLink>
                     </div>
 
                     <Button type="submit" variant="primary" fullWidth size="lg" loading={isLoading} disabled={isLoading} className="!h-10">
-                        Sign In
+                        {t('login.signIn')}
                     </Button>
                 </form>
 
                 <p className="mt-8 text-center text-xs text-grey-medium dark:text-neutral-400">
-                    Don't have an account?{' '}
+                    {t('login.noAccount')}{' '}
                     <RouterLink to="/register" className="font-medium text-primary hover:text-primary-dark dark:text-primary-light dark:hover:text-primary transition-colors">
-                        Sign up here
+                        {t('login.signUp')}
                     </RouterLink>
                 </p>
             </div>

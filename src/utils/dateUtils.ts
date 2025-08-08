@@ -40,10 +40,19 @@ import {
     subMonths,
     subWeeks
 } from 'date-fns';
-import {enUS} from 'date-fns/locale'; // Use English locale
+import {enUS, zhCN} from 'date-fns/locale';
+import {TFunction} from "i18next";
 
-// Consistent locale for formatting
-const currentLocale = enUS;
+// Helper to get date-fns locale object from language string
+export const getLocale = (lang: 'en' | 'zh-CN' = 'en') => {
+    switch (lang) {
+        case 'zh-CN':
+            return zhCN;
+        case 'en':
+        default:
+            return enUS;
+    }
+};
 
 /**
  * Safely parses various date inputs (Date object, timestamp number, string) into a Date object.
@@ -82,13 +91,15 @@ export const isValid = (dateInput: Date | number | null | undefined): boolean =>
  */
 export const formatDate = (
     dateInput: Date | number | null | undefined,
-    formatString: string = 'MMM d, yyyy'
+    formatString: string = 'MMM d, yyyy',
+    lang: 'en' | 'zh-CN' = 'en'
 ): string => {
     const date = safeParseDate(dateInput)
     if (!date) return ''
     try {
+        const locale = getLocale(lang);
         const fixedFormat = formatString.replace(/A/g, 'a')
-        return formatFns(date, fixedFormat, { locale: currentLocale })
+        return formatFns(date, fixedFormat, { locale })
     } catch (e: any) {
         console.error('Error formatting date:', dateInput, e)
         return 'Invalid Date'
@@ -98,23 +109,29 @@ export const formatDate = (
 /**
  * Formats a date and time. If time is midnight, it's considered "All day".
  */
-export const formatDateTime = (dateInput: Date | number | null | undefined): string => {
+export const formatDateTime = (dateInput: Date | number | null | undefined, lang: 'en' | 'zh-CN' = 'en'): string => {
     const date = safeParseDate(dateInput);
     if (!date) return '';
     if (getHours(date) === 0 && getMinutes(date) === 0) {
-        return formatDate(date, 'MMM d, yyyy');
+        return formatDate(date, 'MMM d, yyyy', lang);
     }
-    return formatDate(date, 'MMM d, yyyy, h:mm a');
+    return formatDate(date, 'MMM d, yyyy, h:mm a', lang);
 };
 
 /**
  * Formats a date relative to today. Optionally includes time.
  * If includeTimeIfSet is true and time is midnight, no time will be shown.
  */
-export const formatRelativeDate = (dateInput: Date | number | null | undefined, includeTimeIfSet: boolean = false): string => {
+export const formatRelativeDate = (
+    dateInput: Date | number | null | undefined,
+    t: TFunction,
+    includeTimeIfSet: boolean = false,
+    lang: 'en' | 'zh-CN' = 'en'
+): string => {
     const date = safeParseDate(dateInput);
     if (!date) return '';
 
+    const locale = getLocale(lang);
     const today = new Date();
     const inputDayStart = startOfDay(date);
     const todayDayStart = startOfDay(today);
@@ -122,15 +139,15 @@ export const formatRelativeDate = (dateInput: Date | number | null | undefined, 
 
     let timeString = '';
     if (includeTimeIfSet && (getHours(date) !== 0 || getMinutes(date) !== 0)) {
-        timeString = `, ${formatFns(date, 'h:mm a', {locale: currentLocale})}`;
+        timeString = `, ${formatFns(date, 'h:mm a', {locale})}`;
     }
 
-    if (diffDays === 0) return `Today${timeString}`;
-    if (diffDays === 1) return `Tomorrow${timeString}`;
-    if (diffDays === -1) return `Yesterday${timeString}`;
+    if (diffDays === 0) return `${t('common.today')}${timeString}`;
+    if (diffDays === 1) return `${t('common.tomorrow')}${timeString}`;
+    if (diffDays === -1) return `Yesterday${timeString}`; // i18next can handle this via key "Yesterday"
 
     if (diffDays > 1 && diffDays <= 6) { // Within the current week (e.g. "Next Tuesday")
-        return `${formatFns(date, 'EEEE', {locale: currentLocale})}${timeString}`;
+        return `${formatFns(date, 'EEEE', {locale})}${timeString}`;
     }
 
     // For dates further out or in different years
@@ -138,7 +155,7 @@ export const formatRelativeDate = (dateInput: Date | number | null | undefined, 
     const inputYear = inputDayStart.getFullYear();
     const yearFormat = (inputYear !== currentYear) ? ', yyyy' : '';
 
-    return formatDate(date, `MMM d${yearFormat}${timeString}`);
+    return formatDate(date, `MMM d${yearFormat}${timeString}`, lang);
 };
 
 
@@ -193,4 +210,4 @@ export {
     getHours, getMinutes, setHours, setMinutes, startOfHour, startOfMinute, addHours, addMinutes,
     isSameHour, isSameMinute
 };
-export {enUS};
+export {enUS, zhCN};

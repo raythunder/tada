@@ -12,6 +12,7 @@ import {
     currentSummaryIndexAtom,
     filteredTasksForSummaryAtom,
     isGeneratingSummaryAtom,
+    preferencesSettingsAtom,
     referencedTasksForSummaryAtom,
     relevantStoredSummariesAtom,
     storedSummariesAtom,
@@ -43,6 +44,7 @@ import {CustomDateRangePickerContent} from '../common/CustomDateRangePickerPopov
 import SummaryHistoryModal from './SummaryHistoryModal';
 import {AnimatePresence, motion} from 'framer-motion';
 import {streamAiGeneratedSummary} from '@/services/aiService';
+import {useTranslation} from "react-i18next";
 
 const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
     "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
@@ -55,6 +57,7 @@ const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
 );
 
 const SummaryView: React.FC = () => {
+    const {t} = useTranslation();
     const [period, setPeriod] = useAtom(summaryPeriodFilterAtom);
     const [listFilter, setListFilter] = useAtom(summaryListFilterAtom);
     const availableLists = useAtomValue(userListNamesAtom);
@@ -72,6 +75,7 @@ const SummaryView: React.FC = () => {
     const referencedTasks = useAtomValue(referencedTasksForSummaryAtom);
     const allTasksData = useAtomValue(tasksAtom);
     const allTasks = useMemo(() => allTasksData ?? [], [allTasksData]);
+    const preferences = useAtomValue(preferencesSettingsAtom);
 
     const [summaryDisplayContent, setSummaryDisplayContent] = useState('');
     const [summaryEditorContent, setSummaryEditorContent] = useState('');
@@ -303,19 +307,21 @@ const SummaryView: React.FC = () => {
     const closeHistoryModal = useCallback(() => setIsHistoryModalOpen(false), []);
     const closeRangePicker = useCallback(() => setIsRangePickerOpen(false), []);
 
-    const periodOptions = useMemo((): { label: string, value: SummaryPeriodOption | 'custom' }[] => [{
-        label: 'Today', value: 'today'
-    }, {label: 'Yesterday', value: 'yesterday'}, {label: 'This Week', value: 'thisWeek'}, {
-        label: 'Last Week', value: 'lastWeek'
-    }, {label: 'This Month', value: 'thisMonth'}, {label: 'Last Month', value: 'lastMonth'}, {
-        label: 'Custom Range...', value: 'custom'
-    },], []);
+    const periodOptions = useMemo((): { label: string, value: SummaryPeriodOption | 'custom' }[] => [
+        {label: t('summary.periods.today'), value: 'today'},
+        {label: t('summary.periods.yesterday'), value: 'yesterday'},
+        {label: t('summary.periods.thisWeek'), value: 'thisWeek'},
+        {label: t('summary.periods.lastWeek'), value: 'lastWeek'},
+        {label: t('summary.periods.thisMonth'), value: 'thisMonth'},
+        {label: t('summary.periods.lastMonth'), value: 'lastMonth'},
+        {label: t('summary.periods.custom'), value: 'custom'},
+    ], [t]);
 
     const listOptions = useMemo(() => [{
-        label: 'All Lists', value: 'all'
+        label: t('summary.lists.all'), value: 'all'
     }, ...availableLists.filter(name => name !== 'Trash').map(listName => ({
-        label: listName, value: listName
-    }))], [availableLists]);
+        label: listName === 'Inbox' ? t('sidebar.inbox') : listName, value: listName
+    }))], [availableLists, t]);
 
     const selectedPeriodLabel = useMemo(() => {
         const option = periodOptions.find(p => typeof period === 'string' && p.value === period);
@@ -329,12 +335,12 @@ const SummaryView: React.FC = () => {
             if (isSameDay(period.start, period.end)) return startYear !== currentYear ? format(period.start, 'MMM d, yyyy') : startStr;
             if (startYear !== endYear) return `${format(period.start, 'MMM d, yyyy')} - ${format(period.end, 'MMM d, yyyy')}`; else if (startYear !== currentYear) return `${startStr} - ${endStr}, ${startYear}`; else return `${startStr} - ${endStr}`;
         }
-        return 'Select Period';
+        return t('summary.periods.select');
     }, [period, periodOptions]);
 
     const selectedListLabel = useMemo(() => {
         const option = listOptions.find(l => l.value === listFilter);
-        return option ? option.label : 'Select List';
+        return option ? option.label : t('summary.lists.select');
     }, [listFilter, listOptions]);
 
     const isGenerateDisabled = useMemo(() => {
@@ -345,7 +351,7 @@ const SummaryView: React.FC = () => {
     }, [isGenerating, selectedTaskIds, allTasks]);
 
     const tasksUsedCount = useMemo(() => currentSummary?.taskIds.length ?? 0, [currentSummary]);
-    const summaryTimestamp = useMemo(() => currentSummary ? formatDateTime(currentSummary.createdAt) : null, [currentSummary]);
+    const summaryTimestamp = useMemo(() => currentSummary ? formatDateTime(currentSummary.createdAt, preferences?.language) : null, [currentSummary, preferences]);
     const selectableTasks = useMemo(() => filteredTasks.filter(t => t.listName !== 'Trash'), [filteredTasks]);
     const allSelectableTasksSelected = useMemo(() => selectableTasks.length > 0 && selectableTasks.every(task => selectedTaskIds.has(task.id)), [selectableTasks, selectedTaskIds]);
     const someSelectableTasksSelected = useMemo(() => selectableTasks.some(task => selectedTaskIds.has(task.id)) && !allSelectableTasksSelected, [selectedTaskIds, allSelectableTasksSelected, selectableTasks]);
@@ -378,8 +384,7 @@ const SummaryView: React.FC = () => {
         <div
             className="bg-white dark:bg-neutral-800 rounded-base shadow-modal max-h-72 w-80 styled-scrollbar-thin overflow-y-auto p-1.5">
             <div
-                className="px-1.5 py-1 text-[11px] font-normal text-grey-medium dark:text-neutral-400 border-b border-grey-light dark:border-neutral-700 sticky top-0 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm z-10">Referenced
-                Tasks ({referencedTasks.length})
+                className="px-1.5 py-1 text-[11px] font-normal text-grey-medium dark:text-neutral-400 border-b border-grey-light dark:border-neutral-700 sticky top-0 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm z-10">{t('summary.referencedTasks')} ({referencedTasks.length})
             </div>
             {referencedTasks.length > 0 ? (<ul className="pt-1 space-y-0.5">{referencedTasks.map(task => (
                 <li key={task.id}
@@ -391,7 +396,7 @@ const SummaryView: React.FC = () => {
                               className="text-white"/>} {task.completePercentage != null && task.completePercentage > 0 && !task.completed && (
                         <div className="w-1.5 h-1.5 bg-primary/80 dark:bg-primary-light/80 rounded-full"></div>)} </div>
                     <div className="flex-1 overflow-hidden"><p
-                        className={twMerge("text-[12px] font-normal text-grey-dark dark:text-neutral-100 leading-snug truncate", task.completed && "line-through text-grey-medium dark:text-neutral-400 font-light")}>{task.title || "Untitled"}</p>
+                        className={twMerge("text-[12px] font-normal text-grey-dark dark:text-neutral-100 leading-snug truncate", task.completed && "line-through text-grey-medium dark:text-neutral-400 font-light")}>{task.title || t('common.untitledTask')}</p>
                         <div
                             className="flex items-center space-x-2 mt-0.5 text-[10px] text-grey-medium dark:text-neutral-400 font-light">
                             {task.completePercentage != null && task.completePercentage > 0 && !task.completed && (
@@ -399,24 +404,23 @@ const SummaryView: React.FC = () => {
                                     className="font-normal text-primary dark:text-primary-light">[{task.completePercentage}%]</span>)} {task.dueDate && isValid(safeParseDate(task.dueDate)) && (
                             <span className="flex items-center whitespace-nowrap"><Icon name="calendar" size={10}
                                                                                         strokeWidth={1}
-                                                                                        className="mr-0.5 opacity-80"/>{formatRelativeDate(task.dueDate, false)}</span>)} {task.listName && task.listName !== 'Inbox' && (
+                                                                                        className="mr-0.5 opacity-80"/>{formatRelativeDate(task.dueDate, t, false, preferences?.language)}</span>)} {task.listName && task.listName !== 'Inbox' && (
                             <span
                                 className="flex items-center bg-grey-ultra-light dark:bg-neutral-700 px-1 py-0 rounded-sm max-w-[70px] truncate"
                                 title={task.listName}><Icon name={task.listName === 'Trash' ? 'trash' : 'list'} size={9}
                                                             strokeWidth={1}
                                                             className="mr-0.5 opacity-80 flex-shrink-0"/><span
-                                className="truncate">{task.listName}</span></span>)} </div>
+                                className="truncate">{task.listName === 'Inbox' ? t('sidebar.inbox') : task.listName}</span></span>)} </div>
                     </div>
                 </li>))}</ul>) : (
-                <p className="text-[12px] text-grey-medium dark:text-neutral-400 italic p-4 text-center font-light">No
-                    referenced tasks
-                    found.</p>)} </div>);
+                <p className="text-[12px] text-grey-medium dark:text-neutral-400 italic p-4 text-center font-light">{t('summary.noReferencedTasks')}</p>)} </div>);
 
     const TaskItemMiniInline: React.FC<{
         task: Task;
         isSelected: boolean;
         onSelectionChange: (id: string, selected: boolean | 'indeterminate') => void;
     }> = React.memo(({task, isSelected, onSelectionChange}) => {
+        const {t} = useTranslation();
         const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
         const parsedDueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
         const overdue = useMemo(() => parsedDueDate != null && isValid(parsedDueDate) && isBefore(startOfDay(parsedDueDate), startOfDay(new Date())) && !task.completed, [parsedDueDate, task.completed]);
@@ -459,12 +463,12 @@ const SummaryView: React.FC = () => {
             <div className="flex items-center">
                 <SelectionCheckboxRadix id={uniqueId} checked={isSelected}
                                         onChange={(checkedState) => onSelectionChange(task.id, checkedState)}
-                                        aria-label={`Select task: ${task.title || 'Untitled Task'}`}
+                                        aria-label={`Select task: ${task.title || t('common.untitledTask')}`}
                                         className="mr-2 flex-shrink-0" size={16} disabled={isDisabled}/>
                 <div className="flex-1 overflow-hidden">
                     <span
                         className={twMerge("text-[13px] font-normal text-grey-dark dark:text-neutral-100 block truncate", task.completed && !isDisabled && "line-through text-grey-medium dark:text-neutral-400 font-light", isDisabled && "text-grey-medium dark:text-neutral-400 font-light")}>{task.title ||
-                        <span className="italic">Untitled Task</span>}</span>
+                        <span className="italic">{t('common.untitledTask')}</span>}</span>
                     <div
                         className="text-[11px] font-light text-grey-medium dark:text-neutral-400 flex items-center space-x-2 mt-0.5 flex-wrap gap-y-0.5">
                         {task.completePercentage != null && task.completePercentage > 0 && task.completePercentage < 100 && !isDisabled && (<span
@@ -472,7 +476,7 @@ const SummaryView: React.FC = () => {
                         {parsedDueDate && isValid(parsedDueDate) && (<span
                             className={twMerge("flex items-center whitespace-nowrap", overdue && !task.completed && !isDisabled && "text-error dark:text-red-400 font-normal", task.completed && !isDisabled && "line-through")}><Icon
                             name="calendar" size={10} strokeWidth={1}
-                            className="mr-0.5 opacity-80"/>{formatRelativeDate(parsedDueDate, false)}</span>)}
+                            className="mr-0.5 opacity-80"/>{formatRelativeDate(parsedDueDate, t, false, preferences?.language)}</span>)}
                         {task.listName && task.listName !== 'Inbox' && (<span
                             className="flex items-center bg-grey-ultra-light dark:bg-neutral-700 px-1 rounded-sm text-[10px] max-w-[70px] truncate"
                             title={task.listName}><Icon name={task.listName === 'Trash' ? 'trash' : 'list'} size={10}
@@ -516,7 +520,7 @@ const SummaryView: React.FC = () => {
                                                                 size={11} disabled={true}/>
                                         <span
                                             className={twMerge("truncate text-grey-medium dark:text-neutral-400", sub.completed && "line-through opacity-70")}>{sub.title ||
-                                            <span className="italic">Untitled Subtask</span>}</span>
+                                            <span className="italic">{t('common.untitledSubtask')}</span>}</span>
                                     </div>))}
                                 </div>
                             </motion.div>
@@ -530,7 +534,7 @@ const SummaryView: React.FC = () => {
                                                 size={11} disabled={true}/>
                         <span
                             className={twMerge("truncate text-grey-medium dark:text-neutral-400", sub.completed && "line-through opacity-70")}>{sub.title ||
-                            <span className="italic">Untitled Subtask</span>}</span>
+                            <span className="italic">{t('common.untitledSubtask')}</span>}</span>
                     </div>))} {sortedSubtasks.length > INITIAL_VISIBLE_SUBTASKS && (
                     <button type="button" data-subtask-expander="true" onClick={toggleSubtaskExpansion}
                             className={twMerge("text-[10px] text-primary dark:text-primary-light hover:underline mt-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded font-light", "ml-[calc(0.5rem+11px)]")}
@@ -545,7 +549,7 @@ const SummaryView: React.FC = () => {
             <div
                 className="px-6 py-0 h-[56px] border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 bg-white dark:bg-neutral-800 z-10">
                 <div className="w-1/3 flex items-center space-x-2">
-                    <h1 className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate">AI Summary</h1>
+                    <h1 className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate">{t('iconBar.aiSummary')}</h1>
                     <Tooltip.Provider>
                         <Tooltip.Root delayDuration={200}>
                             <Tooltip.Trigger asChild>
@@ -556,13 +560,13 @@ const SummaryView: React.FC = () => {
                                     onClick={openHistoryModal}
                                     className="w-7 h-7 text-grey-medium dark:text-neutral-400 hover:bg-grey-ultra-light dark:hover:bg-neutral-700"
                                     iconProps={{size: 16, strokeWidth: 1}}
-                                    aria-label="View Summary History"
+                                    aria-label={t('summary.history.title')}
                                     disabled={isGenerating}
                                 />
                             </Tooltip.Trigger>
                             <Tooltip.Portal>
                                 <Tooltip.Content className={tooltipContentClass} sideOffset={4}>
-                                    View All Generated Summaries
+                                    {t('summary.history.tooltip')}
                                     <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900/95"/>
                                 </Tooltip.Content>
                             </Tooltip.Portal>
@@ -647,7 +651,7 @@ const SummaryView: React.FC = () => {
                     <Button variant="primary" size="sm" icon={isGenerating ? undefined : "sparkles"}
                             loading={isGenerating} onClick={handleGenerateClick} disabled={isGenerateDisabled}
                             className="!h-8 px-3">
-                        <span className="font-normal">{isGenerating ? 'Generating...' : 'Generate'}</span>
+                        <span className="font-normal">{isGenerating ? t('summary.generating') : t('summary.generate')}</span>
                     </Button>
                 </div>
             </div>
@@ -658,14 +662,14 @@ const SummaryView: React.FC = () => {
                     <div
                         className="px-4 py-3 border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 h-12">
                         <h2 className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 truncate">
-                            Tasks ({selectableTasks.length})
+                            {t('summary.tasksTitle')} ({selectableTasks.length})
                         </h2>
                         <SelectionCheckboxRadix
                             id="select-all-summary-tasks"
                             checked={selectAllState === true}
                             indeterminate={selectAllState === 'indeterminate'}
                             onChange={handleSelectAllToggle}
-                            aria-label={allSelectableTasksSelected ? "Deselect all tasks" : (someSelectableTasksSelected ? "Deselect some tasks" : "Select all tasks")}
+                            aria-label={allSelectableTasksSelected ? t('summary.deselectAll') : (someSelectableTasksSelected ? t('summary.deselectSome') : t('summary.selectAll'))}
                             className="mr-1"
                             size={16}
                             disabled={selectableTasks.length === 0 || isGenerating}
@@ -677,10 +681,8 @@ const SummaryView: React.FC = () => {
                                 className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-4 text-center pt-10">
                                 <Icon name="archive" size={32} strokeWidth={1}
                                       className="mb-3 text-grey-light dark:text-neutral-500 opacity-80"/>
-                                <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">No relevant
-                                    tasks found</p>
-                                <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">Adjust
-                                    filters or check task status/progress.</p>
+                                <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">{t('summary.noTasks.title')}</p>
+                                <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">{t('summary.noTasks.description')}</p>
                             </div>
                         ) : (
                             filteredTasks.map(task => (
@@ -696,18 +698,18 @@ const SummaryView: React.FC = () => {
                     <div
                         className="px-4 py-3 h-12 border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0">
                         <span className="text-[11px] font-light text-grey-medium dark:text-neutral-400 truncate">
-                            {isGenerating ? 'Generating summary...' : (currentIndex === -1 ? 'New Summary' : (summaryTimestamp ? `Generated: ${summaryTimestamp}` : 'Summary'))}
+                            {isGenerating ? t('summary.generating') : (currentIndex === -1 ? t('summary.newSummary') : (summaryTimestamp ? `${t('summary.generated')}: ${summaryTimestamp}` : t('summary.title')))}
                         </span>
                         <div className="flex items-center space-x-1.5">
                             {currentSummary && !isGenerating && !editMode && (
                                 <Button variant="ghost" size="sm" icon="pencil" className="!h-7 px-2"
-                                        onClick={() => setEditMode(true)}>Edit</Button>
+                                        onClick={() => setEditMode(true)}>{t('common.edit')}</Button>
                             )}
                             {currentSummary && !isGenerating && editMode && (
                                 <Button variant="primary" size="sm" icon="check" className="!h-7 px-2" onClick={() => {
                                     forceSaveCurrentSummary();
                                     setEditMode(false);
-                                }}>Done</Button>
+                                }}>{t('summary.doneEditing')}</Button>
                             )}
                             {(currentSummary && !isGenerating) &&
                                 <div className="w-px h-4 bg-grey-light dark:bg-neutral-700"></div>}
@@ -718,7 +720,7 @@ const SummaryView: React.FC = () => {
                                         <Button variant="link" size="sm"
                                                 className="text-[11px] !h-5 px-1 text-primary hover:text-primary-dark -mr-1"
                                                 aria-haspopup="true">
-                                            {tasksUsedCount} tasks used
+                                            {t('summary.tasksUsed', {count: tasksUsedCount})}
                                             <Icon name="chevron-down" size={12} strokeWidth={1}
                                                   className="ml-0.5 opacity-70"/>
                                         </Button>
@@ -737,13 +739,13 @@ const SummaryView: React.FC = () => {
                                     <Button variant="ghost" size="icon" icon="chevron-left" onClick={handlePrevSummary}
                                             disabled={currentIndex >= totalRelevantSummaries - 1}
                                             className="w-6 h-6 text-grey-medium dark:text-neutral-400"
-                                            iconProps={{size: 14, strokeWidth: 1}} aria-label="Older summary"/>
+                                            iconProps={{size: 14, strokeWidth: 1}} aria-label={t('summary.older')}/>
                                     <span
                                         className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 tabular-nums">{displayedIndexForUi} / {totalForUi}</span>
                                     <Button variant="ghost" size="icon" icon="chevron-right" onClick={handleNextSummary}
                                             disabled={currentIndex <= 0}
                                             className="w-6 h-6 text-grey-medium dark:text-neutral-400"
-                                            iconProps={{size: 14, strokeWidth: 1}} aria-label="Newer summary"/>
+                                            iconProps={{size: 14, strokeWidth: 1}} aria-label={t('summary.newer')}/>
                                 </>
                             )}
                         </div>
@@ -769,10 +771,8 @@ const SummaryView: React.FC = () => {
                                     className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-2 text-center">
                                     <Icon name="sparkles" size={32} strokeWidth={1}
                                           className="mb-3 text-grey-light dark:text-neutral-500 opacity-80"/>
-                                    <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">No
-                                        Summary Available</p>
-                                    <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">Select
-                                        tasks and click 'Generate'.</p>
+                                    <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">{t('summary.noSummary.title')}</p>
+                                    <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">{t('summary.noSummary.description')}</p>
                                 </div>
                             )
                         ) : (
@@ -787,7 +787,7 @@ const SummaryView: React.FC = () => {
                                 {hasUnsavedChangesRef.current && (
                                     <span
                                         className="absolute bottom-2 right-2 text-[10px] text-grey-medium/70 dark:text-neutral-400/70 italic animate-pulse font-light">
-                                        saving...
+                                        {t('summary.saving')}
                                     </span>
                                 )}
                             </div>

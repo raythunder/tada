@@ -1,7 +1,7 @@
 // src/components/calendar/CalendarView.tsx
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai'; // Changed useAtomValue to useAtom for tasks
-import {selectedTaskIdAtom, tasksAtom, tasksLoadingAtom} from '@/store/atoms'; // Added tasksLoadingAtom
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {preferencesSettingsAtom, selectedTaskIdAtom, tasksAtom, tasksLoadingAtom} from '@/store/atoms';
 import Button from '../common/Button';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import {Task} from '@/types';
@@ -10,7 +10,6 @@ import {
     eachDayOfInterval,
     endOfMonth,
     endOfWeek,
-    enUS,
     format,
     getMonth,
     getYear,
@@ -25,7 +24,8 @@ import {
     startOfDay,
     startOfMonth,
     startOfWeek,
-    subMonths
+    subMonths,
+    getLocale, addDays
 } from '@/utils/dateUtils';
 import {twMerge} from 'tailwind-merge';
 import {clsx} from 'clsx';
@@ -42,6 +42,8 @@ import {
 } from '@dnd-kit/core';
 import {CSS} from '@dnd-kit/utilities';
 import Icon from "@/components/common/Icon";
+import {useTranslation} from "react-i18next";
+import {Locale} from "date-fns";
 
 interface DraggableTaskProps {
     task: Task;
@@ -108,13 +110,14 @@ DraggableCalendarTask.displayName = 'DraggableCalendarTask';
 interface MonthYearSelectorProps {
     currentDate: Date;
     onChange: (newDate: Date) => void;
+    locale: Locale;
 }
 
-const MonthYearSelectorContent: React.FC<MonthYearSelectorProps> = React.memo(({currentDate, onChange}) => {
+const MonthYearSelectorContent: React.FC<MonthYearSelectorProps> = React.memo(({currentDate, onChange, locale}) => {
     const currentYear = getYear(currentDate);
     const currentMonth = getMonth(currentDate);
     const [displayYear, setDisplayYear] = useState(currentYear);
-    const months = useMemo(() => ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], []);
+    const months = useMemo(() => Array.from({length: 12}, (_, i) => format(setMonth(new Date(), i), 'MMM', {locale})), [locale]);
     const handleMonthChange = useCallback((monthIndex: number) => {
         let newDate = setMonth(currentDate, monthIndex);
         if (getYear(newDate) !== displayYear) {
@@ -186,14 +189,18 @@ DroppableDayCell.displayName = 'DroppableDayCell';
 
 
 const CalendarView: React.FC = () => {
-    const [tasksData, setTasks] = useAtom(tasksAtom); // Use useAtom to get tasks and setter
-    const tasks = useMemo(() => tasksData ?? [], [tasksData]); // Handle null case
-    const isLoadingTasks = useAtomValue(tasksLoadingAtom); // Get loading state
+    const {t, i18n} = useTranslation();
+    const preferences = useAtomValue(preferencesSettingsAtom);
+    const [tasksData, setTasks] = useAtom(tasksAtom);
+    const tasks = useMemo(() => tasksData ?? [], [tasksData]);
+    const isLoadingTasks = useAtomValue(tasksLoadingAtom);
 
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const [currentMonthDate, setCurrentMonthDate] = useState(startOfDay(new Date()));
     const [draggingTaskId, setDraggingTaskId] = useState<UniqueIdentifier | null>(null);
     const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
+    const dateFnsLocale = useMemo(() => getLocale(preferences?.language), [preferences?.language]);
 
     const draggingTask = useMemo(() => {
         if (!draggingTaskId) return null;
@@ -203,8 +210,8 @@ const CalendarView: React.FC = () => {
 
     const firstDayCurrentMonth = useMemo(() => startOfMonth(currentMonthDate), [currentMonthDate]);
     const lastDayCurrentMonth = useMemo(() => endOfMonth(currentMonthDate), [currentMonthDate]);
-    const startDate = useMemo(() => startOfWeek(firstDayCurrentMonth, {locale: enUS}), [firstDayCurrentMonth]);
-    const endDate = useMemo(() => endOfWeek(lastDayCurrentMonth, {locale: enUS}), [lastDayCurrentMonth]);
+    const startDate = useMemo(() => startOfWeek(firstDayCurrentMonth, {locale: dateFnsLocale}), [firstDayCurrentMonth, dateFnsLocale]);
+    const endDate = useMemo(() => endOfWeek(lastDayCurrentMonth, {locale: dateFnsLocale}), [lastDayCurrentMonth, dateFnsLocale]);
     const daysInGrid = useMemo(() => eachDayOfInterval({start: startDate, end: endDate}), [startDate, endDate]);
     const numberOfRows = useMemo(() => daysInGrid.length / 7, [daysInGrid]);
 
@@ -266,7 +273,6 @@ const CalendarView: React.FC = () => {
                 const originalDateTime = safeParseDate(originalTask.dueDate);
                 let newDueDate = startOfDay(targetDay);
 
-                // Preserve original time if it was set (not midnight)
                 if (originalDateTime && isValid(originalDateTime)) {
                     const hours = originalDateTime.getHours();
                     const minutes = originalDateTime.getMinutes();
@@ -276,7 +282,6 @@ const CalendarView: React.FC = () => {
                 }
 
                 const currentDueDateStart = originalDateTime ? startOfDay(originalDateTime) : null;
-                // Compare only the date part to avoid unnecessary updates if only time changes within the same day
                 if (!currentDueDateStart || !isSameDay(currentDueDateStart, startOfDay(targetDay))) {
                     setTasks(prevTasksValue => {
                         const prevTasks = prevTasksValue ?? [];
@@ -311,8 +316,8 @@ const CalendarView: React.FC = () => {
                               className={twMerge(
                                   'border-r border-b border-grey-light dark:border-neutral-700',
                                   !isCurrentMonthDay && 'bg-grey-ultra-light/30 dark:bg-neutral-750/30 opacity-70',
-                                  index % 7 === 6 && 'border-r-0', // Last column
-                                  index >= daysInGrid.length - 7 && 'border-b-0', // Last row
+                                  index % 7 === 6 && 'border-r-0',
+                                  index >= daysInGrid.length - 7 && 'border-b-0',
                                   'overflow-hidden p-1'
                               )}>
                 <div className="flex justify-end items-center h-5 flex-shrink-0 mb-1">
@@ -323,7 +328,7 @@ const CalendarView: React.FC = () => {
                         )}>{format(day, 'd')}</span>
                 </div>
                 <div
-                    className="flex-1 space-y-0.5 overflow-y-auto styled-scrollbar-thin min-h-[50px]"> {/* Ensure min height for drop target */}
+                    className="flex-1 space-y-0.5 overflow-y-auto styled-scrollbar-thin min-h-[50px]">
                     {isCurrentMonthDay && tasksToShow.map((task) => (
                         <DraggableCalendarTask key={task.id} task={task} onClick={() => handleTaskClick(task.id)}/>))}
                     {isCurrentMonthDay && hasMoreTasks && (
@@ -336,7 +341,11 @@ const CalendarView: React.FC = () => {
         );
     }, [tasksByDueDate, currentMonthDate, handleTaskClick, expandedDays, toggleExpandDay, daysInGrid.length]);
 
-    const weekDays = useMemo(() => ['S', 'M', 'T', 'W', 'T', 'F', 'S'], []);
+    const weekDays = useMemo(() => {
+        const start = startOfWeek(new Date(), {locale: dateFnsLocale});
+        return Array.from({length: 7}).map((_, i) => format(addDays(start, i), 'EEEEEE', {locale: dateFnsLocale}));
+    }, [dateFnsLocale]);
+
     const isTodayButtonDisabled = useMemo(() => isSameDay(currentMonthDate, new Date()) && isSameMonth(currentMonthDate, new Date()), [currentMonthDate]);
     const dropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
 
@@ -357,12 +366,12 @@ const CalendarView: React.FC = () => {
                 <div
                     className="px-6 py-0 h-[56px] border-b border-grey-light dark:border-neutral-700 flex justify-between items-center flex-shrink-0 bg-white dark:bg-neutral-800 z-10">
                     <div className="w-1/3"><h1
-                        className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate">Calendar</h1>
+                        className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate">{t('iconBar.calendar')}</h1>
                     </div>
                     <div className="flex-1 flex justify-center items-center space-x-1">
                         <Button onClick={goToToday} variant="link" size="sm"
                                 className="!h-8 px-3 !text-primary dark:!text-primary-light !font-normal"
-                                disabled={isTodayButtonDisabled}>Today</Button>
+                                disabled={isTodayButtonDisabled}>{t('common.today')}</Button>
                         <div className="flex items-center">
                             <Button onClick={() => changeMonth(-1)} variant="ghost" size="icon" icon="chevron-left"
                                     aria-label="Previous month"
@@ -372,7 +381,7 @@ const CalendarView: React.FC = () => {
                                 <DropdownMenu.Trigger asChild>
                                     <Button variant="ghost" size="sm"
                                             className="!h-8 px-3 text-[14px] font-normal w-36 text-center tabular-nums text-grey-dark dark:text-neutral-100 hover:bg-grey-ultra-light dark:hover:bg-neutral-700">
-                                        {format(currentMonthDate, 'MMMM yyyy', {locale: enUS})}
+                                        {format(currentMonthDate, 'MMMM yyyy', {locale: dateFnsLocale})}
                                         <Icon name="chevron-down" size={14} strokeWidth={1}
                                               className="ml-1.5 opacity-70"/>
                                     </Button>
@@ -382,7 +391,7 @@ const CalendarView: React.FC = () => {
                                         className={twMerge("z-[55] bg-white dark:bg-neutral-750 rounded-base shadow-modal p-0", dropdownAnimationClasses)}
                                         sideOffset={5} align="center">
                                         <MonthYearSelectorContent currentDate={currentMonthDate}
-                                                                  onChange={handleDateChange}/>
+                                                                  onChange={handleDateChange} locale={dateFnsLocale}/>
                                     </DropdownMenu.Content>
                                 </DropdownMenu.Portal>
                             </DropdownMenu.Root>
@@ -393,7 +402,6 @@ const CalendarView: React.FC = () => {
                         </div>
                     </div>
                     <div className="w-1/3"></div>
-                    {/* Spacer */}
                 </div>
                 <div
                     className="flex-1 overflow-hidden flex flex-col p-4 bg-white dark:bg-neutral-800">
@@ -402,12 +410,12 @@ const CalendarView: React.FC = () => {
                                                             className="text-center py-1 text-[11px] font-normal text-grey-medium dark:text-neutral-400 tracking-wide uppercase"> {day} </div>))}
                     </div>
                     <div
-                        className="flex-1 min-h-0"> {/* This div will take remaining space and allow grid to be scrollable if it overflows */}
+                        className="flex-1 min-h-0">
                         <div
                             className={twMerge(
                                 "grid grid-cols-7 h-full w-full gap-0 rounded-base overflow-hidden border border-grey-light dark:border-neutral-700",
                                 "bg-white dark:bg-neutral-800",
-                                numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6" // Adjust rows based on month layout
+                                numberOfRows <= 5 ? "grid-rows-5" : "grid-rows-6"
                             )}>
                             {daysInGrid.map(renderCalendarDay)}
                         </div>

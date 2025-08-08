@@ -8,17 +8,19 @@ import {twMerge} from 'tailwind-merge';
 import Button from "@/components/common/Button";
 import {IconName} from "@/components/common/IconMap";
 import * as SortTooltip from '@radix-ui/react-tooltip';
+import {useTranslation} from "react-i18next";
 
 const IconBar: React.FC = memo(() => {
+    const {t} = useTranslation();
     const currentUser = useAtomValue(currentUserAtom);
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
     const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
     const location = useLocation();
 
-    const navigationItems: { path: string; icon: IconName, label: string }[] = useMemo(() => [
-        {path: '/all', icon: 'archive', label: 'All Tasks'},
-        {path: '/calendar', icon: 'calendar-days', label: 'Calendar'},
-        {path: '/summary', icon: 'sparkles', label: 'AI Summary'},
+    const navigationItems: { path: string; icon: IconName, labelKey: string }[] = useMemo(() => [
+        {path: '/all', icon: 'archive', labelKey: 'iconBar.allTasks'},
+        {path: '/calendar', icon: 'calendar-days', labelKey: 'iconBar.calendar'},
+        {path: '/summary', icon: 'sparkles', labelKey: 'iconBar.aiSummary'},
     ], []);
 
     const handleAvatarClick = useCallback(() => {
@@ -36,7 +38,7 @@ const IconBar: React.FC = memo(() => {
         return twMerge(
             'flex items-center justify-center w-10 h-10 rounded-base transition-colors duration-200 ease-in-out group relative',
             isSectionActive
-                ? 'bg-grey-ultra-light text-primary dark:bg-primary-dark/20 dark:text-primary-light' // Adjusted active state for dark mode
+                ? 'bg-grey-ultra-light text-primary dark:bg-primary-dark/20 dark:text-primary-light'
                 : 'text-grey-medium hover:bg-grey-ultra-light hover:text-grey-dark dark:text-neutral-400 dark:hover:bg-grey-deep dark:hover:text-neutral-100',
             'focus:outline-none focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep'
         );
@@ -48,15 +50,15 @@ const IconBar: React.FC = memo(() => {
         <div
             className={twMerge(
                 "w-16 flex flex-col items-center py-4 flex-shrink-0 z-20 border-r border-grey-light/50 dark:border-grey-deep/50",
-                "bg-white/80 dark:bg-grey-deep/80 backdrop-blur-md transition-colors duration-300" // Semi-transparent with blur
+                "bg-white/80 dark:bg-grey-deep/80 backdrop-blur-md transition-colors duration-300"
             )}
         >
             <div
-                className="mb-6 mt-1 flex items-center justify-center w-9 h-9 select-none" // Removed bg-primary, text-white, font-medium, text-xl, rounded-base (SVG is complex shape)
+                className="mb-6 mt-1 flex items-center justify-center w-9 h-9 select-none"
                 aria-label="Tada App Logo" title="Tada">
                 <svg
                     viewBox="0 0 509 811"
-                    className="w-7 h-7 transition-colors duration-300" // Control size and theme color here
+                    className="w-7 h-7 transition-colors duration-300"
                     xmlns="http://www.w3.org/2000/svg"
                     fillRule="evenodd"
                 >
@@ -87,13 +89,13 @@ const IconBar: React.FC = memo(() => {
                 {navigationItems.map((item) => (
                     <SortTooltip.Root key={item.path} delayDuration={200}>
                         <SortTooltip.Trigger asChild>
-                            <NavLink to={item.path} className={getNavLinkClass(item.path)} aria-label={item.label}>
+                            <NavLink to={item.path} className={getNavLinkClass(item.path)} aria-label={t(item.labelKey)}>
                                 <Icon name={item.icon} size={20} strokeWidth={1}/>
                             </NavLink>
                         </SortTooltip.Trigger>
                         <SortTooltip.Portal>
                             <SortTooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
-                                {item.label}
+                                {t(item.labelKey)}
                                 <SortTooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
                             </SortTooltip.Content>
                         </SortTooltip.Portal>
@@ -106,7 +108,7 @@ const IconBar: React.FC = memo(() => {
                     <SortTooltip.Trigger asChild>
                         <Button onClick={handleAvatarClick} variant="ghost" size="icon"
                                 className="w-9 h-9 rounded-full overflow-hidden p-0 hover:bg-grey-ultra-light dark:hover:bg-grey-deep focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep"
-                                aria-label="Account Settings">
+                                aria-label={t('iconBar.accountSettings')}>
                             {currentUser?.avatarUrl ? (
                                 <img src={currentUser.avatarUrl} alt={currentUser.username || 'User Avatar'}
                                      className="w-full h-full object-cover"/>
@@ -121,7 +123,7 @@ const IconBar: React.FC = memo(() => {
                     </SortTooltip.Trigger>
                     <SortTooltip.Portal>
                         <SortTooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
-                            Account Settings
+                            {t('iconBar.accountSettings')}
                             <SortTooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
                         </SortTooltip.Content>
                     </SortTooltip.Portal>

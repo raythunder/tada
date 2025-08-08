@@ -51,83 +51,40 @@ import {twMerge} from 'tailwind-merge';
 import {TaskItemMenuProvider} from '@/context/TaskItemMenuContext';
 import {IconName} from '../common/IconMap';
 import {analyzeTaskInputWithAI} from '@/services/aiService';
-
-const priorityMap: Record<number, {
-    label: string;
-    iconColor: string;
-    bgColor: string;
-    shortLabel: string;
-    borderColor?: string;
-    dotColor?: string;
-    darkBorderColor?: string;
-}> = {
-    1: {
-        label: 'High Priority',
-        iconColor: 'text-error',
-        bgColor: 'bg-error',
-        shortLabel: 'P1',
-        borderColor: 'border-error',
-        darkBorderColor: 'dark:border-error/70',
-        dotColor: 'bg-error'
-    },
-    2: {
-        label: 'Medium Priority',
-        iconColor: 'text-warning',
-        bgColor: 'bg-warning',
-        shortLabel: 'P2',
-        borderColor: 'border-warning',
-        darkBorderColor: 'dark:border-warning/70',
-        dotColor: 'bg-warning'
-    },
-    3: {
-        label: 'Low Priority',
-        iconColor: 'text-info',
-        bgColor: 'bg-info',
-        shortLabel: 'P3',
-        borderColor: 'border-info',
-        darkBorderColor: 'dark:border-info/70',
-        dotColor: 'bg-info'
-    },
-};
-
-interface TaskListProps {
-    title: string;
-}
+import {useTranslation} from "react-i18next";
 
 const TaskGroupHeader: React.FC<{
     title: string;
     groupKey: TaskGroupCategory;
-}> = React.memo(({title, groupKey}) => (
-    <div
-        className={twMerge(
-            "flex items-center justify-between px-4 pt-3 pb-1.5",
-            "text-[12px] font-normal text-grey-medium dark:text-neutral-400 uppercase tracking-[0.5px]",
-            "sticky top-0 z-10 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm"
-        )}
-    >
-        <span>{title}</span>
-        {groupKey === 'overdue' && (
-            <Popover.Anchor asChild>
-                <Popover.Trigger asChild>
-                    <Button
-                        variant="link" size="sm" icon="calendar-check"
-                        className="text-[11px] !h-5 px-1 text-primary dark:text-primary-light hover:text-primary-dark dark:hover:text-primary -mr-1"
-                        title="Reschedule all overdue tasks..."
-                        iconProps={{size: 12, strokeWidth: 1.5}}
-                    >
-                        Reschedule All
-                    </Button>
-                </Popover.Trigger>
-            </Popover.Anchor>
-        )}
-    </div>
-));
+}> = React.memo(({title, groupKey}) => {
+    const {t} = useTranslation();
+    return (
+        <div
+            className={twMerge(
+                "flex items-center justify-between px-4 pt-3 pb-1.5",
+                "text-[12px] font-normal text-grey-medium dark:text-neutral-400 uppercase tracking-[0.5px]",
+                "sticky top-0 z-10 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm"
+            )}
+        >
+            <span>{title}</span>
+            {groupKey === 'overdue' && (
+                <Popover.Anchor asChild>
+                    <Popover.Trigger asChild>
+                        <Button
+                            variant="link" size="sm" icon="calendar-check"
+                            className="text-[11px] !h-5 px-1 text-primary dark:text-primary-light hover:text-primary-dark dark:hover:text-primary -mr-1"
+                            title="Reschedule all overdue tasks..."
+                            iconProps={{size: 12, strokeWidth: 1.5}}
+                        >
+                            {t('taskList.rescheduleAll')}
+                        </Button>
+                    </Popover.Trigger>
+                </Popover.Anchor>
+            )}
+        </div>
+    )
+});
 TaskGroupHeader.displayName = 'TaskGroupHeader';
-
-const groupTitles: Record<TaskGroupCategory, string> = {
-    overdue: 'Overdue', today: 'Today', next7days: 'Next 7 Days', later: 'Later', nodate: 'No Date',
-};
-const groupOrder: TaskGroupCategory[] = ['overdue', 'today', 'next7days', 'later', 'nodate'];
 
 const getNewTaskMenuSubTriggerClasses = () => twMerge(
     "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
@@ -154,7 +111,8 @@ const getAiGlowThemeClass = (priority: number | null): string => {
 };
 
 
-const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
+const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
+    const {t} = useTranslation();
     const allTasksData = useAtomValue(tasksAtom);
     const allTasks = useMemo(() => allTasksData ?? [], [allTasksData]);
     const isLoadingTasks = useAtomValue(tasksLoadingAtom);
@@ -164,11 +122,24 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     const groupedTasks = useAtomValue(groupedAllTasksAtom);
     const rawSearchResults = useAtomValue(rawSearchResultsAtom);
     const searchTerm = useAtomValue(searchTermAtom);
-    const allUserLists = useAtomValue(userListsAtom); // Get full list objects
+    const allUserLists = useAtomValue(userListsAtom);
     const preferencesData = useAtomValue(preferencesSettingsAtom);
     const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
     const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
 
+    const groupTitles: Record<TaskGroupCategory, string> = useMemo(() => ({
+        overdue: t('taskGroup.overdue'),
+        today: t('taskGroup.today'),
+        next7days: t('taskGroup.next7days'),
+        later: t('taskGroup.later'),
+        nodate: t('taskGroup.nodate'),
+    }), [t]);
+
+    const priorityMap: Record<number, { label: string; iconColor: string; bgColor: string; shortLabel: string; borderColor?: string; dotColor?: string; darkBorderColor?: string; }> = useMemo(() => ({
+        1: {label: t('priorityLabels.1'), iconColor: 'text-error', bgColor: 'bg-error', shortLabel: 'P1', borderColor: 'border-error', darkBorderColor: 'dark:border-error/70', dotColor: 'bg-error'},
+        2: {label: t('priorityLabels.2'), iconColor: 'text-warning', bgColor: 'bg-warning', shortLabel: 'P2', borderColor: 'border-warning', darkBorderColor: 'dark:border-warning/70', dotColor: 'bg-warning'},
+        3: {label: t('priorityLabels.3'), iconColor: 'text-info', bgColor: 'bg-info', shortLabel: 'P3', borderColor: 'border-info', darkBorderColor: 'dark:border-info/70', dotColor: 'bg-info'},
+    }), [t]);
 
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [draggingTask, setDraggingTask] = useState<Task | null>(null);
@@ -253,6 +224,8 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         return {tasksToDisplay: filtered, isGroupedView: false, isSearching: false};
     }, [searchTerm, currentFilterGlobal, groupedTasks, rawSearchResults, allTasks]);
 
+    const groupOrder: TaskGroupCategory[] = useMemo(() => ['overdue', 'today', 'next7days', 'later', 'nodate'], []);
+
     const sortableItems: UniqueIdentifier[] = useMemo(() => {
         if (isGroupedView) {
             return groupOrder.flatMap(groupKey =>
@@ -261,7 +234,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         } else {
             return ((tasksToDisplay as Task[]) ?? []).map(task => task.id);
         }
-    }, [tasksToDisplay, isGroupedView]);
+    }, [tasksToDisplay, isGroupedView, groupOrder]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {activationConstraint: {distance: 8}}),
@@ -436,7 +409,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             updatedAt: now,
             content: '',
             tags: [],
-            groupCategory: 'nodate', // Will be re-calculated by atom
+            groupCategory: 'nodate',
             subtasks: []
         };
 
@@ -560,7 +533,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
             setNewTaskListState(preferences.defaultNewTaskList);
 
         } catch (error) {
-            alert(`AI Task creation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+            alert(t('taskList.aiCreationError', {message: error instanceof Error ? error.message : "Unknown error"}));
         } finally {
             setIsAiProcessing(false);
             setIsAiTaskInputVisible(false);
@@ -570,7 +543,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
         }
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists
+        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists, t
     ]);
 
 
@@ -624,77 +597,38 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
     }, [tasksToDisplay, isGroupedView, isLoadingTasks]);
 
     const emptyStateTitle = useMemo(() => {
-        if (isSearching) return `No results for "${searchTerm}"`;
-        if (currentFilterGlobal === 'trash') return 'Trash is empty';
-        if (currentFilterGlobal === 'completed') return 'No completed tasks yet';
+        if (isSearching) return t('emptyState.title.search', {searchTerm});
+        if (currentFilterGlobal === 'trash') return t('emptyState.title.trash');
+        if (currentFilterGlobal === 'completed') return t('emptyState.title.completed');
         if (currentFilterGlobal.startsWith('list-')) {
-            return `No active tasks in "${pageTitle}"`;
+            return t('emptyState.title.list', {pageTitle});
         }
-        return `No tasks for "${pageTitle}"`;
-    }, [isSearching, searchTerm, currentFilterGlobal, pageTitle]);
+        return t('emptyState.title.default', {pageTitle});
+    }, [isSearching, searchTerm, currentFilterGlobal, pageTitle, t]);
 
-    const headerClass = useMemo(() => twMerge(
-        "px-6 py-0 h-[56px]",
-        "border-b border-grey-light dark:border-neutral-700",
-        "flex justify-between items-center flex-shrink-0 z-10",
-        "bg-white dark:bg-neutral-800"
-    ), []);
+    const headerClass = useMemo(() => twMerge("px-6 py-0 h-[56px]", "border-b border-grey-light dark:border-neutral-700", "flex justify-between items-center flex-shrink-0 z-10", "bg-white dark:bg-neutral-800"), []);
 
-    const shouldShowInputSection = useMemo(() =>
-            isRegularNewTaskModeAllowed || isAiTaskInputVisible,
-        [isRegularNewTaskModeAllowed, isAiTaskInputVisible]
-    );
+    const shouldShowInputSection = useMemo(() => isRegularNewTaskModeAllowed || isAiTaskInputVisible, [isRegularNewTaskModeAllowed, isAiTaskInputVisible]);
     const isCurrentlyAiMode = isAiTaskInputVisible;
 
-    const datePickerPopoverWrapperClasses = useMemo(() => twMerge(
-        "z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700",
-        "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
-    ), []);
-
-    const moreOptionsDropdownContentClasses = useMemo(() => twMerge(
-        "z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700",
-        "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"
-    ), []);
-
+    const datePickerPopoverWrapperClasses = useMemo(() => twMerge("z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700", "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"), []);
+    const moreOptionsDropdownContentClasses = useMemo(() => twMerge("z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700", "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide"), []);
     const newTaskInputWrapperClass = useMemo(() => {
         const baseWrapperClasses = "group relative flex items-center w-full h-[32px] rounded-base transition-all duration-150 ease-in-out border";
-
         if (isCurrentlyAiMode) {
-            if (isAiProcessing) {
-                return twMerge(
-                    baseWrapperClasses,
-                    "bg-grey-ultra-light dark:bg-neutral-700/60",
-                    "opacity-70",
-                    "border-grey-light dark:border-neutral-600"
-                );
-            }
-            return twMerge(
-                baseWrapperClasses,
-                "ai-glow-anim-border animate-border-flow",
-                getAiGlowThemeClass(newTaskPriority),
-                "border-transparent"
-            );
+            if (isAiProcessing) return twMerge(baseWrapperClasses, "bg-grey-ultra-light dark:bg-neutral-700/60", "opacity-70", "border-grey-light dark:border-neutral-600");
+            return twMerge(baseWrapperClasses, "ai-glow-anim-border animate-border-flow", getAiGlowThemeClass(newTaskPriority), "border-transparent");
         } else {
             const prioritySpecificBorder = newTaskPriority && priorityMap[newTaskPriority]?.borderColor;
             const darkPrioritySpecificBorder = newTaskPriority && priorityMap[newTaskPriority]?.darkBorderColor;
-
-            return twMerge(
-                baseWrapperClasses,
-                "bg-grey-ultra-light dark:bg-neutral-700/60",
-                prioritySpecificBorder
-                    ? `${prioritySpecificBorder} ${darkPrioritySpecificBorder || 'dark:border-transparent'}`
-                    : "border-grey-light dark:border-neutral-600"
-            );
+            return twMerge(baseWrapperClasses, "bg-grey-ultra-light dark:bg-neutral-700/60", prioritySpecificBorder ? `${prioritySpecificBorder} ${darkPrioritySpecificBorder || 'dark:border-transparent'}` : "border-grey-light dark:border-neutral-600");
         }
-    }, [newTaskPriority, isCurrentlyAiMode, isAiProcessing]);
+    }, [newTaskPriority, isCurrentlyAiMode, isAiProcessing, priorityMap]);
 
     const newTaskInputClass = useMemo(() => {
         const baseClasses = "flex-1 min-w-0 h-full pl-2 pr-8 text-[13px] font-light outline-none border-none text-grey-dark dark:text-neutral-100 placeholder:text-grey-medium dark:placeholder:text-neutral-400/70";
-
         if (isCurrentlyAiMode) {
-            if (isAiProcessing) {
-                return twMerge(baseClasses, "bg-grey-ultra-light dark:bg-neutral-700/60 rounded-4px");
-            }
+            if (isAiProcessing) return twMerge(baseClasses, "bg-grey-ultra-light dark:bg-neutral-700/60 rounded-4px");
             return twMerge(baseClasses, "bg-white dark:bg-neutral-800 rounded-4px");
         }
         return twMerge(baseClasses, "bg-transparent");
@@ -708,14 +642,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
     const placeholderText = useMemo(() => {
         if (isCurrentlyAiMode) {
-            return preferences.language === 'zh-CN'
-                ? `用AI描述任务 (例如, "下个月策划一次团建活动")`
-                : `Describe task for AI (e.g., "Plan a team building event next month")`;
+            return t('taskList.aiTaskPlaceholder');
         }
-        return preferences.language === 'zh-CN'
-            ? `添加任务到 "${newTaskListState}"`
-            : `Add task to "${newTaskListState}"`;
-    }, [isCurrentlyAiMode, newTaskListState, preferences.language]);
+        return t('taskList.addTaskPlaceholder', {listName: newTaskListState});
+    }, [isCurrentlyAiMode, newTaskListState, t]);
 
     if (isLoadingTasks || isLoadingPreferences) {
         return (
@@ -749,7 +679,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                 "bg-white dark:bg-neutral-800",
                                 "relative z-[1]"
                             )}
-                            title={preferences.language === 'zh-CN' ? '使用 AI 添加任务' : "Add task with AI"}
+                            title={t('taskList.aiTaskButton.label')}
                             aria-expanded={isAiTaskInputVisible}
                             disabled={isAiProcessing}
                         >
@@ -759,9 +689,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                 <Icon name="sparkles" size={14} strokeWidth={1.5} className="mr-1"/>
                             )}
                             <span className="text-[11px] font-medium">
-                                {isAiProcessing
-                                    ? (preferences.language === 'zh-CN' ? "处理中..." : "Processing...")
-                                    : (preferences.language === 'zh-CN' ? "AI 任务" : "AI Task")}
+                                {isAiProcessing ? t('taskList.aiTaskButton.processing') : t('taskList.aiTaskButton.label')}
                             </span>
                         </Button>
                     </div>
@@ -815,11 +743,11 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
 
                                     {newTaskDueDate && (
                                         <div
-                                            className="flex items-center pl-1 pr-2 h-full pointer-events-none"> {/* Adjusted padding slightly */}
+                                            className="flex items-center pl-1 pr-2 h-full pointer-events-none">
                                             <span
                                                 className="text-[12px] text-primary dark:text-primary-light whitespace-nowrap font-medium"
                                             >
-                                                {formatRelativeDate(newTaskDueDate, false)}
+                                                {formatRelativeDate(newTaskDueDate, t, false, preferences?.language)}
                                             </span>
                                         </div>
                                     )}
@@ -864,7 +792,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                             <button
                                                 type="button"
                                                 className="flex items-center justify-center w-7 h-7 rounded-r-base text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-primary"
-                                                aria-label="More task options"
+                                                aria-label={t('taskList.moreOptions')}
                                                 disabled={(isCurrentlyAiMode && isAiProcessing) || isAiProcessing}
                                             >
                                                 <Icon name="chevron-down" size={16} strokeWidth={1.5}/>
@@ -883,7 +811,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                 }}
                                             >
                                                 <div
-                                                    className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
+                                                    className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">{t('common.priority')}
                                                 </div>
                                                 <div className="flex justify-around items-center px-1.5 py-1">
                                                     {[1, 2, 3].map(pVal => {
@@ -917,7 +845,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                             newTaskPriority === null ? "bg-grey-ultra-light dark:bg-neutral-700"
                                                                 : "hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700"
                                                         )}
-                                                        title="No Priority"
+                                                        title={t('priorityLabels.none')}
                                                         aria-pressed={newTaskPriority === null}
                                                     >
                                                         <Icon name="minus" size={14} strokeWidth={1.5}/>
@@ -933,10 +861,10 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                         <div className="flex items-center flex-1 min-w-0">
                                                             <Icon name="folder" size={14} strokeWidth={1}
                                                                   className="mr-2 flex-shrink-0 opacity-80"/>
-                                                            <span className="truncate">Add to List</span>
+                                                            <span className="truncate">{t('taskList.addToList')}</span>
                                                         </div>
                                                         <span
-                                                            className="ml-2 mr-1 text-grey-medium dark:text-neutral-400 text-[11px] truncate max-w-[60px] text-right">{newTaskListState}</span>
+                                                            className="ml-2 mr-1 text-grey-medium dark:text-neutral-400 text-[11px] truncate max-w-[60px] text-right">{newTaskListState === 'Inbox' ? t('sidebar.inbox') : newTaskListState}</span>
                                                         <Icon name="chevron-right" size={14} strokeWidth={1}
                                                               className="opacity-70 flex-shrink-0"/>
                                                     </DropdownMenu.SubTrigger>
@@ -958,7 +886,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                                                             name={list === 'Inbox' ? 'inbox' : 'list' as IconName}
                                                                             size={14} strokeWidth={1}
                                                                             className="mr-2 flex-shrink-0 opacity-80"/>
-                                                                        {list}
+                                                                        {list === 'Inbox' ? t('sidebar.inbox') : list}
                                                                         <DropdownMenu.ItemIndicator
                                                                             className="absolute right-2 inline-flex items-center">
                                                                             <Icon name="check" size={12}
@@ -994,9 +922,7 @@ const TaskList: React.FC<TaskListProps> = ({title: pageTitle}) => {
                                         className="mb-3 text-grey-light dark:text-neutral-500 opacity-80"/>
                                     <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-300">{emptyStateTitle}</p>
                                     {(isRegularNewTaskModeAllowed && !isCurrentlyAiMode) && (
-                                        <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">Use
-                                            the input bar
-                                            above to add a new task.</p>)}
+                                        <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">{t('emptyState.addTaskHint')}</p>)}
                                 </div>
                             ) : (
                                 <div className="pb-16">

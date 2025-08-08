@@ -27,6 +27,7 @@ import {useTaskItemMenu} from '@/context/TaskItemMenuContext';
 import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 import * as Tooltip from '@radix-ui/react-tooltip';
 import AddTagsPopoverContent from "@/components/common/AddTagsPopoverContent";
+import {useTranslation} from "react-i18next";
 
 export const ProgressIndicator: React.FC<{
     percentage: number | null; isTrash: boolean; size?: number; className?: string;
@@ -113,43 +114,6 @@ function generateContentSnippet(content: string, term: string, length: number = 
     return snippet;
 }
 
-
-const taskListPriorityMap: Record<number, {
-    label: string;
-    iconColor: string;
-    bgColor: string;
-    shortLabel: string;
-    borderColor?: string;
-    dotColor?: string;
-}> = {
-    1: {
-        label: 'High Priority',
-        iconColor: 'text-error',
-        bgColor: 'bg-error',
-        shortLabel: 'P1',
-        borderColor: 'border-error',
-        dotColor: 'bg-error'
-    },
-    2: {
-        label: 'Medium Priority',
-        iconColor: 'text-warning',
-        bgColor: 'bg-warning',
-        shortLabel: 'P2',
-        borderColor: 'border-warning',
-        dotColor: 'bg-warning'
-    },
-    3: {
-        label: 'Low Priority',
-        iconColor: 'text-info',
-        bgColor: 'bg-info',
-        shortLabel: 'P3',
-        borderColor: 'border-info',
-        dotColor: 'bg-info'
-    },
-};
-const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
-
-
 const getTaskItemMenuItemStyle = (selected?: boolean, isDanger?: boolean) => twMerge(
     "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
     isDanger
@@ -221,6 +185,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     isOverlay = false,
                                                     style: overlayStyle
                                                 }) => {
+    const {t} = useTranslation();
     const [selectedTaskId, setSelectedTaskId] = useAtom(selectedTaskIdAtom);
     const setTasks = useSetAtom(tasksAtom);
     const [searchTerm] = useAtom(searchTermAtom);
@@ -329,7 +294,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
             setSelectedTaskId(null);
         }
         setOpenItemId(null);
-    }, [task.completed, isSelected, updateTask, setSelectedTaskId, setOpenItemId, task.id]);
+    }, [task.completed, isSelected, updateTask, setSelectedTaskId, setOpenItemId]);
 
 
     const handleProgressIndicatorKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -444,7 +409,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                 completed: false,
                 completedAt: null,
             })),
-            groupCategory: 'nodate' // It will be recalculated
+            groupCategory: 'nodate'
         };
         setTasks(prevValue => [...(prevValue ?? []), newTask]);
         setSelectedTaskId(newTask.id);
@@ -535,7 +500,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     ), [isCompleted, isTrashItem]);
 
     const listIcon: IconName = useMemo(() => task.listName === 'Inbox' ? 'inbox' : (task.listName === 'Trash' ? 'trash' : 'list'), [task.listName]);
-    const availableLists = useMemo(() => (allUserLists ?? []).filter(l => l.name !== 'Trash'), [allUserLists]); // Changed
+    const availableLists = useMemo(() => (allUserLists ?? []).filter(l => l.name !== 'Trash'), [allUserLists]);
 
     const actionsMenuContentClasses = useMemo(() => twMerge(
         'z-[60] min-w-[180px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700',
@@ -547,13 +512,19 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
 
+    const taskListPriorityMap: Record<number, { label: string; iconColor: string; bgColor: string; shortLabel: string; borderColor?: string; dotColor?: string; }> = useMemo(() => ({
+        1: {label: t('priorityLabels.1'), iconColor: 'text-error', bgColor: 'bg-error', shortLabel: 'P1', borderColor: 'border-error', dotColor: 'bg-error'},
+        2: {label: t('priorityLabels.2'), iconColor: 'text-warning', bgColor: 'bg-warning', shortLabel: 'P2', borderColor: 'border-warning', dotColor: 'bg-warning'},
+        3: {label: t('priorityLabels.3'), iconColor: 'text-info', bgColor: 'bg-info', shortLabel: 'P3', borderColor: 'border-info', dotColor: 'bg-info'},
+    }), [t]);
+    const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
 
     const progressMenuItems = useMemo(() => [
-        {label: 'Not Started', value: null, icon: 'circle' as IconName, iconStroke: 1.5},
-        {label: 'In Progress', value: 30, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
-        {label: 'Mostly Done', value: 60, icon: 'circle-dot' as IconName, iconStroke: 1.5},
-        {label: 'Completed', value: 100, icon: 'circle-check' as IconName, iconStroke: 2},
-    ], []);
+        {label: t('taskDetail.progressLabels.notStarted'), value: null, icon: 'circle' as IconName, iconStroke: 1.5},
+        {label: t('taskDetail.progressLabels.inProgress'), value: 30, icon: 'circle-dot-dashed' as IconName, iconStroke: 1.5},
+        {label: t('taskDetail.progressLabels.mostlyDone'), value: 60, icon: 'circle-dot' as IconName, iconStroke: 1.5},
+        {label: t('taskDetail.progressLabels.completed'), value: 100, icon: 'circle-check' as IconName, iconStroke: 2},
+    ], [t]);
 
     const isDateClickable = isValidDueDate && isInteractive;
 
@@ -574,14 +545,14 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
             return taskListPriorityMap[task.priority].bgColor;
         }
         return noPriorityBgColor;
-    }, [task.priority]);
+    }, [task.priority, taskListPriorityMap, noPriorityBgColor]);
 
     const priorityDotLabel = useMemo(() => {
         if (task.priority && taskListPriorityMap[task.priority]) {
             return taskListPriorityMap[task.priority].label;
         }
-        return 'No Priority';
-    }, [task.priority]);
+        return t('priorityLabels.none');
+    }, [task.priority, taskListPriorityMap, t]);
 
     if (isLoadingPreferences) {
         return (
@@ -641,7 +612,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                 </Tooltip.Content></Tooltip.Portal>
                             </Tooltip.Root></Tooltip.Provider>
                         )}
-                        <Highlighter {...highlighterProps} textToHighlight={task.title || 'Untitled Task'}
+                        <Highlighter {...highlighterProps} textToHighlight={task.title || t('common.untitledTask')}
                                      id={`task-title-${task.id}`} className={titleClasses}/>
                     </div>
 
@@ -657,12 +628,12 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                          <Icon name={listIcon} size={12} strokeWidth={1.5}
                                                className="mr-0.5 opacity-80 flex-shrink-0"/>
                                         <span
-                                            className={clsx((isCompleted || isTrashItem) && 'line-through')}>{task.listName}</span>
+                                            className={clsx((isCompleted || isTrashItem) && 'line-through')}>{task.listName === 'Inbox' ? t('sidebar.inbox') : task.listName}</span>
                                     </span>
                                 </Tooltip.Trigger>
                                 <Tooltip.Portal><Tooltip.Content className={tooltipContentClass} side="bottom"
                                                                  align="start" sideOffset={4}>
-                                    List: {task.listName} <Tooltip.Arrow
+                                    List: {task.listName === 'Inbox' ? t('sidebar.inbox') : task.listName} <Tooltip.Arrow
                                     className="fill-grey-dark dark:fill-neutral-900/95"/>
                                 </Tooltip.Content></Tooltip.Portal>
                             </Tooltip.Root></Tooltip.Provider>
@@ -704,13 +675,13 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     handleDateClickPickerOpenChange(true);
                                                 }
                                             } : undefined}
-                                            aria-label={isDateClickable ? `Change due date, currently ${formatRelativeDate(dueDate!, false)}` : `Due date ${formatRelativeDate(dueDate!, false)}`}
+                                            aria-label={isDateClickable ? `Change due date, currently ${formatRelativeDate(dueDate!, t, false, preferences?.language)}` : `Due date ${formatRelativeDate(dueDate!, t, false, preferences?.language)}`}
                                             data-date-picker-trigger={isDateClickable ? "true" : "false"}
                                             data-tooltip-trigger={!isDateClickable ? "true" : "false"}
                                     >
                                         <Icon name="calendar" size={12} strokeWidth={1.5}
                                               className="mr-0.5 opacity-80 flex-shrink-0"/>
-                                        {formatRelativeDate(dueDate!, false)}
+                                        {formatRelativeDate(dueDate!, t, false, preferences?.language)}
                                     </button>
                                 </Popover.Trigger>
                                 {isDateClickable && (
@@ -815,7 +786,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                     }}
                                 >
                                     <div
-                                        className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Progress
+                                        className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">{t('taskDetail.progress')}
                                     </div>
                                     <div className="flex justify-around items-center px-1.5 py-1">
                                         {progressMenuItems.map(item => {
@@ -844,7 +815,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                         className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
                                     <div
-                                        className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">Priority
+                                        className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">{t('common.priority')}
                                     </div>
                                     <div className="flex justify-around items-center px-1.5 py-1">
                                         {[1, 2, 3].map(pVal => {
@@ -878,7 +849,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-300 hover:bg-grey-ultra-light dark:hover:bg-neutral-700 focus-visible:bg-grey-ultra-light dark:focus-visible:bg-neutral-700",
                                                 !isInteractive && "opacity-50 cursor-not-allowed"
                                             )}
-                                            title="No Priority"
+                                            title={t('priorityLabels.none')}
                                             aria-pressed={task.priority === null}
                                             disabled={!isInteractive}
                                         >
@@ -899,7 +870,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     handleMenuSubPopoverOpenChange(true, 'tags');
                                                 }}
                                                 disabled={!isInteractive}
-                                            > Add Tags... </TaskItemRadixMenuItem>
+                                            > {t('taskDetail.addTags')} </TaskItemRadixMenuItem>
                                         </Popover.Trigger>
                                         <Popover.Portal>
                                             <Popover.Content
@@ -940,7 +911,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     handleMenuSubPopoverOpenChange(true, 'date');
                                                 }}
                                                 disabled={!isInteractive}
-                                            > Set Due Date... </TaskItemRadixMenuItem>
+                                            > {t('taskDetail.setDueDate')}... </TaskItemRadixMenuItem>
                                         </Popover.Trigger>
                                         <Popover.Portal>
                                             <Popover.Content
@@ -987,7 +958,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                         >
                                             <Icon name="folder" size={14} strokeWidth={1.5}
                                                   className="mr-2 flex-shrink-0 opacity-80"/>
-                                            Move to List
+                                            {t('taskDetail.moveTo')}
                                             <div className="ml-auto pl-5"><Icon name="chevron-right" size={14}
                                                                                 strokeWidth={1.5}
                                                                                 className="opacity-70"/></div>
@@ -1006,7 +977,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                             <Icon name={list.name === 'Inbox' ? 'inbox' : 'list'}
                                                                   size={14} strokeWidth={1.5}
                                                                   className="mr-2 flex-shrink-0 opacity-80"/>
-                                                            {list.name}
+                                                            {list.name === 'Inbox' ? t('sidebar.inbox') : list.name}
                                                             <DropdownMenu.ItemIndicator
                                                                 className="absolute right-2 inline-flex items-center">
                                                                 <Icon name="check" size={12} strokeWidth={2}/>
@@ -1023,7 +994,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
 
                                     <TaskItemRadixMenuItem icon="copy-plus" onSelect={handleDuplicateTask}
                                                            disabled={!isInteractive || isTrashItem}>
-                                        Duplicate Task
+                                        {t('taskDetail.duplicate')}
                                     </TaskItemRadixMenuItem>
 
                                     {!isTrashItem && (
@@ -1032,7 +1003,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                             onSelect={() => setTimeout(() => handleDeleteTask(), 0)}
                                             isDanger
                                             disabled={isLoadingPreferences}>
-                                            Move to Trash
+                                            {t('taskDetail.moveToTrash')}
                                         </TaskItemRadixMenuItem>
                                     )}
                                 </DropdownMenu.Content>
@@ -1042,8 +1013,16 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                 )}
             </div>
 
-            <ConfirmDeleteModalRadix isOpen={isDeleteDialogOpen} onClose={closeDeleteConfirm}
-                                     onConfirm={confirmDeleteTask} itemTitle={task.title || 'Untitled Task'}/>
+            <ConfirmDeleteModalRadix
+                isOpen={isDeleteDialogOpen}
+                onClose={closeDeleteConfirm}
+                onConfirm={confirmDeleteTask}
+                itemTitle={task.title || t('common.untitledTask')}
+                title={t('confirmDeleteModal.task.title')}
+                description={t('confirmDeleteModal.task.description', {itemTitle: task.title || t('common.untitledTask')})}
+                confirmText={t('confirmDeleteModal.task.confirmText')}
+                confirmVariant="danger"
+            />
         </>
     );
 });

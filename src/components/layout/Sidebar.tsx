@@ -5,10 +5,8 @@ import Icon from '../common/Icon';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
     currentFilterAtom,
-    defaultPreferencesSettingsForApi,
     isAddListModalOpenAtom,
     preferencesSettingsAtom,
-    preferencesSettingsLoadingAtom,
     rawSearchResultsAtom,
     searchTermAtom,
     selectedTaskIdAtom,
@@ -28,6 +26,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as service from "@/services/apiService";
 import {RESET} from "jotai/utils";
 import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
+import {useTranslation} from "react-i18next";
 
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -149,6 +148,7 @@ const CollapsibleSection: React.FC<{
 CollapsibleSection.displayName = 'CollapsibleSection';
 
 const Sidebar: React.FC = () => {
+    const {t} = useTranslation();
     const counts = useAtomValue(taskCountsAtom);
     const userLists = useAtomValue(userListsAtom);
     const userTags = useAtomValue(userTagNamesAtom);
@@ -160,9 +160,7 @@ const Sidebar: React.FC = () => {
     const [isAddListModalOpen, setIsAddListModalOpen] = useAtom(isAddListModalOpenAtom);
     const [currentFilter, setCurrentFilter] = useAtom(currentFilterAtom);
 
-    const preferencesData = useAtomValue(preferencesSettingsAtom);
-    const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
-    const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
+    const preferences = useAtomValue(preferencesSettingsAtom);
 
     const navigate = useNavigate();
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -170,19 +168,16 @@ const Sidebar: React.FC = () => {
     const debouncedSearchTerm = useDebounce(searchTerm, 250);
     const isSearching = useMemo(() => debouncedSearchTerm.trim().length > 0, [debouncedSearchTerm]);
 
-    // --- State for Inline Editing and Delete Confirmation ---
     const [editingListId, setEditingListId] = useState<string | null>(null);
     const [editingListName, setEditingListName] = useState('');
     const [listToDelete, setListToDelete] = useState<List | null>(null);
 
     useEffect(() => {
-        // Auto-focus and select text when editing starts
         if (editingListId && listEditInputRef.current) {
             listEditInputRef.current.focus();
             listEditInputRef.current.select();
         }
     }, [editingListId]);
-
 
     const handleAddNewListClick = useCallback(() => {
         setIsAddListModalOpen(true);
@@ -228,7 +223,7 @@ const Sidebar: React.FC = () => {
 
         try {
             await service.apiUpdateList(editingListId, {name: trimmedName});
-            if (currentFilter === `list-${originalList.name}`) {
+            if (currentFilter === `list-${encodeURIComponent(originalList.name)}`) {
                 navigate(`/list/${encodeURIComponent(trimmedName)}`);
             }
             setListsAtom(RESET);
@@ -260,7 +255,7 @@ const Sidebar: React.FC = () => {
 
         try {
             await service.apiDeleteList(listToDelete.id);
-            if (currentFilter === `list-${listToDelete.name}`) {
+            if (currentFilter === `list-${encodeURIComponent(listToDelete.name)}`) {
                 navigate('/all');
             }
             setListsAtom(RESET);
@@ -268,10 +263,9 @@ const Sidebar: React.FC = () => {
         } catch (e: any) {
             alert(`Error deleting list: ${e.message}`);
         } finally {
-            setListToDelete(null); // Close the modal
+            setListToDelete(null);
         }
     }, [listToDelete, currentFilter, navigate, setListsAtom, setTasksAtom]);
-
 
     const myListsToDisplay = useMemo(() => userLists?.filter(list => list.name !== 'Inbox') ?? [], [userLists]);
     const inboxList = useMemo(() => userLists?.find(list => list.name === 'Inbox'), [userLists]);
@@ -297,12 +291,9 @@ const Sidebar: React.FC = () => {
     const dropdownContentClasses = "z-[60] min-w-[120px] p-1 bg-white rounded-base shadow-modal dark:bg-neutral-800 dark:border dark:border-neutral-700 data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
     const dropdownItemClasses = "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7 focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light dark:focus:bg-neutral-700 dark:data-[highlighted]:bg-neutral-700 text-grey-dark data-[highlighted]:text-grey-dark dark:text-neutral-200 dark:data-[highlighted]:text-neutral-100";
 
-    if (isLoadingPreferences) {
+    if (!preferences) {
         return (
-            <aside className={twMerge(
-                "w-full h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2",
-                "bg-transparent items-center justify-center"
-            )}>
+            <aside className="w-full h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2 bg-transparent items-center justify-center">
                 <Icon name="loader" size={20} className="text-primary animate-spin"/>
             </aside>
         );
@@ -310,17 +301,14 @@ const Sidebar: React.FC = () => {
 
     return (
         <>
-            <aside className={twMerge(
-                "w-full h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2",
-                "bg-transparent"
-            )}>
+            <aside className="w-full h-full flex flex-col shrink-0 z-10 pt-2.5 pb-2 px-2 bg-transparent">
                 <div className="mb-3 flex-shrink-0">
                     <div className="relative flex items-center">
                         <label htmlFor="sidebar-search" className="sr-only">Search Tasks</label>
                         <Icon name="search" size={12} strokeWidth={1.5}
                               className="absolute left-3 text-grey-medium dark:text-neutral-400 pointer-events-none z-10"/>
                         <input ref={searchInputRef} id="sidebar-search" type="search"
-                               placeholder={preferences.language === 'zh-CN' ? '搜索任务...' : 'Search Tasks'}
+                               placeholder={t('sidebar.searchPlaceholder')}
                                value={searchTerm} onChange={handleSearchChange} className={searchInputClassName}
                                aria-label="Search tasks"/>
                         <AnimatePresence>
@@ -346,7 +334,7 @@ const Sidebar: React.FC = () => {
                                         className="px-0.5 pb-2">
                                 {searchResults.length > 0 ? (
                                     <>
-                                        <p className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 px-1.5 py-1">{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</p>
+                                        <p className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 px-1.5 py-1">{t('sidebar.searchResults', {count: searchResults.length})}</p>
                                         {searchResults.map((task: Task) => (
                                             <button key={task.id} onClick={() => handleSearchResultClick(task)}
                                                     className={searchResultButtonClassName}
@@ -358,7 +346,7 @@ const Sidebar: React.FC = () => {
                                                     aria-hidden="true"/>
                                                 <div className="flex-1 overflow-hidden">
                                                     <Highlighter {...highlighterProps}
-                                                                 textToHighlight={task.title || 'Untitled Task'}
+                                                                 textToHighlight={task.title || t('common.untitledTask')}
                                                                  className={twMerge("block truncate font-normal text-grey-dark dark:text-neutral-100", task.completed && task.listName !== 'Trash' && "line-through text-grey-medium dark:text-neutral-400", task.listName === 'Trash' && "italic text-grey-medium dark:text-neutral-400")}/>
                                                     {task.content && generateContentSnippet(task.content, debouncedSearchTerm) && (
                                                         <Highlighter {...highlighterProps}
@@ -370,7 +358,7 @@ const Sidebar: React.FC = () => {
                                     </>
                                 ) : (
                                     <p className="text-[12px] text-grey-medium dark:text-neutral-400 text-center py-4 px-2 italic font-light">
-                                        {preferences.language === 'zh-CN' ? `没有找到与 "${debouncedSearchTerm}" 匹配的任务。` : `No tasks found matching "${debouncedSearchTerm}".`}
+                                        {t('sidebar.noSearchResults', {searchTerm: debouncedSearchTerm})}
                                     </p>)}
                             </motion.div>
                         ) : (
@@ -378,29 +366,29 @@ const Sidebar: React.FC = () => {
                                         transition={{duration: 0.15, ease: 'linear'}} className="px-0.5 pb-2">
                                 <nav className="mb-1">
                                     <SidebarItem to="/all" filter="all" icon="archive"
-                                                 label={preferences.language === 'zh-CN' ? '所有任务' : "All Tasks"}
+                                                 label={t('sidebar.allTasks')}
                                                  count={counts.all}/>
                                     <SidebarItem to="/today" filter="today" icon="sun"
-                                                 label={preferences.language === 'zh-CN' ? '今天' : "Today"}
+                                                 label={t('sidebar.today')}
                                                  count={counts.today}/>
                                     <SidebarItem to="/next7days" filter="next7days" icon="calendar"
-                                                 label={preferences.language === 'zh-CN' ? '未来7天' : "Next 7 Days"}
+                                                 label={t('sidebar.next7Days')}
                                                  count={counts.next7days}/>
                                     {inboxList && <SidebarItem to="/list/Inbox" filter="list-Inbox" icon="inbox"
-                                                               label={preferences.language === 'zh-CN' ? '收件箱' : "Inbox"}
+                                                               label={t('sidebar.inbox')}
                                                                count={counts.lists['Inbox']}/>}
                                 </nav>
-                                <CollapsibleSection title={preferences.language === 'zh-CN' ? '我的列表' : "My Lists"}
+                                <CollapsibleSection title={t('sidebar.myLists')}
                                                     action={
                                                         <Button variant="ghost" size="icon" icon="plus"
                                                                 className="w-6 h-6 text-grey-medium dark:text-neutral-400 hover:text-primary dark:hover:text-primary-light hover:bg-grey-ultra-light dark:hover:bg-grey-deep"
                                                                 iconProps={{size: 16, strokeWidth: 1.5}}
                                                                 onClick={handleAddNewListClick}
-                                                                aria-label="Add New List"/>
+                                                                aria-label={t('sidebar.addNewList')}/>
                                                     }>
                                     {myListsToDisplay.length === 0 ? (
                                         <p className="text-[12px] text-grey-medium dark:text-neutral-400 px-2 py-1 italic font-light">
-                                            {preferences.language === 'zh-CN' ? '暂无自定义列表。' : 'No custom lists yet.'}
+                                            {t('sidebar.noCustomLists')}
                                         </p>) : (myListsToDisplay.map(list => {
                                         const isEditing = editingListId === list.id;
                                         return (
@@ -470,18 +458,18 @@ const Sidebar: React.FC = () => {
                                     }))}
                                 </CollapsibleSection>
                                 {tagsToDisplay.length > 0 && (
-                                    <CollapsibleSection title={preferences.language === 'zh-CN' ? '标签' : "Tags"}
+                                    <CollapsibleSection title={t('sidebar.tags')}
                                                         initiallyOpen={false}> {tagsToDisplay.map(tagName => (
                                         <SidebarItem key={tagName} to={`/tag/${encodeURIComponent(tagName)}`}
                                                      filter={`tag-${tagName}`} icon="tag" label={`#${tagName}`}
                                                      count={counts.tags[tagName]}/>))} </CollapsibleSection>)}
-                                <CollapsibleSection title={preferences.language === 'zh-CN' ? '系统' : "System"}
+                                <CollapsibleSection title={t('sidebar.system')}
                                                     initiallyOpen={false}>
                                     <SidebarItem to="/completed" filter="completed" icon="check-square"
-                                                 label={preferences.language === 'zh-CN' ? '已完成' : "Completed"}
+                                                 label={t('sidebar.completed')}
                                                  count={counts.completed}/>
                                     <SidebarItem to="/trash" filter="trash" icon="trash"
-                                                 label={preferences.language === 'zh-CN' ? '垃圾桶' : "Trash"}
+                                                 label={t('sidebar.trash')}
                                                  count={counts.trash}/>
                                 </CollapsibleSection>
                             </motion.div>
@@ -496,9 +484,9 @@ const Sidebar: React.FC = () => {
                     onClose={() => setListToDelete(null)}
                     onConfirm={handleConfirmDelete}
                     itemTitle={listToDelete.name}
-                    title="Delete List?"
-                    description={`Are you sure you want to delete the list "${listToDelete.name}"? All tasks within this list will be moved to your Inbox.`}
-                    confirmText="Delete List"
+                    title={t('confirmDeleteModal.list.title')}
+                    description={t('confirmDeleteModal.list.description', {itemTitle: listToDelete.name})}
+                    confirmText={t('confirmDeleteModal.list.confirmText')}
                     confirmVariant="danger"
                 />
             )}

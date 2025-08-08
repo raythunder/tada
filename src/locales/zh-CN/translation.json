@@ -1,0 +1,361 @@
+{
+  "global": {
+    "loading": "正在加载应用数据..."
+  },
+  "common": {
+    "priority": "优先级",
+    "none": "无",
+    "untitledTask": "无标题任务",
+    "untitledSubtask": "无标题子任务",
+    "delete": "删除",
+    "cancel": "取消",
+    "save": "保存",
+    "edit": "编辑",
+    "apply": "应用",
+    "ok": "确定",
+    "clear": "清除",
+    "today": "今天",
+    "tomorrow": "明天"
+  },
+  "priorityLabels": {
+    "none": "无优先级",
+    "1": "高优先级",
+    "2": "中优先级",
+    "3": "低优先级"
+  },
+  "sidebar": {
+    "searchPlaceholder": "搜索任务...",
+    "allTasks": "所有任务",
+    "today": "今天",
+    "next7Days": "未来7天",
+    "inbox": "收件箱",
+    "myLists": "我的列表",
+    "noCustomLists": "暂无自定义列表。",
+    "addNewList": "添加新列表",
+    "tags": "标签",
+    "system": "系统",
+    "completed": "已完成",
+    "trash": "垃圾桶",
+    "searchResults": "{{count}} 个结果",
+    "searchResults_plural": "{{count}} 个结果",
+    "noSearchResults": "没有找到与 \"{{searchTerm}}\" 匹配的任务。"
+  },
+  "iconBar": {
+    "allTasks": "所有任务",
+    "calendar": "日历",
+    "aiSummary": "AI 摘要",
+    "accountSettings": "账户设置"
+  },
+  "addListModal": {
+    "title": "创建新列表",
+    "placeholder": "例如：购物清单，项目X",
+    "label": "列表名称",
+    "createButton": "创建列表",
+    "errorEmpty": "列表名称不能为空。",
+    "errorExists": "列表 \"{{name}}\" 已存在。",
+    "errorReserved": "\"{{name}}\" 是一个保留的系统名称。"
+  },
+  "confirmDeleteModal": {
+    "title": "删除项目？",
+    "description": "您确定要删除 \"{{itemTitle}}\" 吗？此操作无法撤销。",
+    "confirmText": "删除",
+    "list": {
+      "title": "删除列表？",
+      "description": "您确定要删除列表 \"{{itemTitle}}\" 吗？此列表中的所有任务将被移动到您的收件箱。",
+      "confirmText": "删除列表"
+    },
+    "subtask": {
+      "title": "删除子任务？",
+      "description": "您确定要永久删除子任务 \"{{itemTitle}}\" 吗？此操作无法撤销。"
+    },
+    "task": {
+      "title": "移至垃圾桶？",
+      "description": "您确定要将 \"{{itemTitle}}\" 移至垃圾桶吗？",
+      "confirmText": "移至垃圾桶"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "account": {
+      "title": "账户",
+      "username": "用户名",
+      "email": "邮箱地址",
+      "emailDescription": "用于登录和接收通知。",
+      "phone": "手机号码",
+      "phoneDescription": "用于登录和接收通知。",
+      "password": "密码",
+      "changePassword": "修改密码",
+      "logout": "退出登录",
+      "premiumMember": "高级会员",
+      "uploadAvatar": "上传新头像",
+      "deleteAvatar": "删除头像",
+      "editNameError": "更新名称失败：{{message}}",
+      "changePasswordError": "修改密码失败：{{message}}",
+      "uploadAvatarError": "上传头像失败：{{message}}",
+      "deleteAvatarError": "删除头像失败：{{message}}",
+      "confirmDeleteAvatar": "您确定要删除您的头像吗？"
+    },
+    "appearance": {
+      "title": "外观",
+      "mode": "外观模式",
+      "modeDescription": "选择您偏好的界面外观。",
+      "darkModeOptions": {
+        "light": "浅色",
+        "dark": "深色",
+        "system": "跟随系统"
+      },
+      "themeColor": "主题色",
+      "themeColorDescription": "为应用选择一个强调色。",
+      "backgroundImage": "背景图片",
+      "backgroundImageDescription": "选择一个预设背景或设置自定义背景。",
+      "customUrlPlaceholder": "输入自定义图片 URL (http://... 或 data:image/...)",
+      "applyUrl": "应用URL",
+      "backgroundBlur": "背景模糊",
+      "backgroundBlurDescription": "调整背景图片的模糊度。",
+      "backgroundBrightness": "背景亮度",
+      "backgroundBrightnessDescription": "调整背景图片的亮度。",
+      "invalidUrlError": "请输入有效的图片 URL (以 http://, https://, 或 data:image 开头)。"
+    },
+    "preferences": {
+      "title": "偏好设置",
+      "language": "语言",
+      "languageDescription": "更改应用程序的显示语言。",
+      "languages": {
+        "en": "English",
+        "zh-CN": "简体中文"
+      },
+      "defaultDueDate": "默认到期日",
+      "defaultDueDateDescription": "为新创建的任务设置默认到期日。",
+      "dueDateOptions": {
+        "none": "无",
+        "today": "今天",
+        "tomorrow": "明天"
+      },
+      "defaultPriority": "默认优先级",
+      "defaultPriorityDescription": "为新创建的任务设置默认优先级。",
+      "priorityOptions": {
+        "none": "无优先级",
+        "1": "高 (P1)",
+        "2": "中 (P2)",
+        "3": "低 (P3)"
+      },
+      "defaultList": "默认列表",
+      "defaultListDescription": "为新创建的任务设置默认列表。",
+      "confirmDeletions": "删除前确认",
+      "confirmDeletionsDescription": "将任务移至垃圾桶前显示确认对话框。"
+    },
+    "premium": {
+      "title": "高级版",
+      "unlock": "解锁高级功能",
+      "supercharge": "通过独家功能增强您的生产力。",
+      "youArePremium": "您是高级会员！",
+      "activeUntil": "您的订阅有效期至 {{date}}。",
+      "freeTier": {
+        "name": "免费版",
+        "price": "免费",
+        "features": [
+          "基本任务管理",
+          "最多3个列表",
+          "标准AI摘要"
+        ]
+      },
+      "proTier": {
+        "name": "专业版",
+        "price": "￥30/月",
+        "features": [
+          "无限列表和任务",
+          "高级AI摘要选项",
+          "优先支持",
+          "云备份与同步"
+        ]
+      },
+      "upgradeToPro": "升级到专业版",
+      "manageSubscription": "管理订阅"
+    },
+    "about": {
+      "title": "关于",
+      "version": "应用版本",
+      "changelog": "更新日志",
+      "privacyPolicy": "隐私政策",
+      "termsOfUse": "使用条款",
+      "view": "查看",
+      "hide": "隐藏",
+      "feedback": "反馈与建议",
+      "feedbackDescription": "我们很乐意听到您的声音！",
+      "sendEmail": "发送邮件",
+      "reportIssue": "报告问题",
+      "reportIssueDescription": "发现了一个bug？让我们知道。",
+      "reportButton": "报告问题"
+    }
+  },
+  "taskList": {
+    "addTaskPlaceholder": "添加任务到 “{{listName}}”",
+    "aiTaskPlaceholder": "用AI描述任务 (例如, \"下个月策划一次团建活动\")",
+    "aiTaskButton": {
+      "label": "AI 任务",
+      "processing": "处理中..."
+    },
+    "moreOptions": "更多任务选项",
+    "addToList": "添加到列表",
+    "rescheduleAll": "重新安排全部",
+    "aiCreationError": "AI任务创建失败：{{message}}"
+  },
+  "taskGroup": {
+    "overdue": "已过期",
+    "today": "今天",
+    "next7days": "未来7天",
+    "later": "以后",
+    "nodate": "无日期"
+  },
+  "emptyState": {
+    "title": {
+      "search": "没有找到 \"{{searchTerm}}\" 的结果",
+      "trash": "垃圾桶是空的",
+      "completed": "还没有已完成的任务",
+      "list": "\"{{pageTitle}}\" 中没有活动的任务",
+      "default": "没有 \"{{pageTitle}}\" 的任务"
+    },
+    "addTaskHint": "使用上方的输入栏添加一个新任务。"
+  },
+  "taskDetail": {
+    "titlePlaceholder": "任务标题...",
+    "notesPlaceholder": "在此添加笔记、链接或详情... 支持 Markdown 格式。",
+    "setDueDate": "设置到期日",
+    "moreActions": "更多操作",
+    "close": "关闭任务详情",
+    "progress": "进度",
+    "progressLabels": {
+      "notStarted": "未开始",
+      "inProgress": "进行中",
+      "mostlyDone": "已完成大半",
+      "completed": "已完成"
+    },
+    "addTags": "添加标签...",
+    "moveTo": "移动到列表",
+    "duplicate": "复制任务",
+    "moveToTrash": "移至垃圾桶",
+    "restore": "恢复任务",
+    "taskInfo": "任务信息",
+    "created": "创建于",
+    "updated": "更新于",
+    "subtasks": "子任务",
+    "subtasksCompleted": "({{completed}}/{{total}} 已完成)",
+    "addSubtask": "添加子任务...",
+    "addSubtaskButton": "添加",
+    "deleteModal": {
+      "title": "移至垃圾桶？"
+    }
+  },
+  "subtask": {
+    "setDueDate": "设置子任务到期日",
+    "delete": "删除子任务",
+    "deleteModal": {
+      "title": "删除子任务？"
+    }
+  },
+  "taskDetailPlaceholder": {
+    "title": "未选择任务",
+    "description": "从列表中选择一个任务以查看其详细信息。"
+  },
+  "login": {
+    "title": "欢迎回到 Tada",
+    "passwordLogin": "密码登录",
+    "codeLogin": "验证码登录",
+    "identifierPlaceholder": "邮箱、手机号或用户名",
+    "passwordPlaceholder": "密码",
+    "forgotPassword": "忘记密码？",
+    "signIn": "登录",
+    "noAccount": "还没有账户？",
+    "signUp": "在此注册",
+    "codePlaceholder": "验证码",
+    "sendCode": "发送验证码",
+    "resendCode": "重新发送"
+  },
+  "register": {
+    "title": "创建您的 Tada 账户",
+    "identifierPlaceholder": "邮箱或手机号",
+    "sendCode": "发送验证码",
+    "codePlaceholder": "验证码",
+    "usernamePlaceholder": "用户名",
+    "passwordPlaceholder": "密码 (最少8位)",
+    "confirmPasswordPlaceholder": "确认密码",
+    "createAccount": "创建账户",
+    "hasAccount": "已经有账户了？",
+    "signIn": "登录"
+  },
+  "forgotPassword": {
+    "title": "重置密码",
+    "description": "输入您的邮箱或手机号以接收验证码。",
+    "identifierPlaceholder": "you@example.com 或 +861234567890",
+    "sendCode": "发送验证码",
+    "codePlaceholder": "验证码",
+    "passwordPlaceholder": "输入新密码 (最少8位)",
+    "resetButton": "重置密码",
+    "rememberPassword": "记得密码？",
+    "signIn": "登录",
+    "successMessage": "密码重置成功。正在跳转到登录页面..."
+  },
+  "theme": {
+    "coralRed": "珊瑚红",
+    "oceanBlue": "海洋蓝",
+    "forestGreen": "森林绿",
+    "sunsetOrange": "日落橙",
+    "royalPurple": "皇家紫",
+    "graphiteGrey": "石墨灰",
+    "bgNone": "无",
+    "bgBrownGrassSunset": "日落草地",
+    "bgSailboatOnSea": "海上帆船",
+    "bgGreenGrassField": "绿色田野",
+    "bgSnowyCabinDawn": "雪中小屋",
+    "bgBurrataSaladBowl": "沙拉碗",
+    "bgCappadociaBalloons": "卡帕多西亚气球",
+    "bgRedOrangePoppy": "罂粟花"
+  },
+  "summary": {
+    "history": {
+      "title": "摘要历史",
+      "tooltip": "查看所有生成的摘要",
+      "close": "关闭历史记录",
+      "description": "浏览和搜索历史摘要。",
+      "searchPlaceholder": "搜索历史...",
+      "emptyState": "还没有生成任何摘要。",
+      "noResults": "没有找到与 \"{{searchTerm}}\" 匹配的摘要。",
+      "selectPrompt": "选择一个摘要以查看详情。"
+    },
+    "periods": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "thisWeek": "本周",
+      "lastWeek": "上周",
+      "thisMonth": "本月",
+      "lastMonth": "上月",
+      "custom": "自定义范围...",
+      "select": "选择周期"
+    },
+    "lists": {
+      "all": "所有列表",
+      "select": "选择列表"
+    },
+    "generate": "生成摘要",
+    "generating": "生成中...",
+    "tasksTitle": "相关任务",
+    "selectAll": "全选任务",
+    "deselectAll": "取消全选",
+    "deselectSome": "取消部分选择",
+    "noTasks": {
+      "title": "未找到相关任务",
+      "description": "请调整筛选条件或检查任务状态/进度。"
+    },
+    "newSummary": "新摘要",
+    "title": "摘要",
+    "generated": "生成于",
+    "doneEditing": "完成",
+    "tasksUsed": "使用了 {{count}} 个任务",
+    "tasksUsed_plural": "使用了 {{count}} 个任务",
+    "referencedTasks": "引用的任务",
+    "noReferencedTasks": "未找到引用的任务。",
+    "older": "更早的摘要",
+    "newer": "更新的摘要",
+    "saving": "保存中..."
+  }
+}
