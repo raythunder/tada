@@ -442,6 +442,13 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         [currentFilterGlobal, isSearching]
     );
 
+    // <<< MODIFICATION START
+    const shouldShowAiButton = useMemo(() =>
+            !['completed', 'trash'].includes(currentFilterGlobal),
+        [currentFilterGlobal]
+    );
+    // MODIFICATION END >>>
+
     const toggleAiTaskInput = useCallback(() => {
         if (isAiProcessing) return;
         const nextState = !isAiTaskInputVisible;
@@ -662,37 +669,41 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
                 <div className={headerClass}>
                     <h1 className="text-[18px] font-light text-grey-dark dark:text-neutral-100 truncate pr-2"
                         title={pageTitle}>{pageTitle}</h1>
-                    <div className={twMerge(
-                        "relative flex-shrink-0 ml-2 rounded-base",
-                        isCurrentlyAiMode && !isAiProcessing && "ai-glow-anim-border animate-border-flow",
-                        isCurrentlyAiMode && !isAiProcessing && getAiGlowThemeClass(newTaskPriority),
-                        isAiProcessing && "opacity-50 cursor-not-allowed"
-                    )}>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={toggleAiTaskInput}
-                            className={twMerge(
-                                "text-grey-medium dark:text-neutral-400 hover:text-primary dark:hover:text-primary-light focus-visible:text-primary dark:focus-visible:text-primary-light",
-                                "h-7 w-auto px-2 py-1 flex items-center",
-                                (isCurrentlyAiMode && !isAiProcessing) ? "rounded-4px" : "rounded-base",
-                                "bg-white dark:bg-neutral-800",
-                                "relative z-[1]"
-                            )}
-                            title={t('taskList.aiTaskButton.label')}
-                            aria-expanded={isAiTaskInputVisible}
-                            disabled={isAiProcessing}
-                        >
-                            {isAiProcessing ? (
-                                <Icon name="loader" size={14} strokeWidth={1.5} className="mr-1 animate-spin"/>
-                            ) : (
-                                <Icon name="sparkles" size={14} strokeWidth={1.5} className="mr-1"/>
-                            )}
-                            <span className="text-[11px] font-medium">
+                    {/* <<< MODIFICATION START */}
+                    {shouldShowAiButton && (
+                        <div className={twMerge(
+                            "relative flex-shrink-0 ml-2 rounded-base",
+                            isCurrentlyAiMode && !isAiProcessing && "ai-glow-anim-border animate-border-flow",
+                            isCurrentlyAiMode && !isAiProcessing && getAiGlowThemeClass(newTaskPriority),
+                            isAiProcessing && "opacity-50 cursor-not-allowed"
+                        )}>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={toggleAiTaskInput}
+                                className={twMerge(
+                                    "text-grey-medium dark:text-neutral-400 hover:text-primary dark:hover:text-primary-light focus-visible:text-primary dark:focus-visible:text-primary-light",
+                                    "h-7 w-auto px-2 py-1 flex items-center",
+                                    (isCurrentlyAiMode && !isAiProcessing) ? "rounded-4px" : "rounded-base",
+                                    "bg-white dark:bg-neutral-800",
+                                    "relative z-[1]"
+                                )}
+                                title={t('taskList.aiTaskButton.label')}
+                                aria-expanded={isAiTaskInputVisible}
+                                disabled={isAiProcessing}
+                            >
+                                {isAiProcessing ? (
+                                    <Icon name="loader" size={14} strokeWidth={1.5} className="mr-1 animate-spin"/>
+                                ) : (
+                                    <Icon name="sparkles" size={14} strokeWidth={1.5} className="mr-1"/>
+                                )}
+                                <span className="text-[11px] font-medium">
                                 {isAiProcessing ? t('taskList.aiTaskButton.processing') : t('taskList.aiTaskButton.label')}
                             </span>
-                        </Button>
-                    </div>
+                            </Button>
+                        </div>
+                    )}
+                    {/* MODIFICATION END >>> */}
                 </div>
 
                 {shouldShowInputSection && (

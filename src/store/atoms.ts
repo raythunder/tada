@@ -308,18 +308,33 @@ export const tasksAtom: AsyncDataAtom<Task[]> = atom(
             const deleteSubtaskPromises = deletedSubtasks.map(id => service.apiDeleteSubtask(id));
 
             // Execute all API calls concurrently
+            const creationResults = await Promise.all(creationPromises);
+
             await Promise.all([
-                ...creationPromises,
                 ...updateTaskPromises,
                 ...createSubtaskPromises,
                 ...updateSubtaskPromises,
                 ...deleteSubtaskPromises,
             ]);
 
-            // After all operations, refetch from server to get the source of truth
-            const fetchedTasks = await service.apiFetchTasks();
-            const tasksWithCategory = fetchedTasks.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}));
-            set(baseTasksDataAtom, tasksWithCategory.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+            // <<< FIX START
+            // If new tasks were created, we need to update the state with the real tasks from the server
+            // to replace the ones with temporary local IDs.
+            if (creationResults.length > 0) {
+                const currentTasks = get(baseTasksDataAtom) ?? [];
+                const localIds = new Set(newLocalTasks.map(t => t.id));
+
+                // Filter out the old local tasks and add the new server-confirmed tasks
+                const updatedTaskList = [
+                    ...currentTasks.filter(t => !localIds.has(t.id)),
+                    ...creationResults.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}))
+                ];
+
+                set(baseTasksDataAtom, updatedTaskList.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+            }
+            // The main fix: We DO NOT refetch all tasks here. The optimistic state is now the source of truth
+            // until the next explicit refresh (e.g., page load).
+            // <<< FIX END
 
         } catch (e: any) {
             console.error('[TasksAtom] Backend update failed, reverting:', e);
