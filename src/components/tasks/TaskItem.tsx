@@ -861,6 +861,55 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                         <DropdownMenu.Separator
                                             className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
+                                        <DropdownMenu.Sub>
+                                            <DropdownMenu.SubTrigger
+                                                className={getTaskItemMenuSubTriggerStyle()}
+                                                disabled={!isInteractive || isTrashItem}
+                                                onPointerEnter={() => {
+                                                    if (isDatePickerPopoverOpen) handleMenuSubPopoverOpenChange(false, 'date');
+                                                    if (isTagsPopoverOpen) handleMenuSubPopoverOpenChange(false, 'tags');
+                                                }}
+                                                onFocus={() => {
+                                                    if (isDatePickerPopoverOpen) handleMenuSubPopoverOpenChange(false, 'date');
+                                                    if (isTagsPopoverOpen) handleMenuSubPopoverOpenChange(false, 'tags');
+                                                }}
+                                            >
+                                                <Icon name="folder" size={14} strokeWidth={1.5}
+                                                      className="mr-2 flex-shrink-0 opacity-80"/>
+                                                {t('taskDetail.moveTo')}
+                                                <div className="ml-auto pl-5"><Icon name="chevron-right" size={14}
+                                                                                    strokeWidth={1.5}
+                                                                                    className="opacity-70"/></div>
+                                            </DropdownMenu.SubTrigger>
+                                            <DropdownMenu.Portal>
+                                                <DropdownMenu.SubContent
+                                                    className={twMerge(actionsMenuContentClasses, "max-h-48 overflow-y-auto styled-scrollbar-thin")}
+                                                    sideOffset={2} alignOffset={-5}
+                                                >
+                                                    <DropdownMenu.RadioGroup value={task.listName}
+                                                                             onValueChange={handleListChange}>
+                                                        {availableLists.map(list => (
+                                                            <DropdownMenu.RadioItem key={list.id} value={list.name}
+                                                                                    className={getTaskItemMenuRadioItemStyle(task.listName === list.name)}
+                                                                                    disabled={!isInteractive || isTrashItem}>
+                                                                <Icon name={list.name === 'Inbox' ? 'inbox' : 'list'}
+                                                                      size={14} strokeWidth={1.5}
+                                                                      className="mr-2 flex-shrink-0 opacity-80"/>
+                                                                {list.name === 'Inbox' ? t('sidebar.inbox') : list.name}
+                                                                <DropdownMenu.ItemIndicator
+                                                                    className="absolute right-2 inline-flex items-center">
+                                                                    <Icon name="check" size={12} strokeWidth={2}/>
+                                                                </DropdownMenu.ItemIndicator>
+                                                            </DropdownMenu.RadioItem>
+                                                        ))}
+                                                    </DropdownMenu.RadioGroup>
+                                                </DropdownMenu.SubContent>
+                                            </DropdownMenu.Portal>
+                                        </DropdownMenu.Sub>
+
+                                        <DropdownMenu.Separator
+                                            className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
+
                                         <Popover.Root modal={false} open={isTagsPopoverOpen}
                                                       onOpenChange={(open) => handleMenuSubPopoverOpenChange(open, 'tags')}>
                                             <Popover.Trigger asChild>
@@ -943,52 +992,6 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                                                 </Popover.Content>
                                             </Popover.Portal>
                                         </Popover.Root>
-
-                                        <DropdownMenu.Sub>
-                                            <DropdownMenu.SubTrigger
-                                                className={getTaskItemMenuSubTriggerStyle()}
-                                                disabled={!isInteractive || isTrashItem}
-                                                onPointerEnter={() => {
-                                                    if (isDatePickerPopoverOpen) handleMenuSubPopoverOpenChange(false, 'date');
-                                                    if (isTagsPopoverOpen) handleMenuSubPopoverOpenChange(false, 'tags');
-                                                }}
-                                                onFocus={() => {
-                                                    if (isDatePickerPopoverOpen) handleMenuSubPopoverOpenChange(false, 'date');
-                                                    if (isTagsPopoverOpen) handleMenuSubPopoverOpenChange(false, 'tags');
-                                                }}
-                                            >
-                                                <Icon name="folder" size={14} strokeWidth={1.5}
-                                                      className="mr-2 flex-shrink-0 opacity-80"/>
-                                                {t('taskDetail.moveTo')}
-                                                <div className="ml-auto pl-5"><Icon name="chevron-right" size={14}
-                                                                                    strokeWidth={1.5}
-                                                                                    className="opacity-70"/></div>
-                                            </DropdownMenu.SubTrigger>
-                                            <DropdownMenu.Portal>
-                                                <DropdownMenu.SubContent
-                                                    className={twMerge(actionsMenuContentClasses, "max-h-48 overflow-y-auto styled-scrollbar-thin")}
-                                                    sideOffset={2} alignOffset={-5}
-                                                >
-                                                    <DropdownMenu.RadioGroup value={task.listName}
-                                                                             onValueChange={handleListChange}>
-                                                        {availableLists.map(list => (
-                                                            <DropdownMenu.RadioItem key={list.id} value={list.name}
-                                                                                    className={getTaskItemMenuRadioItemStyle(task.listName === list.name)}
-                                                                                    disabled={!isInteractive || isTrashItem}>
-                                                                <Icon name={list.name === 'Inbox' ? 'inbox' : 'list'}
-                                                                      size={14} strokeWidth={1.5}
-                                                                      className="mr-2 flex-shrink-0 opacity-80"/>
-                                                                {list.name === 'Inbox' ? t('sidebar.inbox') : list.name}
-                                                                <DropdownMenu.ItemIndicator
-                                                                    className="absolute right-2 inline-flex items-center">
-                                                                    <Icon name="check" size={12} strokeWidth={2}/>
-                                                                </DropdownMenu.ItemIndicator>
-                                                            </DropdownMenu.RadioItem>
-                                                        ))}
-                                                    </DropdownMenu.RadioGroup>
-                                                </DropdownMenu.SubContent>
-                                            </DropdownMenu.Portal>
-                                        </DropdownMenu.Sub>
 
                                         <DropdownMenu.Separator
                                             className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>

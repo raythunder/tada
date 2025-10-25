@@ -1,14 +1,6 @@
 // src/types/index.ts
 import {DarkModeOption, DefaultNewTaskDueDate} from "@/store/atoms.ts";
-
-export interface User {
-    id: string;
-    username: string;
-    email: string | null;
-    phone?: string | null;
-    avatarUrl?: string | null;
-    isPremium: boolean;
-}
+import {AIProvider, AIModel} from "@/config/aiProviders.ts";
 
 export interface List {
     id: string;
@@ -20,7 +12,7 @@ export interface List {
 
 export interface Subtask {
     id: string;
-    parentId: string; // Corresponds to task_id on backend
+    parentId: string;
     title: string;
     completed: boolean;
     completedAt: number | null;
@@ -59,10 +51,9 @@ export type TaskFilter =
     | `tag-${string}`;
 
 export type SettingsTab =
-    | 'account'
     | 'appearance'
     | 'preferences'
-    | 'premium'
+    | 'ai'
     | 'about';
 
 export type TaskGroupCategory =
@@ -85,9 +76,6 @@ export interface StoredSummary {
 export interface AppearanceSettings {
     themeId: string;
     darkMode: DarkModeOption;
-    backgroundImageUrl: string;
-    backgroundImageBlur: number;
-    backgroundImageBrightness: number;
     interfaceDensity: 'compact' | 'default' | 'comfortable';
 }
 
@@ -97,4 +85,20 @@ export interface PreferencesSettings {
     defaultNewTaskPriority: number | null;
     defaultNewTaskList: string;
     confirmDeletions: boolean;
+}
+
+export interface AIProviderSettings {
+    apiKey: string;
+    model: string;
+    baseUrl?: string;
+    modelOrder?: string[]; // Order of models for this provider
+}
+
+export interface AISettings {
+    provider: AIProvider['id']; // Currently selected provider in the UI
+    // Per-provider settings. A provider is only "configured" if it has an entry here with an API key.
+    providerSettings: Partial<Record<AIProvider['id'], AIProviderSettings>>;
+    providerOrder: AIProvider['id'][];
+    // Fetched models are now stored here to be persisted
+    fetchedModels?: Partial<Record<AIProvider['id'], AIModel[]>>;
 }

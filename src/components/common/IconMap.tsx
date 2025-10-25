@@ -1,11 +1,7 @@
 // src/components/common/IconMap.tsx
 import * as LucideIcons from "lucide-react";
-import AlipayLogo from "./CustomIcons/AlipayLogo";
-import WechatLogo from "./CustomIcons/WechatLogo";
 
 export const iconMap = {
-    'alipay-logo': AlipayLogo,
-    'wechat-logo': WechatLogo,
     'check-square': LucideIcons.CheckSquare,
     'square': LucideIcons.Square,
     'calendar': LucideIcons.CalendarDays,

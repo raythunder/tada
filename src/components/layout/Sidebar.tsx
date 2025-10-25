@@ -23,7 +23,7 @@ import {IconName} from "@/components/common/IconMap";
 import Highlighter from "react-highlight-words";
 import {AnimatePresence, motion} from 'framer-motion';
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import * as service from "@/services/apiService";
+import * as service from "@/services/localStorageService";
 import {RESET} from "jotai/utils";
 import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
 import {useTranslation} from "react-i18next";
@@ -174,8 +174,11 @@ const Sidebar: React.FC = () => {
 
     useEffect(() => {
         if (editingListId && listEditInputRef.current) {
-            listEditInputRef.current.focus();
-            listEditInputRef.current.select();
+            // Use setTimeout to ensure the input is rendered and ready for focus.
+            setTimeout(() => {
+                listEditInputRef.current?.focus();
+                listEditInputRef.current?.select();
+            }, 0);
         }
     }, [editingListId]);
 
@@ -185,7 +188,7 @@ const Sidebar: React.FC = () => {
 
     const handleListAdded = useCallback(() => {
         setIsAddListModalOpen(false);
-        setListsAtom(RESET);
+        setListsAtom(RESET); // Resync with localStorage
     }, [setListsAtom, setIsAddListModalOpen]);
 
     const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,7 +214,7 @@ const Sidebar: React.FC = () => {
         setEditingListName('');
     }, []);
 
-    const handleSaveRename = useCallback(async () => {
+    const handleSaveRename = useCallback(() => {
         if (!editingListId) return;
         const originalList = userLists?.find(l => l.id === editingListId);
         const trimmedName = editingListName.trim();
@@ -222,7 +225,7 @@ const Sidebar: React.FC = () => {
         }
 
         try {
-            await service.apiUpdateList(editingListId, {name: trimmedName});
+            service.updateList(editingListId, {name: trimmedName});
             if (currentFilter === `list-${encodeURIComponent(originalList.name)}`) {
                 navigate(`/list/${encodeURIComponent(trimmedName)}`);
             }
@@ -245,7 +248,7 @@ const Sidebar: React.FC = () => {
         }
     };
 
-    const handleConfirmDelete = useCallback(async () => {
+    const handleConfirmDelete = useCallback(() => {
         if (!listToDelete) return;
         if (listToDelete.name === 'Inbox') {
             alert("The 'Inbox' list cannot be deleted.");
@@ -254,7 +257,7 @@ const Sidebar: React.FC = () => {
         }
 
         try {
-            await service.apiDeleteList(listToDelete.id);
+            service.deleteList(listToDelete.id);
             if (currentFilter === `list-${encodeURIComponent(listToDelete.name)}`) {
                 navigate('/all');
             }

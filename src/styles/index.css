@@ -51,9 +51,6 @@
         --ai-glow-gradient-yellow: linear-gradient(90deg, #F78C33, #F6AD55, #FFDB1A, #A3CC33, #F78C33);
         --ai-glow-gradient-blue: linear-gradient(90deg, #4ADCF2, #63B3ED, #738AF2, #9C6BF7, #4ADCF2);
         --ai-glow-gradient-neutral: linear-gradient(90deg, #ADC9F5, #CDE5EF, #D2BDEF, #F7D9E0, #ADC9F5);
-
-        --app-background-image: none;
-        --app-background-filter: none;
     }
 
     .dark { /* Dark mode neutral overrides */
@@ -77,25 +74,9 @@
         transition: background-color 0.3s ease-in-out;
     }
 
-    body::before {
-        content: '';
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        background-image: var(--app-background-image);
-        filter: var(--app-background-filter);
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        transition: background-image 0.3s ease-in-out, filter 0.3s ease-in-out;
-    }
-
-
     .dark body {
         background-color: hsl(var(--color-grey-deep)); /* Dark mode base background */
     }
-
 
     html {
         scroll-behavior: smooth;
@@ -276,49 +257,5 @@
 
     .custom-switch-thumb-off {
         @apply translate-x-0;
-    }
-
-    /* New styles for animated gradient avatar */
-    .animated-gradient-avatar {
-        position: relative;
-        /* The main element is now just a container and doesn't have a background itself */
-    }
-
-    .animated-gradient-avatar::before {
-        content: '';
-        position: absolute;
-        /* The pseudo-element covers the entire parent */
-        inset: 0;
-        /* It inherits the border-radius from the parent */
-        border-radius: inherit;
-        /* The gradient is applied to the pseudo-element */
-        background-image: var(--avatar-gradient);
-        background-size: 250% 250%;
-        /* The animation is applied to the pseudo-element */
-        animation: gradient-rotate 10s ease-in-out infinite;
-        /* Ensure the pseudo-element is behind the content (the initial) */
-        z-index: 0;
-    }
-
-    /* The initial/text is a direct child and will sit on top of the pseudo-element */
-    .animated-gradient-avatar > span {
-        position: relative;
-        z-index: 1;
-    }
-}
-
-/* Keyframes for rotation and position shift */
-@keyframes gradient-rotate {
-    0% {
-        transform: rotate(0deg);
-        background-position: 10% 0%;
-    }
-    50% {
-        transform: rotate(180deg);
-        background-position: 90% 100%;
-    }
-    100% {
-        transform: rotate(360deg);
-        background-position: 10% 0%;
     }
 }

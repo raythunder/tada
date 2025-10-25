@@ -3,6 +3,8 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import TaskItem from './TaskItem';
 import {useAtomValue, useSetAtom} from 'jotai';
 import {
+    addNotificationAtom,
+    aiSettingsAtom,
     currentFilterAtom,
     defaultPreferencesSettingsForApi,
     groupedAllTasksAtom,
@@ -124,8 +126,15 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
     const searchTerm = useAtomValue(searchTermAtom);
     const allUserLists = useAtomValue(userListsAtom);
     const preferencesData = useAtomValue(preferencesSettingsAtom);
+    const aiSettings = useAtomValue(aiSettingsAtom);
     const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
     const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
+    const addNotification = useSetAtom(addNotificationAtom);
+
+    const isAiEnabled = useMemo(() => {
+        if (!aiSettings || !aiSettings.provider) return false;
+        return !!aiSettings.providerSettings[aiSettings.provider]?.apiKey;
+    }, [aiSettings]);
 
     const groupTitles: Record<TaskGroupCategory, string> = useMemo(() => ({
         overdue: t('taskGroup.overdue'),
@@ -480,12 +489,12 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
 
     const handleAiTaskCommit = useCallback(async () => {
         const sentence = newTaskTitle.trim();
-        if (!sentence || isAiProcessing) return;
+        if (!sentence || isAiProcessing || !aiSettings) return;
 
         setIsAiProcessing(true);
 
         try {
-            const aiAnalysis = await analyzeTaskInputWithAI(sentence);
+            const aiAnalysis = await analyzeTaskInputWithAI(sentence, aiSettings);
 
             const targetList = allUserLists?.find(l => l.name === newTaskListState);
             const inboxList = allUserLists?.find(l => l.name === 'Inbox');
@@ -538,7 +547,8 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
             setNewTaskListState(preferences.defaultNewTaskList);
 
         } catch (error) {
-            alert(t('taskList.aiCreationError', {message: error instanceof Error ? error.message : "Unknown error"}));
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            addNotification({type: 'error', message: t('taskList.aiCreationError', {message: errorMessage})});
         } finally {
             setIsAiProcessing(false);
             setIsAiTaskInputVisible(false);
@@ -548,7 +558,7 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         }
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists, t
+        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists, t, aiSettings, addNotification
     ]);
 
 
@@ -687,7 +697,7 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
                                 )}
                                 title={t('taskList.aiTaskButton.label')}
                                 aria-expanded={isAiTaskInputVisible}
-                                disabled={isAiProcessing}
+                                disabled={isAiProcessing || !isAiEnabled}
                             >
                                 {isAiProcessing ? (
                                     <Icon name="loader" size={14} strokeWidth={1.5} className="mr-1 animate-spin"/>

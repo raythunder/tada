@@ -1,21 +1,21 @@
 // src/components/settings/SettingsModal.tsx
-import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {memo, useCallback, useMemo, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
     addNotificationAtom,
+    aiSettingsAtom,
     appearanceSettingsAtom,
-    currentUserAtom,
     DarkModeOption,
+    defaultAISettingsForApi,
     defaultAppearanceSettingsForApi,
     DefaultNewTaskDueDate,
     defaultPreferencesSettingsForApi,
     isSettingsOpenAtom,
-    openPaymentModalAtom,
     preferencesSettingsAtom,
     settingsSelectedTabAtom,
     userListNamesAtom,
 } from '@/store/atoms';
-import {SettingsTab, User} from '@/types';
+import {AIProviderSettings, AISettings as AISettingsType, SettingsTab} from '@/types';
 import Icon from '../common/Icon';
 import Button from '../common/Button';
 import {twMerge} from 'tailwind-merge';
@@ -28,188 +28,25 @@ import {
     APP_THEMES,
     APP_VERSION,
     CHANGELOG_HTML,
-    PREDEFINED_BACKGROUND_IMAGES,
     PRIVACY_POLICY_HTML,
     TERMS_OF_USE_HTML
 } from '@/config/themes';
-import * as apiService from '@/services/apiService';
 import {useTranslation} from "react-i18next";
-import ConfirmDeleteModalRadix from "@/components/common/ConfirmDeleteModal";
-import UserAvatar from "@/components/common/UserAvatar";
+import {AIProvider, AI_PROVIDERS, AIModel} from "@/config/aiProviders";
+import {fetchProviderModels} from "@/services/aiService";
+import {
+    closestCenter,
+    DndContext,
+    DragEndEvent,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors
+} from "@dnd-kit/core";
+import {arrayMove, SortableContext, useSortable, verticalListSortingStrategy} from "@dnd-kit/sortable";
+import {CSS} from "@dnd-kit/utilities";
 
-interface IdentifierEditModalProps {
-    type: 'email' | 'phone';
-    isOpen: boolean;
-    onClose: () => void;
-    onSuccess: (updatedUser: User) => void;
-    currentValue: string | null;
-}
-
-const IdentifierEditModal: React.FC<IdentifierEditModalProps> = ({ type, isOpen, onClose, onSuccess, currentValue }) => {
-    const { t } = useTranslation();
-    const [step, setStep] = useState(1);
-    const [newValue, setNewValue] = useState('');
-    const [code, setCode] = useState('');
-    const [isSendingCode, setIsSendingCode] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [message, setMessage] = useState<string | null>(null);
-
-    const title = type === 'email' ? t('settings.account.editEmail') : t('settings.account.editPhone');
-    const placeholder = type === 'email' ? t('settings.account.emailPlaceholder') : t('settings.account.phonePlaceholder');
-
-    useEffect(() => {
-        if (!isOpen) {
-            setTimeout(() => {
-                setStep(1);
-                setNewValue('');
-                setCode('');
-                setIsSendingCode(false);
-                setIsLoading(false);
-                setError(null);
-                setMessage(null);
-            }, 200);
-        }
-    }, [isOpen]);
-
-
-    const handleSendCode = async () => {
-        if (!newValue.trim() || newValue.trim() === currentValue) {
-            setError(t('settings.account.errorIdentifierUnchanged'));
-            return;
-        }
-        setIsSendingCode(true);
-        setError(null);
-        setMessage(null);
-        try {
-            const response = await apiService.apiSendCode(newValue, type === 'email' ? 'update_email' : 'update_phone');
-            if (response.success) {
-                setMessage(response.message || t('settings.account.codeSentMessage'));
-                setStep(2);
-            } else {
-                setError(response.error || t('settings.account.errorSendingCode'));
-            }
-        } catch (e: any) {
-            setError(e.message || t('settings.account.errorSendingCode'));
-        } finally {
-            setIsSendingCode(false);
-        }
-    };
-
-    const handleSave = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const updatedUser = type === 'email'
-                ? await apiService.apiUpdateEmailWithCode(newValue, code)
-                : await apiService.apiUpdatePhoneWithCode(newValue, code);
-            onSuccess(updatedUser);
-            onClose();
-        } catch (e: any) {
-            setError(e.message || t('settings.account.errorIdentifierUpdate'));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const inputClasses = "w-full h-9 px-3 text-[13px] font-light rounded-base focus:outline-none bg-grey-ultra-light dark:bg-neutral-700 placeholder:text-grey-medium dark:placeholder:text-neutral-400 text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light";
-
-    return (
-        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 bg-grey-dark/30 dark:bg-black/60 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-[51] backdrop-blur-sm"/>
-                <Dialog.Content className={twMerge("fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[52]", "bg-white dark:bg-neutral-800 w-full max-w-sm rounded-base shadow-modal flex flex-col p-6", "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide")}>
-                    <Dialog.Title className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 mb-4 text-center">{title}</Dialog.Title>
-
-                    {error && <p className="text-xs text-error dark:text-red-400 text-center bg-error/10 p-2 rounded-base mb-3">{error}</p>}
-                    {message && !error && <p className="text-xs text-success dark:text-green-400 text-center bg-success/10 p-2 rounded-base mb-3">{message}</p>}
-
-                    {step === 1 && (
-                        <div className="space-y-4">
-                            <input type={type === 'email' ? 'email' : 'tel'} value={newValue} onChange={e => setNewValue(e.target.value)} placeholder={placeholder} className={inputClasses}/>
-                            <Button fullWidth variant="primary" size="md" onClick={handleSendCode} loading={isSendingCode}>{t('settings.account.sendCode')}</Button>
-                        </div>
-                    )}
-                    {step === 2 && (
-                        <div className="space-y-4">
-                            <input type="text" value={code} onChange={e => setCode(e.target.value)} placeholder={t('settings.account.codePlaceholder')} className={inputClasses} inputMode="numeric" />
-                            <Button fullWidth variant="primary" size="md" onClick={handleSave} loading={isLoading}>{t('common.save')}</Button>
-                        </div>
-                    )}
-                </Dialog.Content>
-            </Dialog.Portal>
-        </Dialog.Root>
-    )
-}
-IdentifierEditModal.displayName = 'IdentifierEditModal';
-
-const PasswordChangeModal: React.FC<{ isOpen: boolean, onClose: () => void, onSuccess: () => void }> = ({ isOpen, onClose, onSuccess }) => {
-    const { t } = useTranslation();
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!isOpen) {
-            setTimeout(() => {
-                setCurrentPassword('');
-                setNewPassword('');
-                setConfirmPassword('');
-                setIsLoading(false);
-                setError(null);
-            }, 200);
-        }
-    }, [isOpen]);
-
-    const handleSave = async () => {
-        if (newPassword !== confirmPassword) {
-            setError(t('settings.account.errorPasswordMismatch'));
-            return;
-        }
-        if (newPassword.length < 8) {
-            setError(t('settings.account.errorPasswordLength'));
-            return;
-        }
-        setError(null);
-        setIsLoading(true);
-        try {
-            await apiService.apiChangePassword(currentPassword, newPassword);
-            onSuccess();
-            onClose();
-        } catch (e: any) {
-            setError(e.message || t('settings.account.changePasswordError', { message: 'Unknown error' }));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const inputClasses = "w-full h-9 px-3 text-[13px] font-light rounded-base focus:outline-none bg-grey-ultra-light dark:bg-neutral-700 placeholder:text-grey-medium dark:placeholder:text-neutral-400 text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light";
-
-    return (
-        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <Dialog.Portal>
-                <Dialog.Overlay className="fixed inset-0 bg-grey-dark/30 dark:bg-black/60 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-[51] backdrop-blur-sm"/>
-                <Dialog.Content className={twMerge("fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[52]", "bg-white dark:bg-neutral-800 w-full max-w-sm rounded-base shadow-modal flex flex-col p-6", "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide")}>
-                    <Dialog.Title className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 mb-4 text-center">{t('settings.account.changePassword')}</Dialog.Title>
-                    {error && <p className="text-xs text-error dark:text-red-400 text-center bg-error/10 p-2 rounded-base mb-3">{error}</p>}
-                    <div className="space-y-4">
-                        <input type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder={t('settings.account.currentPasswordPlaceholder')} className={inputClasses} autoComplete="current-password" />
-                        <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder={t('settings.account.newPasswordPlaceholder')} className={inputClasses} autoComplete="new-password" />
-                        <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('settings.account.confirmPasswordPlaceholder')} className={inputClasses} autoComplete="new-password" />
-                    </div>
-                    <div className="flex justify-end mt-6 space-x-2">
-                        <Button variant="secondary" size="md" onClick={onClose}>{t('common.cancel')}</Button>
-                        <Button variant="primary" size="md" onClick={handleSave} loading={isLoading}>{t('common.save')}</Button>
-                    </div>
-                </Dialog.Content>
-            </Dialog.Portal>
-        </Dialog.Root>
-    )
-}
-PasswordChangeModal.displayName = 'PasswordChangeModal';
-
+// ... (SettingsItem, SettingsRow, DarkModeSelector, ColorSwatch, AppearanceSettings, PreferencesSettings components are unchanged)
 interface SettingsItem {
     id: SettingsTab;
     labelKey: string;
@@ -217,10 +54,9 @@ interface SettingsItem {
 }
 
 const settingsSections: SettingsItem[] = [
-    {id: 'account', labelKey: 'settings.account.title', icon: 'user'},
     {id: 'appearance', labelKey: 'settings.appearance.title', icon: 'settings'},
     {id: 'preferences', labelKey: 'settings.preferences.title', icon: 'sliders'},
-    {id: 'premium', labelKey: 'settings.premium.title', icon: 'crown'},
+    {id: 'ai', labelKey: 'settings.ai.title', icon: 'sparkles'},
     {id: 'about', labelKey: 'settings.about.title', icon: 'info'},
 ];
 
@@ -311,284 +147,11 @@ const ColorSwatch: React.FC<{
 ));
 ColorSwatch.displayName = 'ColorSwatch';
 
-const BackgroundImagePreview: React.FC<{
-    imageUrl: string;
-    name: string;
-    selected: boolean;
-    onClick: () => void;
-}> = memo(({imageUrl, name, selected, onClick}) => (
-    <button
-        type="button"
-        onClick={onClick}
-        className={twMerge(
-            "w-full h-20 rounded-base border-2 overflow-hidden relative group transition-all duration-150 ease-in-out",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep",
-            selected ? "border-primary dark:border-primary-light" : "border-grey-light hover:border-grey-medium dark:border-neutral-600 dark:hover:border-neutral-400"
-        )}
-        aria-label={`Select background: ${name}`}
-        aria-pressed={selected}
-    >
-        {imageUrl === 'none' ? (
-            <div className="w-full h-full flex items-center justify-center bg-grey-ultra-light dark:bg-grey-deep">
-                <Icon name="slash" size={24} className="text-grey-medium dark:text-neutral-500"/>
-            </div>
-        ) : (
-            <img src={imageUrl} alt={name} className="w-full h-full object-cover"/>
-        )}
-        <div className={twMerge(
-            "absolute inset-0 bg-black/20 group-hover:bg-black/10 flex items-center justify-center transition-opacity duration-150",
-            selected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-        )}>
-            {selected && <Icon name="check-circle" size={20} className="text-white"/>}
-        </div>
-        <span
-            className="absolute bottom-1 left-1.5 text-[10px] bg-black/40 text-white px-1 py-0.5 rounded-sm backdrop-blur-sm">{name}</span>
-    </button>
-));
-BackgroundImagePreview.displayName = 'BackgroundImagePreview';
-
-
-// Account Settings
-const AccountSettings: React.FC = memo(() => {
-    const {t} = useTranslation();
-    const [currentUser, setCurrentUserGlobally] = useAtom(currentUserAtom);
-    const addNotification = useSetAtom(addNotificationAtom);
-    const [isEditingName, setIsEditingName] = useState(false);
-    const [newName, setNewName] = useState(currentUser?.username || '');
-    const [isLoading, setIsLoading] = useState(false);
-    const [isDeleteAvatarConfirmOpen, setIsDeleteAvatarConfirmOpen] = useState(false);
-    const avatarInputRef = useRef<HTMLInputElement>(null);
-    const nameInputRef = useRef<HTMLInputElement>(null);
-
-    type EditingModal = 'phone' | 'email' | 'password' | null;
-    const [editingModal, setEditingModal] = useState<EditingModal>(null);
-
-    useEffect(() => {
-        if (currentUser) {
-            setNewName(currentUser.username || '');
-        }
-    }, [currentUser]);
-
-    useEffect(() => {
-        if (isEditingName && nameInputRef.current) {
-            nameInputRef.current.focus();
-            nameInputRef.current.select();
-        }
-    }, [isEditingName]);
-
-    const handleEditName = () => setIsEditingName(true);
-    const handleCancelEditName = () => {
-        setIsEditingName(false);
-        setNewName(currentUser?.username || '');
-    };
-    const handleSaveName = async () => {
-        if (!currentUser || newName.trim() === currentUser.username || !newName.trim()) {
-            setIsEditingName(false);
-            if (!newName.trim()) setNewName(currentUser?.username || '');
-            return;
-        }
-        setIsLoading(true);
-        try {
-            const updatedUser = await apiService.apiUpdateUser({username: newName.trim()});
-            setCurrentUserGlobally(updatedUser);
-            setIsEditingName(false);
-        } catch (e: any) {
-            addNotification({ type: 'error', message: t('settings.account.editNameError', { message: e.message }) });
-        }
-        setIsLoading(false);
-    };
-
-    const handleIdentifierUpdateSuccess = useCallback((updatedUser: User) => {
-        setCurrentUserGlobally(updatedUser);
-        addNotification({ type: 'success', message: t('settings.account.updateSuccessMessage') });
-    }, [setCurrentUserGlobally, addNotification, t]);
-
-    const handlePasswordUpdateSuccess = useCallback(() => {
-        addNotification({ type: 'success', message: t('settings.account.passwordChangeSuccess') });
-    }, [addNotification, t]);
-
-
-    const handleAvatarUploadClick = () => avatarInputRef.current?.click();
-
-    const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        setIsLoading(true);
-        try {
-            const updatedUser = await apiService.apiUploadAvatar(file);
-            setCurrentUserGlobally(updatedUser);
-        } catch (e: any) {
-            addNotification({ type: 'error', message: t('settings.account.uploadAvatarError', { message: e.message }) });
-        }
-        setIsLoading(false);
-        if (event.target) event.target.value = '';
-    };
-
-    const handleDeleteAvatar = () => {
-        if (!currentUser?.avatarUrl) return;
-        setIsDeleteAvatarConfirmOpen(true);
-    };
-
-    const confirmDeleteAvatar = async () => {
-        setIsDeleteAvatarConfirmOpen(false);
-        setIsLoading(true);
-        try {
-            const updatedUser = await apiService.apiDeleteAvatar();
-            setCurrentUserGlobally(updatedUser);
-        } catch (e: any) {
-            addNotification({ type: 'error', message: t('settings.account.deleteAvatarError', { message: e.message }) });
-        }
-        setIsLoading(false);
-    };
-
-
-    const handleLogout = async () => {
-        setIsLoading(true);
-        await setCurrentUserGlobally('logout');
-    };
-
-    const userName = useMemo(() => currentUser?.username ?? 'Guest User', [currentUser]);
-    const userEmail = useMemo(() => currentUser?.email ?? 'No email provided', [currentUser]);
-    const userPhone = useMemo(() => currentUser?.phone ?? 'No phone provided', [currentUser]);
-    const isPremium = useMemo(() => currentUser?.isPremium ?? false, [currentUser]);
-
-    return (<>
-        <div className="space-y-6">
-            {isLoading && <div
-                className="absolute inset-0 bg-white/50 dark:bg-neutral-800/50 flex items-center justify-center z-10">
-                <Icon
-                    name="loader" className="animate-spin text-primary" size={24}/></div>}
-
-            <div className="flex items-center space-x-4 mb-4">
-                <div className="relative group/avatar">
-                    <div className="relative z-0">
-                        <UserAvatar user={currentUser} size={64}/>
-                    </div>
-                    <div
-                        className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity z-10">
-                        <input type="file" ref={avatarInputRef} onChange={handleAvatarFileChange} accept="image/*"
-                               hidden/>
-                        <Button variant="ghost" size="icon" icon="upload" onClick={handleAvatarUploadClick}
-                                className="text-white hover:bg-white/20" title={t('settings.account.uploadAvatar')}/>
-                        {currentUser?.avatarUrl && (
-                            <Button variant="ghost" size="icon" icon="trash" onClick={handleDeleteAvatar}
-                                    className="text-white hover:bg-white/20"
-                                    title={t('settings.account.deleteAvatar')}/>
-                        )}
-                    </div>
-                </div>
-                <div>
-                    <div className="flex items-center space-x-2">
-                        {isEditingName ? (
-                            <div className="flex items-center">
-                                <input
-                                    ref={nameInputRef}
-                                    type="text"
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                    onBlur={handleSaveName}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSaveName();
-                                        if (e.key === 'Escape') handleCancelEditName();
-                                    }}
-                                    className="h-7 px-2 text-[18px] font-normal rounded-base bg-grey-ultra-light dark:bg-neutral-700 border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
-                                    disabled={isLoading}
-                                />
-                            </div>
-                        ) : (
-                            <h3 className="text-[18px] font-normal text-grey-dark dark:text-neutral-100">{userName}</h3>
-                        )}
-                        {!isEditingName && (
-                            <Button variant="ghost" size="icon" icon="edit" onClick={handleEditName} className="w-6 h-6 text-grey-medium hover:text-primary" iconProps={{size: 14, strokeWidth: 1.5}} title={t('settings.account.editUsername')} />
-                        )}
-                    </div>
-                    <div className="flex items-center space-x-2 mt-1">
-                        <p className="text-[13px] text-grey-medium dark:text-neutral-300 font-light">{userPhone}</p>
-                        <Button variant="ghost" size="icon" icon="edit" onClick={() => setEditingModal('phone')} className="w-6 h-6 text-grey-medium hover:text-primary" iconProps={{size: 14, strokeWidth: 1.5}} title={t('settings.account.editPhone')} />
-                    </div>
-                    {isPremium && (
-                        <div
-                            className="text-[11px] text-primary dark:text-primary-light flex items-center mt-1.5 font-normal bg-primary-light dark:bg-primary-dark/30 px-2 py-0.5 rounded-full w-fit">
-                            <Icon name="crown" size={12} className="mr-1 text-primary dark:text-primary-light"
-                                  strokeWidth={1.5}/>
-                            <span>{t('settings.account.premiumMember')}</span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <div className="space-y-0">
-                <SettingsRow label={t('settings.account.email')}>
-                     <span
-                         className="text-grey-medium dark:text-neutral-300 text-right font-normal mr-2 truncate max-w-[200px]"
-                         title={userEmail}>
-                         {userEmail}
-                    </span>
-                    <Button variant="link" size="sm" onClick={() => setEditingModal('email')}
-                            disabled={isLoading}>{t('common.edit')}</Button>
-                </SettingsRow>
-                <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-                <SettingsRow label={t('settings.account.password')} action={<Button variant="link" size="sm"
-                                                                                    onClick={() => setEditingModal('password')}
-                                                                                    disabled={isLoading}>{t('settings.account.changePassword')}</Button>}/>
-            </div>
-
-            <div className="mt-8">
-                <Button variant="secondary" size="md" icon="logout" onClick={handleLogout}
-                        className="w-full sm:w-auto" disabled={isLoading}>{t('settings.account.logout')}</Button>
-            </div>
-        </div>
-
-        <IdentifierEditModal
-            type="email"
-            isOpen={editingModal === 'email'}
-            onClose={() => setEditingModal(null)}
-            onSuccess={handleIdentifierUpdateSuccess}
-            currentValue={currentUser?.email ?? null}
-        />
-        <IdentifierEditModal
-            type="phone"
-            isOpen={editingModal === 'phone'}
-            onClose={() => setEditingModal(null)}
-            onSuccess={handleIdentifierUpdateSuccess}
-            currentValue={currentUser?.phone ?? null}
-        />
-        <PasswordChangeModal
-            isOpen={editingModal === 'password'}
-            onClose={() => setEditingModal(null)}
-            onSuccess={handlePasswordUpdateSuccess}
-        />
-
-        <ConfirmDeleteModalRadix
-            isOpen={isDeleteAvatarConfirmOpen}
-            onClose={() => setIsDeleteAvatarConfirmOpen(false)}
-            onConfirm={confirmDeleteAvatar}
-            itemTitle={currentUser?.username || ''}
-            title={t('settings.account.deleteAvatar')}
-            description={t('settings.account.confirmDeleteAvatar')}
-            confirmText={t('common.delete')}
-            confirmVariant="danger"
-        />
-    </>);
-});
-AccountSettings.displayName = 'AccountSettings';
-
 const defaultAppearanceSettingsFromAtoms = defaultAppearanceSettingsForApi();
 
 const AppearanceSettings: React.FC = memo(() => {
     const {t} = useTranslation();
     const [appearance, setAppearance] = useAtom(appearanceSettingsAtom);
-    const [customBgUrl, setCustomBgUrl] = useState('');
-    const customBgUrlInputRef = useRef<HTMLInputElement>(null);
-
-    useEffect(() => {
-        if (appearance && !PREDEFINED_BACKGROUND_IMAGES.some(img => img.url === appearance.backgroundImageUrl) && appearance.backgroundImageUrl !== 'none') {
-            setCustomBgUrl(appearance.backgroundImageUrl);
-        } else {
-            setCustomBgUrl('');
-        }
-    }, [appearance]);
 
     if (!appearance) {
         return <div className="p-4 text-center text-grey-medium">Loading appearance settings...</div>;
@@ -604,39 +167,6 @@ const AppearanceSettings: React.FC = memo(() => {
         ...(s ?? defaultAppearanceSettingsFromAtoms),
         darkMode: mode
     }));
-    const handleBgImageChange = (url: string) => {
-        setAppearance(s => ({...(s ?? defaultAppearanceSettingsFromAtoms), backgroundImageUrl: url}));
-        if (!PREDEFINED_BACKGROUND_IMAGES.some(img => img.url === url) && url !== 'none') {
-            setCustomBgUrl(url);
-        } else {
-            setCustomBgUrl('');
-        }
-    };
-    const handleCustomBgUrlApply = () => {
-        if (customBgUrl.trim()) {
-            if (customBgUrl.startsWith('http://') || customBgUrl.startsWith('https://') || customBgUrl.startsWith('data:image')) {
-                handleBgImageChange(customBgUrl.trim());
-            } else {
-                alert(t('settings.appearance.invalidUrlError'));
-                customBgUrlInputRef.current?.focus();
-            }
-        }
-    };
-    const handleBlurChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseInt(e.target.value, 10);
-        setAppearance(s => ({
-            ...(s ?? defaultAppearanceSettingsFromAtoms),
-            backgroundImageBlur: Math.max(0, Math.min(20, value))
-        }));
-    };
-    const handleBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseInt(e.target.value, 10);
-        setAppearance(s => ({
-            ...(s ?? defaultAppearanceSettingsFromAtoms),
-            backgroundImageBrightness: Math.max(0, Math.min(200, value))
-        }));
-    };
-
 
     return (
         <div className="space-y-6">
@@ -659,76 +189,51 @@ const AppearanceSettings: React.FC = memo(() => {
                     ))}
                 </div>
             </SettingsRow>
-            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-
-            <div>
-                <SettingsRow label={t('settings.appearance.backgroundImage')}
-                             description={t('settings.appearance.backgroundImageDescription')}/>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-1 mb-4">
-                    {PREDEFINED_BACKGROUND_IMAGES.map(img => (
-                        <BackgroundImagePreview
-                            key={img.id}
-                            imageUrl={img.url}
-                            name={t(img.nameKey)}
-                            selected={currentAppearance.backgroundImageUrl === img.url}
-                            onClick={() => handleBgImageChange(img.url)}
-                        />
-                    ))}
-                </div>
-                <div className="flex items-center space-x-2">
-                    <input
-                        ref={customBgUrlInputRef}
-                        type="url"
-                        value={customBgUrl}
-                        onChange={(e) => setCustomBgUrl(e.target.value)}
-                        placeholder={t('settings.appearance.customUrlPlaceholder')}
-                        className={twMerge(
-                            "flex-grow h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
-                            "bg-grey-ultra-light dark:bg-neutral-700",
-                            "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
-                            "text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out",
-                            "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
-                        )}
-                    />
-                    <Button variant="secondary" size="md" onClick={handleCustomBgUrlApply}
-                            className="flex-shrink-0">{t('settings.appearance.applyUrl')}</Button>
-                </div>
-            </div>
-
-            {currentAppearance.backgroundImageUrl && currentAppearance.backgroundImageUrl !== 'none' && (
-                <>
-                    <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-                    <SettingsRow label={t('settings.appearance.backgroundBlur')} htmlFor="bgBlurSlider"
-                                 description={t('settings.appearance.backgroundBlurDescription')}>
-                        <div className="flex items-center space-x-2 w-[180px]">
-                            <input id="bgBlurSlider" type="range" min="0" max="20" step="1"
-                                   value={currentAppearance.backgroundImageBlur}
-                                   onChange={handleBlurChange}
-                                   className="range-slider-track flex-grow" aria-label="Background blur amount"/>
-                            <span
-                                className="text-xs text-grey-medium dark:text-neutral-300 w-8 text-right tabular-nums">{currentAppearance.backgroundImageBlur}px</span>
-                        </div>
-                    </SettingsRow>
-                    <SettingsRow label={t('settings.appearance.backgroundBrightness')} htmlFor="bgBrightnessSlider"
-                                 description={t('settings.appearance.backgroundBrightnessDescription')}>
-                        <div className="flex items-center space-x-2 w-[180px]">
-                            <input id="bgBrightnessSlider" type="range" min="0" max="200" step="5"
-                                   value={currentAppearance.backgroundImageBrightness}
-                                   onChange={handleBrightnessChange}
-                                   className="range-slider-track flex-grow"
-                                   aria-label="Background brightness percentage"/>
-                            <span
-                                className="text-xs text-grey-medium dark:text-neutral-300 w-8 text-right tabular-nums">{currentAppearance.backgroundImageBrightness}%</span>
-                        </div>
-                    </SettingsRow>
-                </>
-            )}
         </div>
     );
 });
 AppearanceSettings.displayName = 'AppearanceSettings';
 
 const defaultPreferencesFromAtoms = defaultPreferencesSettingsForApi();
+
+const renderSelect = (id: string, value: string | null, onChange: (value: string) => void, options: {
+    value: string,
+    label: string
+}[], placeholder: string) => (
+    <Select.Root value={value ?? undefined} onValueChange={onChange}>
+        <Select.Trigger
+            id={id}
+            className="flex items-center justify-between w-[160px] h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 hover:bg-grey-light dark:hover:bg-neutral-600 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+            aria-label={placeholder}
+        >
+            <Select.Value placeholder={placeholder}/>
+            <Select.Icon className="text-grey-medium dark:text-neutral-400">
+                <Icon name="chevron-down" size={14} strokeWidth={1.5}/>
+            </Select.Icon>
+        </Select.Trigger>
+        <Select.Portal>
+            <Select.Content
+                className="z-[60] min-w-[160px] bg-white dark:bg-neutral-750 rounded-base shadow-popover p-1 overflow-hidden animate-popoverShow"
+                position="popper" sideOffset={5}
+            >
+                <Select.Viewport>
+                    {options.map(opt => (
+                        <Select.Item
+                            key={opt.value}
+                            value={opt.value}
+                            className="relative flex items-center h-7 px-3 text-[13px] font-light rounded-[4px] select-none cursor-pointer data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-neutral-600 data-[highlighted]:outline-none text-grey-dark dark:text-neutral-100 data-[state=checked]:text-primary dark:data-[state=checked]:text-primary-light"
+                        >
+                            <Select.ItemText>{opt.label}</Select.ItemText>
+                            <Select.ItemIndicator className="absolute right-2">
+                                <Icon name="check" size={12} strokeWidth={2}/>
+                            </Select.ItemIndicator>
+                        </Select.Item>
+                    ))}
+                </Select.Viewport>
+            </Select.Content>
+        </Select.Portal>
+    </Select.Root>
+);
 
 const PreferencesSettings: React.FC = memo(() => {
     const {t} = useTranslation();
@@ -781,45 +286,6 @@ const PreferencesSettings: React.FC = memo(() => {
         }));
     }, [userLists, t]);
 
-    const renderSelect = (id: string, value: string | null, onChange: (value: string) => void, options: {
-        value: string,
-        label: string
-    }[], placeholder: string) => (
-        <Select.Root value={value ?? undefined} onValueChange={onChange}>
-            <Select.Trigger
-                id={id}
-                className="flex items-center justify-between w-[160px] h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 hover:bg-grey-light dark:hover:bg-neutral-600 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                aria-label={placeholder}
-            >
-                <Select.Value placeholder={placeholder}/>
-                <Select.Icon className="text-grey-medium dark:text-neutral-400">
-                    <Icon name="chevron-down" size={14} strokeWidth={1.5}/>
-                </Select.Icon>
-            </Select.Trigger>
-            <Select.Portal>
-                <Select.Content
-                    className="z-[60] min-w-[160px] bg-white dark:bg-neutral-750 rounded-base shadow-popover p-1 overflow-hidden animate-popoverShow"
-                    position="popper" sideOffset={5}
-                >
-                    <Select.Viewport>
-                        {options.map(opt => (
-                            <Select.Item
-                                key={opt.value}
-                                value={opt.value}
-                                className="relative flex items-center h-7 px-3 text-[13px] font-light rounded-[4px] select-none cursor-pointer data-[highlighted]:bg-grey-ultra-light dark:data-[highlighted]:bg-neutral-600 data-[highlighted]:outline-none text-grey-dark dark:text-neutral-100 data-[state=checked]:text-primary dark:data-[state=checked]:text-primary-light"
-                            >
-                                <Select.ItemText>{opt.label}</Select.ItemText>
-                                <Select.ItemIndicator className="absolute right-2">
-                                    <Icon name="check" size={12} strokeWidth={2}/>
-                                </Select.ItemIndicator>
-                            </Select.Item>
-                        ))}
-                    </Select.Viewport>
-                </Select.Content>
-            </Select.Portal>
-        </Select.Root>
-    );
-
     return (
         <div className="space-y-0">
             <SettingsRow label={t('settings.preferences.language')}
@@ -871,91 +337,311 @@ const PreferencesSettings: React.FC = memo(() => {
 });
 PreferencesSettings.displayName = 'PreferencesSettings';
 
-const PremiumSettings: React.FC = memo(() => {
-    const { t } = useTranslation();
-    const currentUser = useAtomValue(currentUserAtom);
-    const openPayment = useSetAtom(openPaymentModalAtom);
+const defaultAISettingsFromAtoms = defaultAISettingsForApi();
 
-    const handleUpgrade = (productId: string, productName: string) => {
-        openPayment({ productId, productName });
+const SortableItem: React.FC<{ item: { id: string; name: string }; isDragging: boolean }> = ({ item, isDragging }) => {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.7 : 1,
+        zIndex: isDragging ? 10 : 'auto',
     };
 
-    const premiumTiers = [
-        {
-            id: "free",
-            name: t('settings.premium.freeTier.name'),
-            price: t('settings.premium.freeTier.price'),
-            features: t('settings.premium.freeTier.features', { returnObjects: true }) as string[],
-            current: !currentUser?.isPremium
-        },
-        {
-            id: "pro",
-            productId: "premium_monthly",
-            name: t('settings.premium.proTier.name'),
-            price: t('settings.premium.proTier.price'),
-            features: t('settings.premium.proTier.features', { returnObjects: true }) as string[],
-            current: currentUser?.isPremium
-        },
-    ];
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            className="flex items-center bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-2 text-sm"
+        >
+            <button
+                {...listeners}
+                className="cursor-grab touch-none mr-3 text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200"
+                aria-label={`Reorder ${item.name}`}
+            >
+                <Icon name="grip-vertical" size={16} strokeWidth={1.5} />
+            </button>
+            <span className="text-grey-dark dark:text-neutral-100 font-light">{item.name}</span>
+        </div>
+    );
+};
+
+const AISettings: React.FC = memo(() => {
+    const { t } = useTranslation();
+    const [aiSettings, setAISettings] = useAtom(aiSettingsAtom);
+    const addNotification = useSetAtom(addNotificationAtom);
+    const [isFetchingModels, setIsFetchingModels] = useState(false);
+    const [draggingId, setDraggingId] = useState<string | null>(null);
+
+    const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
+
+    if (!aiSettings) {
+        return <div className="p-4 text-center text-grey-medium">Loading AI settings...</div>;
+    }
+
+    const currentSettings = aiSettings ?? defaultAISettingsFromAtoms;
+    const { provider: currentProviderId, providerSettings, providerOrder, fetchedModels = {} } = currentSettings;
+    const currentProvider = AI_PROVIDERS.find(p => p.id === currentProviderId) ?? AI_PROVIDERS[0];
+    const currentProviderSettings = providerSettings[currentProviderId] ?? { apiKey: '', model: '' };
+
+    const apiKeyDescription = currentProvider.id === 'custom'
+        ? t('settings.ai.apiKeyDescription_custom')
+        : t('settings.ai.apiKeyDescription', { providerName: currentProvider.name });
+
+    const handleProviderChange = (providerId: AIProvider['id']) => {
+        setAISettings(s => {
+            const settings = s ?? defaultAISettingsForApi();
+            const existingProviderSettings = settings.providerSettings[providerId];
+            if (existingProviderSettings?.model) {
+                return { ...settings, provider: providerId };
+            }
+            const newProvider = AI_PROVIDERS.find(p => p.id === providerId);
+            const defaultModel = newProvider?.models[0]?.id ?? '';
+            return {
+                ...settings,
+                provider: providerId,
+                providerSettings: {
+                    ...settings.providerSettings,
+                    [providerId]: {
+                        ...(settings.providerSettings[providerId] ?? { apiKey: '' }),
+                        model: defaultModel,
+                    },
+                },
+            };
+        });
+    };
+
+    const handleSettingChange = (field: keyof AIProviderSettings, value: string) => {
+        setAISettings(s => {
+            const settings = s ?? defaultAISettingsForApi();
+            const providerSettings = settings.providerSettings[currentProviderId] ?? { apiKey: '', model: '' };
+            return {
+                ...settings,
+                providerSettings: {
+                    ...settings.providerSettings,
+                    [currentProviderId]: { ...providerSettings, [field]: value },
+                },
+            };
+        });
+    };
+
+    const handleFetchModels = useCallback(async () => {
+        if (!currentProvider || isFetchingModels || !currentProviderSettings.apiKey) {
+            if (!currentProviderSettings.apiKey) {
+                addNotification({ type: 'error', message: "API key is required to fetch models." });
+            }
+            return;
+        }
+        setIsFetchingModels(true);
+        try {
+            const models = await fetchProviderModels({
+                provider: currentProviderId,
+                apiKey: currentProviderSettings.apiKey,
+                baseUrl: currentProviderSettings.baseUrl,
+            });
+            setAISettings(prev => {
+                const prevSettings = prev ?? defaultAISettingsForApi();
+                return {
+                    ...prevSettings,
+                    fetchedModels: {
+                        ...(prevSettings.fetchedModels ?? {}),
+                        [currentProviderId]: models,
+                    }
+                };
+            });
+            addNotification({ type: 'success', message: `Successfully fetched ${models.length} models for ${currentProvider.name}.` });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            addNotification({ type: 'error', message: `Failed to fetch models: ${errorMessage}` });
+        } finally {
+            setIsFetchingModels(false);
+        }
+    }, [currentProvider, currentProviderId, currentProviderSettings, isFetchingModels, setAISettings, addNotification]);
+
+    const handleProviderDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setDraggingId(null);
+        if (over && active.id !== over.id) {
+            setAISettings(s => {
+                const settings = s ?? defaultAISettingsFromAtoms;
+                const oldOrder = settings.providerOrder;
+                const configuredIds = oldOrder.filter(id => !!settings.providerSettings[id]?.apiKey);
+                const unconfiguredIds = oldOrder.filter(id => !settings.providerSettings[id]?.apiKey);
+
+                const oldIndex = configuredIds.indexOf(active.id as AIProvider['id']);
+                const newIndex = configuredIds.indexOf(over.id as AIProvider['id']);
+
+                if (oldIndex === -1 || newIndex === -1) return settings;
+
+                const reorderedConfigured = arrayMove(configuredIds, oldIndex, newIndex);
+                return { ...settings, providerOrder: [...reorderedConfigured, ...unconfiguredIds] };
+            });
+        }
+    };
+
+    const providerOptions = useMemo(() => providerOrder
+            .map(id => AI_PROVIDERS.find(p => p.id === id))
+            .filter((p): p is AIProvider => !!p)
+            .map(p => ({ value: p.id, label: p.name })),
+        [providerOrder]);
+
+    const configuredProviders = useMemo(() => providerOrder
+            .map(id => AI_PROVIDERS.find(p => p.id === id))
+            .filter((p): p is AIProvider => !!p && !!providerSettings[p.id]?.apiKey),
+        [providerOrder, providerSettings]);
+
+    const modelOptions = useMemo(() => {
+        const providerFetchedModels = (fetchedModels ?? {})[currentProvider.id] ?? [];
+        const combinedModels = [...currentProvider.models, ...providerFetchedModels];
+        const uniqueModels = Array.from(new Map(combinedModels.map(m => [m.id, m])).values());
+
+        const modelOrder = currentProviderSettings.modelOrder;
+        if (modelOrder) {
+            uniqueModels.sort((a, b) => {
+                const indexA = modelOrder.indexOf(a.id);
+                const indexB = modelOrder.indexOf(b.id);
+                if (indexA === -1 && indexB === -1) return a.name.localeCompare(b.name);
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+                return indexA - indexB;
+            });
+        } else {
+            uniqueModels.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        return uniqueModels.map(m => ({ value: m.id, label: m.name, id: m.id, name: m.name }));
+    }, [currentProvider, fetchedModels, currentProviderSettings.modelOrder]);
+
+    const handleModelDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setDraggingId(null);
+        if (over && active.id !== over.id) {
+            setAISettings(s => {
+                const settings = s ?? defaultAISettingsForApi();
+                const oldOrder = modelOptions.map(m => m.id);
+                const oldIndex = oldOrder.indexOf(active.id as string);
+                const newIndex = oldOrder.indexOf(over.id as string);
+                const newOrder = arrayMove(oldOrder, oldIndex, newIndex);
+
+                return {
+                    ...settings,
+                    providerSettings: {
+                        ...settings.providerSettings,
+                        [currentProviderId]: {
+                            ...(settings.providerSettings[currentProviderId] ?? { apiKey: '', model: '' }),
+                            modelOrder: newOrder,
+                        },
+                    },
+                };
+            });
+        }
+    };
 
     return (
-        <div className="space-y-6 relative">
-            <div
-                className="p-4 rounded-base bg-primary-light/50 dark:bg-primary-dark/20 border border-primary/30 dark:border-primary-dark/40">
-                <div className="flex items-center">
-                    <Icon name="crown" size={24} className="text-primary dark:text-primary-light mr-3"/>
-                    <div>
-                        <h3 className="text-md font-medium text-primary dark:text-primary-light">
-                            {currentUser?.isPremium ? t('settings.premium.youArePremium') : t('settings.premium.unlock')}
-                        </h3>
-                        {currentUser?.isPremium ? (
-                            <p className="text-xs text-primary/80 dark:text-primary-light/80">
-                                {t('settings.premium.activeUntil', { date: 'N/A' })} {/* Replace N/A with actual expiry date from user object if available */}
-                            </p>
-                        ) : (
-                            <p className="text-xs text-primary/80 dark:text-primary-light/80">
-                                {t('settings.premium.supercharge')}
-                            </p>
-                        )}
+        <div className="space-y-0">
+            <SettingsRow label={t('settings.ai.provider')} description={t('settings.ai.providerDescription')} htmlFor="aiProviderSelect">
+                {renderSelect('aiProviderSelect', currentProviderId, (id) => handleProviderChange(id as AIProvider['id']), providerOptions, "Select Provider")}
+            </SettingsRow>
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+            <SettingsRow label={t('settings.ai.apiKey')} description={apiKeyDescription} htmlFor="apiKeyInput">
+                <input
+                    id="apiKeyInput"
+                    type="password"
+                    value={currentProviderSettings.apiKey}
+                    onBlur={handleFetchModels}
+                    onChange={(e) => handleSettingChange('apiKey', e.target.value)}
+                    placeholder={t('settings.ai.apiKeyPlaceholder')}
+                    className={twMerge(
+                        "w-[240px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
+                        "bg-grey-ultra-light dark:bg-neutral-700",
+                        "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
+                        "text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out",
+                        "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
+                    )}
+                />
+            </SettingsRow>
+            {currentProvider.requiresBaseUrl && (
+                <>
+                    <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+                    <SettingsRow label={t('settings.ai.baseUrl')} description={t('settings.ai.baseUrlDescription')} htmlFor="baseUrlInput">
+                        <input
+                            id="baseUrlInput"
+                            type="url"
+                            value={currentProviderSettings.baseUrl ?? ''}
+                            onChange={(e) => handleSettingChange('baseUrl', e.target.value)}
+                            placeholder={t('settings.ai.baseUrlPlaceholder')}
+                            className={twMerge(
+                                "w-[240px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
+                                "bg-grey-ultra-light dark:bg-neutral-700",
+                                "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
+                                "text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out",
+                                "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
+                            )}
+                        />
+                    </SettingsRow>
+                </>
+            )}
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+            <SettingsRow label={t('settings.ai.model')} description={t('settings.ai.modelDescription')} htmlFor="aiModelSelect">
+                <div className="flex items-center space-x-2">
+                    {currentProvider.id === 'custom' ? (
+                        <input
+                            id="aiModelInput"
+                            type="text"
+                            value={currentProviderSettings.model}
+                            onChange={(e) => handleSettingChange('model', e.target.value)}
+                            placeholder="e.g., gpt-4"
+                            className={twMerge( "w-[160px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none", "bg-grey-ultra-light dark:bg-neutral-700", "placeholder:text-grey-medium dark:placeholder:text-neutral-400", "text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out", "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light")}
+                        />
+                    ) : (
+                        renderSelect('aiModelSelect', currentProviderSettings.model, (value) => handleSettingChange('model', value), modelOptions, "Select Model")
+                    )}
+                    {currentProvider.listModelsEndpoint && (
+                        <Button variant="ghost" size="icon" icon="refresh-cw" onClick={handleFetchModels}
+                                disabled={isFetchingModels || !currentProviderSettings.apiKey} loading={isFetchingModels}
+                                className="w-7 h-7 text-grey-medium dark:text-neutral-400"
+                                aria-label="Fetch latest models"/>
+                    )}
+                </div>
+            </SettingsRow>
+            {modelOptions.length > 1 && currentProvider.id !== 'custom' &&
+                <div className="py-3">
+                    <p className="text-[11px] text-grey-medium dark:text-neutral-400 mt-0.5 font-light">Drag to reorder models for the current provider.</p>
+                    <div className="mt-2 max-h-40 overflow-y-auto styled-scrollbar-thin border border-grey-light dark:border-neutral-700 rounded-lg p-2">
+                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={e => setDraggingId(e.active.id as string)} onDragEnd={handleModelDragEnd}>
+                            <SortableContext items={modelOptions.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                                <div className="space-y-2">
+                                    {modelOptions.map(model => (<SortableItem key={model.id} item={model} isDragging={draggingId === model.id} />))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
                     </div>
                 </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {premiumTiers.map(tier => (
-                    <div key={tier.name} className={twMerge(
-                        "p-4 rounded-lg border",
-                        tier.current ? "border-primary dark:border-primary-light bg-primary-light/30 dark:bg-primary-dark/10" : "border-grey-light dark:border-neutral-700 bg-grey-ultra-light dark:bg-neutral-750"
-                    )}>
-                        <h4 className="text-md font-semibold text-grey-dark dark:text-neutral-100 mb-1">{tier.name}</h4>
-                        <p className="text-lg font-medium text-primary dark:text-primary-light mb-3">{tier.price}</p>
-                        <ul className="space-y-1.5 text-xs text-grey-medium dark:text-neutral-300 mb-4">
-                            {tier.features.map(feature => (
-                                <li key={feature} className="flex items-start">
-                                    <Icon name="check" size={12} strokeWidth={2.5}
-                                          className="text-success mr-1.5 mt-0.5 flex-shrink-0"/>
-                                    <span>{feature}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        {!currentUser?.isPremium && tier.id === "pro" && (
-                            <Button variant="primary" fullWidth onClick={() => handleUpgrade(tier.productId!, tier.name)}>
-                                {t('settings.premium.upgradeToPro')}
-                            </Button>
-                        )}
-                        {currentUser?.isPremium && tier.id === "pro" && (
-                            <Button variant="secondary" fullWidth onClick={() => alert('Redirecting to subscription management...')}>
-                                {t('settings.premium.manageSubscription')}
-                            </Button>
-                        )}
-                    </div>
-                ))}
+            }
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+            <div className="py-3">
+                <div className="flex-1 mr-4">
+                    <label className="text-[13px] text-grey-dark dark:text-neutral-200 font-normal block cursor-default">{t('settings.ai.providerPriority.title')}</label>
+                    <p className="text-[11px] text-grey-medium dark:text-neutral-400 mt-0.5 font-light">{t('settings.ai.providerPriority.description')}</p>
+                </div>
+                <div className="mt-3 max-h-60 overflow-y-auto styled-scrollbar-thin border border-grey-light dark:border-neutral-700 rounded-lg p-2">
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={e => setDraggingId(e.active.id as string)} onDragEnd={handleProviderDragEnd}>
+                        <SortableContext items={configuredProviders.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                            <div className="space-y-2">
+                                {configuredProviders.length > 0 ? configuredProviders.map(provider => (<SortableItem key={provider.id} item={provider} isDragging={draggingId === provider.id} />))
+                                    : <p className="text-center text-xs text-grey-medium p-2">No providers with API keys configured.</p>}
+                            </div>
+                        </SortableContext>
+                    </DndContext>
+                </div>
             </div>
         </div>
     );
 });
-PremiumSettings.displayName = 'PremiumSettings';
+AISettings.displayName = 'AISettings';
 
+
+// ... (AboutSettings and SettingsModal components are unchanged)
 const AboutSettings: React.FC = memo(() => {
     const {t} = useTranslation();
     const [activeContent, setActiveContent] = useState<'changelog' | 'privacy' | 'terms' | null>(null);
@@ -1038,18 +724,16 @@ const SettingsModal: React.FC = () => {
     const handleTabClick = useCallback((id: SettingsTab) => setSelectedTab(id), [setSelectedTab]);
     const renderContent = useMemo(() => {
         switch (selectedTab) {
-            case 'account':
-                return <AccountSettings/>;
             case 'appearance':
                 return <AppearanceSettings/>;
             case 'preferences':
                 return <PreferencesSettings/>;
-            case 'premium':
-                return <PremiumSettings/>;
+            case 'ai':
+                return <AISettings />;
             case 'about':
                 return <AboutSettings/>;
             default:
-                return <AccountSettings/>;
+                return <AppearanceSettings/>;
         }
     }, [selectedTab]);
     const modalTitle = useMemo(() => {
@@ -1065,7 +749,7 @@ const SettingsModal: React.FC = () => {
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
-                        "bg-white dark:bg-neutral-800 w-full max-w-3xl h-[75vh] max-h-[650px]",
+                        "bg-white dark:bg-neutral-800 w-full max-w-5xl h-[85vh] max-h-[750px]", // Changed size
                         "rounded-base shadow-modal flex overflow-hidden",
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}

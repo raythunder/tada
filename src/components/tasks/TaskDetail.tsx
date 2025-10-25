@@ -41,6 +41,7 @@ import {arrayMove, SortableContext, verticalListSortingStrategy} from "@dnd-kit/
 import {AnimatePresence, motion} from "framer-motion";
 import SubtaskItemDetail from "./SubtaskItemDetail";
 import {useTranslation} from "react-i18next";
+import * as service from "@/services/localStorageService";
 
 interface TagPillProps {
     tag: string;
@@ -131,6 +132,7 @@ const TaskDetail: React.FC = () => {
     const [localDueDate, setLocalDueDate] = useState<Date | undefined>(undefined);
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isPermanentDeleteDialogOpen, setIsPermanentDeleteDialogOpen] = useState(false);
     const [isFooterDatePickerOpen, setIsFooterDatePickerOpen] = useState(false);
     const [isHeaderMenuDatePickerOpen, setIsHeaderMenuDatePickerOpen] = useState(false);
     const [isHeaderMenuTagsPopoverOpen, setIsHeaderMenuTagsPopoverOpen] = useState(false);
@@ -256,6 +258,7 @@ const TaskDetail: React.FC = () => {
             setNewSubtaskTitle('');
             setNewSubtaskDueDate(undefined);
             setIsDeleteDialogOpen(false);
+            setIsPermanentDeleteDialogOpen(false);
             setIsFooterDatePickerOpen(false);
             setIsInfoPopoverOpen(false);
             setIsHeaderMenuDatePickerOpen(false);
@@ -424,6 +427,17 @@ const TaskDetail: React.FC = () => {
         }
     }, [preferences.confirmDeletions, confirmDelete, isLoadingPreferences]);
 
+    const handleDeletePermanently = useCallback(() => {
+        setIsPermanentDeleteDialogOpen(true);
+    }, []);
+
+    const confirmPermanentDelete = useCallback(() => {
+        if (!selectedTask) return;
+        service.deleteTask(selectedTask.id);
+        setTasks(prev => (prev ?? []).filter(t => t.id !== selectedTask.id));
+        setSelectedTaskId(null);
+        setIsPermanentDeleteDialogOpen(false);
+    }, [selectedTask, setTasks, setSelectedTaskId]);
 
     const handleRestore = useCallback(() => {
         if (!selectedTask || selectedTask.listName !== 'Trash') return;
@@ -812,6 +826,59 @@ const TaskDetail: React.FC = () => {
                                     <DropdownMenu.Separator
                                         className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
+                                    <DropdownMenu.Sub>
+                                        <DropdownMenu.SubTrigger
+                                            className={getSubTriggerClasses()}
+                                            disabled={isTrash}
+                                            onPointerEnter={() => {
+                                                if (isHeaderMenuDatePickerOpen) handleHeaderMenuPopoverOpenChange(false, 'date');
+                                                if (isHeaderMenuTagsPopoverOpen) handleHeaderMenuPopoverOpenChange(false, 'tags');
+                                            }}
+                                            onFocus={() => {
+                                                if (isHeaderMenuDatePickerOpen) handleHeaderMenuPopoverOpenChange(false, 'date');
+                                                if (isHeaderMenuTagsPopoverOpen) handleHeaderMenuPopoverOpenChange(false, 'tags');
+                                            }}
+                                        >
+                                            <Icon name="folder" size={14} strokeWidth={1.5}
+                                                  className="mr-2 opacity-80"/>
+                                            {t('taskDetail.moveTo')}
+                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={14}
+                                                                                strokeWidth={1.5}
+                                                                                className="opacity-70"/></div>
+                                        </DropdownMenu.SubTrigger>
+                                        <DropdownMenu.Portal>
+                                            <DropdownMenu.SubContent
+                                                className={twMerge(dropdownContentClasses, "max-h-48 overflow-y-auto styled-scrollbar-thin")}
+                                                sideOffset={2} alignOffset={-5}>
+                                                <DropdownMenu.RadioGroup
+                                                    value={selectedTask.listName}
+                                                    onValueChange={handleListChange}
+                                                >
+                                                    {availableLists.map(list => (
+                                                        <DropdownMenu.RadioItem
+                                                            key={list.id}
+                                                            value={list.name}
+                                                            className={getRadioItemClasses(selectedTask.listName === list.name)}
+                                                            disabled={isTrash}
+                                                        >
+                                                            <Icon name={list.name === 'Inbox' ? 'inbox' : 'list'}
+                                                                  size={14} strokeWidth={1.5}
+                                                                  className="mr-2 flex-shrink-0 opacity-80"/>
+                                                            <span className="flex-grow">{list.name === 'Inbox' ? t('sidebar.inbox') : list.name}</span>
+                                                            <DropdownMenu.ItemIndicator
+                                                                className="absolute right-2 inline-flex items-center">
+                                                                <Icon name="check" size={12} strokeWidth={2}/>
+                                                            </DropdownMenu.ItemIndicator>
+                                                        </DropdownMenu.RadioItem>
+                                                    ))}
+                                                </DropdownMenu.RadioGroup>
+                                            </DropdownMenu.SubContent>
+                                        </DropdownMenu.Portal>
+                                    </DropdownMenu.Sub>
+
+                                    <DropdownMenu.Separator
+                                        className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
+
                                     <Popover.Root modal={false} open={isHeaderMenuTagsPopoverOpen}
                                                   onOpenChange={(open) => handleHeaderMenuPopoverOpenChange(open, 'tags')}>
                                         <Popover.Trigger asChild>
@@ -900,56 +967,6 @@ const TaskDetail: React.FC = () => {
                                         </Popover.Portal>
                                     </Popover.Root>
 
-                                    <DropdownMenu.Sub>
-                                        <DropdownMenu.SubTrigger
-                                            className={getSubTriggerClasses()}
-                                            disabled={isTrash}
-                                            onPointerEnter={() => {
-                                                if (isHeaderMenuDatePickerOpen) handleHeaderMenuPopoverOpenChange(false, 'date');
-                                                if (isHeaderMenuTagsPopoverOpen) handleHeaderMenuPopoverOpenChange(false, 'tags');
-                                            }}
-                                            onFocus={() => {
-                                                if (isHeaderMenuDatePickerOpen) handleHeaderMenuPopoverOpenChange(false, 'date');
-                                                if (isHeaderMenuTagsPopoverOpen) handleHeaderMenuPopoverOpenChange(false, 'tags');
-                                            }}
-                                        >
-                                            <Icon name="folder" size={14} strokeWidth={1.5}
-                                                  className="mr-2 opacity-80"/>
-                                            {t('taskDetail.moveTo')}
-                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={14}
-                                                                                strokeWidth={1.5}
-                                                                                className="opacity-70"/></div>
-                                        </DropdownMenu.SubTrigger>
-                                        <DropdownMenu.Portal>
-                                            <DropdownMenu.SubContent
-                                                className={twMerge(dropdownContentClasses, "max-h-48 overflow-y-auto styled-scrollbar-thin")}
-                                                sideOffset={2} alignOffset={-5}>
-                                                <DropdownMenu.RadioGroup
-                                                    value={selectedTask.listName}
-                                                    onValueChange={handleListChange}
-                                                >
-                                                    {availableLists.map(list => (
-                                                        <DropdownMenu.RadioItem
-                                                            key={list.id}
-                                                            value={list.name}
-                                                            className={getRadioItemClasses(selectedTask.listName === list.name)}
-                                                            disabled={isTrash}
-                                                        >
-                                                            <Icon name={list.name === 'Inbox' ? 'inbox' : 'list'}
-                                                                  size={14} strokeWidth={1.5}
-                                                                  className="mr-2 flex-shrink-0 opacity-80"/>
-                                                            <span className="flex-grow">{list.name === 'Inbox' ? t('sidebar.inbox') : list.name}</span>
-                                                            <DropdownMenu.ItemIndicator
-                                                                className="absolute right-2 inline-flex items-center">
-                                                                <Icon name="check" size={12} strokeWidth={2}/>
-                                                            </DropdownMenu.ItemIndicator>
-                                                        </DropdownMenu.RadioItem>
-                                                    ))}
-                                                </DropdownMenu.RadioGroup>
-                                            </DropdownMenu.SubContent>
-                                        </DropdownMenu.Portal>
-                                    </DropdownMenu.Sub>
-
                                     <DropdownMenu.Separator
                                         className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
                                     <RadixMenuItem icon="copy-plus"
@@ -960,11 +977,19 @@ const TaskDetail: React.FC = () => {
                                     <DropdownMenu.Separator
                                         className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
                                     {isTrash ? (
-                                        <RadixMenuItem icon="arrow-left"
-                                                       onSelect={handleRestore}
-                                                       className="text-success dark:text-green-500 data-[highlighted]:!bg-green-500/10 data-[highlighted]:!text-green-600 dark:data-[highlighted]:!bg-green-500/15 dark:data-[highlighted]:!text-green-400">
-                                            {t('taskDetail.restore')}
-                                        </RadixMenuItem>
+                                        <>
+                                            <RadixMenuItem icon="arrow-left"
+                                                           onSelect={handleRestore}
+                                                           className="text-success dark:text-green-500 data-[highlighted]:!bg-green-500/10 data-[highlighted]:!text-green-600 dark:data-[highlighted]:!bg-green-500/15 dark:data-[highlighted]:!text-green-400">
+                                                {t('taskDetail.restore')}
+                                            </RadixMenuItem>
+                                            <RadixMenuItem
+                                                icon="trash"
+                                                onSelect={() => setTimeout(() => handleDeletePermanently(), 0)}
+                                                isDanger>
+                                                {t('taskDetail.deletePermanently')}
+                                            </RadixMenuItem>
+                                        </>
                                     ) : (
                                         <RadixMenuItem
                                             icon="trash"
@@ -1245,10 +1270,22 @@ const TaskDetail: React.FC = () => {
                 <ConfirmDeleteModalRadix isOpen={isDeleteDialogOpen} onClose={closeDeleteConfirm}
                                          onConfirm={confirmDelete}
                                          itemTitle={selectedTask.title || t('common.untitledTask')}
-                                         title={t('taskDetail.deleteModal.title')}
+                                         title={t('confirmDeleteModal.task.title')}
                                          description={t('confirmDeleteModal.task.description', {itemTitle: selectedTask.title || t('common.untitledTask')})}
                                          confirmText={t('confirmDeleteModal.task.confirmText')}
                                          confirmVariant="danger"
+                />
+            )}
+            {selectedTask && (
+                <ConfirmDeleteModalRadix
+                    isOpen={isPermanentDeleteDialogOpen}
+                    onClose={() => setIsPermanentDeleteDialogOpen(false)}
+                    onConfirm={confirmPermanentDelete}
+                    itemTitle={selectedTask.title || t('common.untitledTask')}
+                    title={t('confirmDeleteModal.permanent.title')}
+                    description={t('confirmDeleteModal.permanent.description', {itemTitle: selectedTask.title || t('common.untitledTask')})}
+                    confirmText={t('confirmDeleteModal.permanent.confirmText')}
+                    confirmVariant="danger"
                 />
             )}
         </>

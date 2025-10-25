@@ -44,7 +44,7 @@
     "allTasks": "All Tasks",
     "calendar": "Calendar",
     "aiSummary": "AI Summary",
-    "accountSettings": "Account Settings"
+    "accountSettings": "App Settings"
   },
   "addListModal": {
     "title": "Create New List",
@@ -72,48 +72,15 @@
       "title": "Move to Trash?",
       "description": "Are you sure you want to move \"{{itemTitle}}\" to trash?",
       "confirmText": "Move to Trash"
+    },
+    "permanent": {
+      "title": "Delete Task Permanently?",
+      "description": "Are you sure you want to permanently delete \"{{itemTitle}}\"? This action cannot be undone.",
+      "confirmText": "Delete Permanently"
     }
   },
   "settings": {
     "title": "Settings",
-    "account": {
-      "title": "Account",
-      "username": "Username",
-      "email": "Email Address",
-      "emailDescription": "Used for login and notifications.",
-      "phone": "Phone Number",
-      "phoneDescription": "Used for login and notifications.",
-      "password": "Password",
-      "changePassword": "Change Password",
-      "logout": "Logout",
-      "premiumMember": "Premium Member",
-      "uploadAvatar": "Upload new avatar",
-      "deleteAvatar": "Delete avatar",
-      "editNameError": "Error updating name: {{message}}",
-      "changePasswordError": "Error changing password: {{message}}",
-      "uploadAvatarError": "Error uploading avatar: {{message}}",
-      "deleteAvatarError": "Error deleting avatar: {{message}}",
-      "confirmDeleteAvatar": "Are you sure you want to delete your avatar?",
-      "editUsername": "Edit username",
-      "editPhone": "Edit phone number",
-      "editEmail": "Edit email address",
-      "updateSuccessMessage": "Information updated successfully!",
-      "passwordChangeSuccess": "Password changed successfully!",
-      "errorIdentifierUnchanged": "New information cannot be the same as the current one.",
-      "codeSentMessage": "Verification code sent. Please check your inbox/messages.",
-      "errorSendingCode": "Failed to send verification code. Please try again later.",
-      "errorIdentifierUpdate": "Update failed. Please check your verification code or network.",
-      "codePlaceholder": "Verification Code",
-      "sendCode": "Send Code",
-      "phonePlaceholder": "Enter new phone number",
-      "emailPlaceholder": "Enter new email address",
-      "errorPasswordMismatch": "The passwords you entered do not match.",
-      "errorPasswordLength": "New password must be at least 8 characters long.",
-      "currentPasswordPlaceholder": "Current Password",
-      "newPasswordPlaceholder": "New Password",
-      "confirmPasswordPlaceholder": "Confirm New Password",
-      "currentLabel": "Current"
-    },
     "appearance": {
       "title": "Appearance",
       "mode": "Appearance Mode",
@@ -124,16 +91,7 @@
         "system": "System"
       },
       "themeColor": "Theme Color",
-      "themeColorDescription": "Choose an accent color for the application.",
-      "backgroundImage": "Background Image",
-      "backgroundImageDescription": "Select a predefined background or set a custom one.",
-      "customUrlPlaceholder": "Enter custom image URL (http://... or data:image/...)",
-      "applyUrl": "Apply URL",
-      "backgroundBlur": "Background Blur",
-      "backgroundBlurDescription": "Adjust background image blurriness.",
-      "backgroundBrightness": "Background Brightness",
-      "backgroundBrightnessDescription": "Adjust background image brightness.",
-      "invalidUrlError": "Please enter a valid image URL (starting with http://, https://, or data:image)."
+      "themeColorDescription": "Choose an accent color for the application."
     },
     "preferences": {
       "title": "Preferences",
@@ -163,33 +121,23 @@
       "confirmDeletions": "Confirm Deletions",
       "confirmDeletionsDescription": "Show a confirmation dialog before moving tasks to trash."
     },
-    "premium": {
-      "title": "Premium",
-      "unlock": "Unlock Premium Features",
-      "supercharge": "Supercharge your productivity with exclusive features.",
-      "youArePremium": "You are a Premium Member!",
-      "activeUntil": "Your subscription is active until {{date}}.",
-      "freeTier": {
-        "name": "Free Tier",
-        "price": "Free",
-        "features": [
-          "Basic Task Management",
-          "Up to 3 Lists",
-          "Standard AI Summary"
-        ]
-      },
-      "proTier": {
-        "name": "Pro Tier",
-        "price": "$5/month",
-        "features": [
-          "Unlimited Lists & Tasks",
-          "Advanced AI Summary Options",
-          "Priority Support",
-          "Cloud Backup & Sync"
-        ]
-      },
-      "upgradeToPro": "Upgrade to Pro",
-      "manageSubscription": "Manage Subscription"
+    "ai": {
+      "title": "AI Settings",
+      "provider": "LLM Provider",
+      "providerDescription": "Select the language model provider for AI features.",
+      "apiKey": "API Key",
+      "apiKeyDescription": "Your {{providerName}} API Key. Stored securely in your browser.",
+      "apiKeyDescription_custom": "Your API Key. Stored securely in your browser.",
+      "apiKeyPlaceholder": "Enter your API key here",
+      "baseUrl": "Custom Base URL",
+      "baseUrlDescription": "Provide a custom base URL for OpenAI-compatible services.",
+      "baseUrlPlaceholder": "e.g., https://api.example.com/v1",
+      "model": "Model",
+      "modelDescription": "Select a model for the chosen provider.",
+      "providerPriority": {
+        "title": "Provider Priority",
+        "description": "Drag to reorder the display sequence of providers in the selection menu."
+      }
     },
     "about": {
       "title": "About",
@@ -253,6 +201,7 @@
     "moveTo": "Move to List",
     "duplicate": "Duplicate Task",
     "moveToTrash": "Move to Trash",
+    "deletePermanently": "Delete Permanently",
     "restore": "Restore Task",
     "taskInfo": "Task Information",
     "created": "Created",
@@ -276,59 +225,13 @@
     "title": "No Task Selected",
     "description": "Select a task from the list to view its details."
   },
-  "login": {
-    "title": "Welcome Back to Tada",
-    "passwordLogin": "Password Login",
-    "codeLogin": "Code Login",
-    "identifierPlaceholder": "Email, Phone, or Username",
-    "passwordPlaceholder": "Password",
-    "forgotPassword": "Forgot password?",
-    "signIn": "Sign In",
-    "noAccount": "Don't have an account?",
-    "signUp": "Sign up here",
-    "codePlaceholder": "Verification Code",
-    "sendCode": "Send Code",
-    "resendCode": "Resend"
-  },
-  "register": {
-    "title": "Create your Tada Account",
-    "identifierPlaceholder": "Email or Phone number",
-    "sendCode": "Send Verification Code",
-    "codePlaceholder": "Verification Code",
-    "usernamePlaceholder": "Username",
-    "passwordPlaceholder": "Password (min. 8 characters)",
-    "confirmPasswordPlaceholder": "Confirm Password",
-    "createAccount": "Create Account",
-    "hasAccount": "Already have an account?",
-    "signIn": "Sign in"
-  },
-  "forgotPassword": {
-    "title": "Reset Password",
-    "description": "Enter your email or phone number to receive a verification code.",
-    "identifierPlaceholder": "you@example.com or +1234567890",
-    "sendCode": "Send Verification Code",
-    "codePlaceholder": "Verification Code",
-    "passwordPlaceholder": "Enter new password (min. 8)",
-    "resetButton": "Reset Password",
-    "rememberPassword": "Remember your password?",
-    "signIn": "Sign in",
-    "successMessage": "Password reset successfully. Redirecting to login..."
-  },
   "theme": {
     "coralRed": "Coral Red",
     "oceanBlue": "Ocean Blue",
     "forestGreen": "Forest Green",
     "sunsetOrange": "Sunset Orange",
     "royalPurple": "Royal Purple",
-    "graphiteGrey": "Graphite Grey",
-    "bgNone": "None",
-    "bgBrownGrassSunset": "Brown Grass Sunset",
-    "bgSailboatOnSea": "Sailboat On Sea",
-    "bgGreenGrassField": "Green Grass Field",
-    "bgSnowyCabinDawn": "Snowy Cabin Dawn",
-    "bgBurrataSaladBowl": "Burrata Salad Bowl",
-    "bgCappadociaBalloons": "Cappadocia Balloons",
-    "bgRedOrangePoppy": "Red Orange Poppy"
+    "graphiteGrey": "Graphite Grey"
   },
   "summary": {
     "history": {
@@ -357,6 +260,7 @@
     },
     "generate": "Generate",
     "generating": "Generating...",
+    "generateDisabled": "AI Feature Disabled (Offline Mode)",
     "tasksTitle": "Tasks",
     "selectAll": "Select all tasks",
     "deselectAll": "Deselect all tasks",
@@ -375,6 +279,10 @@
     "noReferencedTasks": "No referenced tasks found.",
     "older": "Older summary",
     "newer": "Newer summary",
-    "saving": "saving..."
+    "saving": "saving...",
+    "noSummary": {
+      "title": "No summary available",
+      "description": "Select tasks and generate a new summary."
+    }
   }
 }

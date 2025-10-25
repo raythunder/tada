@@ -7,6 +7,8 @@ import * as Popover from '@radix-ui/react-popover';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
+    addNotificationAtom,
+    aiSettingsAtom,
     currentDisplayedSummaryAtom,
     currentSummaryFilterKeyAtom,
     currentSummaryIndexAtom,
@@ -43,8 +45,9 @@ import useDebounce from '@/hooks/useDebounce';
 import {CustomDateRangePickerContent} from '../common/CustomDateRangePickerPopover';
 import SummaryHistoryModal from './SummaryHistoryModal';
 import {AnimatePresence, motion} from 'framer-motion';
-import {streamAiGeneratedSummary} from '@/services/aiService';
+import {generateAiSummary} from '@/services/aiService';
 import {useTranslation} from "react-i18next";
+import * as service from "@/services/localStorageService";
 
 const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
     "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
@@ -66,6 +69,7 @@ const SummaryView: React.FC = () => {
     const relevantSummaries = useAtomValue(relevantStoredSummariesAtom);
     const allStoredSummariesData = useAtomValue(storedSummariesAtom);
     const allStoredSummaries = useMemo(() => allStoredSummariesData ?? [], [allStoredSummariesData]);
+    const addNotification = useSetAtom(addNotificationAtom);
 
     const [currentIndex, setCurrentIndex] = useAtom(currentSummaryIndexAtom);
     const currentSummary = useAtomValue(currentDisplayedSummaryAtom);
@@ -76,6 +80,12 @@ const SummaryView: React.FC = () => {
     const allTasksData = useAtomValue(tasksAtom);
     const allTasks = useMemo(() => allTasksData ?? [], [allTasksData]);
     const preferences = useAtomValue(preferencesSettingsAtom);
+    const aiSettings = useAtomValue(aiSettingsAtom);
+
+    const isAiEnabled = useMemo(() => {
+        if (!aiSettings || !aiSettings.provider) return false;
+        return !!aiSettings.providerSettings[aiSettings.provider]?.apiKey;
+    }, [aiSettings]);
 
     const [summaryDisplayContent, setSummaryDisplayContent] = useState('');
     const [summaryEditorContent, setSummaryEditorContent] = useState('');
@@ -86,9 +96,6 @@ const SummaryView: React.FC = () => {
     const isInternalEditorUpdate = useRef(false);
 
     const [editMode, setEditMode] = useState(false);
-
-    const eventSourceRef = useRef<EventSource | null>(null);
-    const [isWaitingForFirstChunk, setIsWaitingForFirstChunk] = useState(false);
 
     const [isRangePickerOpen, setIsRangePickerOpen] = useState(false);
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -103,6 +110,8 @@ const SummaryView: React.FC = () => {
     }, [period, listFilter, setCurrentIndex, setSelectedTaskIds]);
 
     useEffect(() => {
+        if (editMode) return;
+
         if (isGenerating) return;
 
         const text = currentSummary?.summaryText ?? '';
@@ -114,7 +123,7 @@ const SummaryView: React.FC = () => {
         setEditMode(false);
         hasUnsavedChangesRef.current = false;
         setIsRefTasksDropdownOpen(false);
-    }, [currentIndex, currentSummary, isGenerating]);
+    }, [currentIndex, currentSummary, isGenerating, editMode]);
 
     useEffect(() => {
         if (hasUnsavedChangesRef.current && currentSummary?.id && !isGenerating && editMode) {
@@ -142,12 +151,10 @@ const SummaryView: React.FC = () => {
 
     const handleGenerateClick = useCallback(async () => {
         if (isGenerating) return;
-        forceSaveCurrentSummary();
-        if (eventSourceRef.current) eventSourceRef.current.close();
 
+        forceSaveCurrentSummary();
         setEditMode(false);
         setIsGenerating(true);
-        setIsWaitingForFirstChunk(true);
         setSummaryDisplayContent('');
         setSummaryEditorContent('');
         setCurrentIndex(-1);
@@ -155,79 +162,56 @@ const SummaryView: React.FC = () => {
         const tasksToSummarize = allTasks.filter(t => selectedTaskIds.has(t.id));
         if (tasksToSummarize.length === 0) {
             setIsGenerating(false);
-            setIsWaitingForFirstChunk(false);
             return;
         }
         const taskIdsToSummarize = tasksToSummarize.map(t => t.id);
         const [periodKey, listKey] = filterKey.split('__');
 
+        // Non-AI fallback
+        if (!isAiEnabled) {
+            const completedTasks = tasksToSummarize.filter(t => t.completed);
+            const pendingTasks = tasksToSummarize.filter(t => !t.completed);
+
+            let summaryText = `## Task Report\n\nA summary of **${tasksToSummarize.length}** selected tasks.\n\n`;
+            if (completedTasks.length > 0) {
+                summaryText += `### ✅ Completed Tasks (${completedTasks.length})\n`;
+                summaryText += completedTasks.map(t => `- ${t.title}`).join('\n') + '\n\n';
+            }
+            if (pendingTasks.length > 0) {
+                summaryText += `### ⏳ Pending Tasks (${pendingTasks.length})\n`;
+                summaryText += pendingTasks.map(t => `- ${t.title}`).join('\n') + '\n\n';
+            }
+
+            const newSummary = service.createSummary({periodKey, listKey, taskIds: taskIdsToSummarize, summaryText});
+            setStoredSummaries(prev => [newSummary, ...(prev ?? [])]);
+            setSummaryDisplayContent(summaryText);
+            setTimeout(() => setCurrentIndex(0), 100);
+            setIsGenerating(false);
+            addNotification({ type: 'success', message: 'Simple task report generated.' });
+            return;
+        }
+
+        // AI path
         try {
-            const source = streamAiGeneratedSummary(taskIdsToSummarize, periodKey, listKey);
-            eventSourceRef.current = source;
-            let accumulatedText = '';
+            const onDelta = (chunk: string) => {
+                setSummaryDisplayContent(prev => prev + chunk);
+            };
 
-            source.addEventListener('message', (event: MessageEvent) => {
-                setIsWaitingForFirstChunk(false);
-                try {
-                    const chunk = JSON.parse(event.data);
-                    accumulatedText += chunk;
-                    setSummaryDisplayContent(accumulatedText);
-                } catch (e) {
-                    console.error("Failed to parse SSE message chunk:", event.data, e);
-                }
-            });
+            const finalSummary = await generateAiSummary(taskIdsToSummarize, periodKey, listKey, aiSettings!, onDelta);
 
-            source.addEventListener('end', (event: MessageEvent) => {
-                const finalSummaryData = JSON.parse(event.data);
-                const newSummaryEntry: StoredSummary = {
-                    id: finalSummaryData.id,
-                    createdAt: new Date(finalSummaryData.createdAt).getTime(),
-                    updatedAt: new Date(finalSummaryData.updatedAt).getTime(),
-                    periodKey: finalSummaryData.periodKey,
-                    listKey: finalSummaryData.listKey,
-                    taskIds: finalSummaryData.taskIds,
-                    summaryText: finalSummaryData.summaryText,
-                };
-
-                setSummaryDisplayContent(newSummaryEntry.summaryText);
-                setStoredSummaries(prev => [newSummaryEntry, ...(prev ?? []).filter(s => s.id !== newSummaryEntry.id)]);
-
-                source.close();
-                eventSourceRef.current = null;
-                setIsGenerating(false);
-                setIsWaitingForFirstChunk(false);
-                setTimeout(() => setCurrentIndex(0), 100);
-            });
-
-            source.addEventListener('error', (event: MessageEvent) => {
-                console.error("EventSource failed:", event);
-                const errorText = `\n\n[Error: ${event.data || 'Connection to summary service failed.'}]`;
-                setSummaryDisplayContent(prev => prev + errorText);
-                if (eventSourceRef.current) {
-                    source.close();
-                    eventSourceRef.current = null;
-                }
-                setIsGenerating(false);
-                setIsWaitingForFirstChunk(false);
-            });
+            setStoredSummaries(prev => [finalSummary, ...(prev ?? []).filter(s => s.id !== finalSummary.id)]);
+            setTimeout(() => setCurrentIndex(0), 100);
 
         } catch (error) {
-            console.error("Error initiating summary stream:", error);
-            const errorText = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
-            setSummaryDisplayContent(errorText);
+            console.error("Error generating summary:", error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error during summary generation.';
+            addNotification({type: 'error', message: `Summary Failed: ${errorMessage}`});
+            setSummaryDisplayContent(`## Summary Generation Failed\n\n**Error:**\n\`\`\`\n${errorMessage}\n\`\`\``);
+        } finally {
             setIsGenerating(false);
-            setIsWaitingForFirstChunk(false);
         }
-    }, [isGenerating, forceSaveCurrentSummary, allTasks, selectedTaskIds, filterKey, setStoredSummaries, setCurrentIndex, setIsGenerating]);
+    }, [isGenerating, forceSaveCurrentSummary, allTasks, selectedTaskIds, filterKey, setStoredSummaries, setCurrentIndex, setIsGenerating, aiSettings, addNotification, isAiEnabled]);
 
-    useEffect(() => {
-        return () => {
-            if (eventSourceRef.current) {
-                eventSourceRef.current.close();
-                eventSourceRef.current = null;
-            }
-        };
-    }, []);
 
     const handleEditorChange = useCallback((newValue: string) => {
         if (isInternalEditorUpdate.current) {
@@ -284,13 +268,13 @@ const SummaryView: React.FC = () => {
         if (isGenerating) return;
         forceSaveCurrentSummary();
         setCurrentIndex(prev => Math.min(prev + 1, (relevantSummaries?.length ?? 1) - 1));
-    }, [setCurrentIndex, relevantSummaries, forceSaveCurrentSummary]);
+    }, [setCurrentIndex, relevantSummaries, forceSaveCurrentSummary, isGenerating]);
 
     const handleNextSummary = useCallback(() => {
         if (isGenerating) return;
         forceSaveCurrentSummary();
         setCurrentIndex(prev => Math.max(prev - 1, 0));
-    }, [setCurrentIndex, forceSaveCurrentSummary]);
+    }, [setCurrentIndex, forceSaveCurrentSummary, isGenerating]);
 
     const handleRangeApply = useCallback((startDate: Date, endDate: Date) => {
         forceSaveCurrentSummary();
@@ -349,6 +333,7 @@ const SummaryView: React.FC = () => {
         const tasksForSummary = allTasks.filter(t => selectedTaskIds.has(t.id));
         return !tasksForSummary.some(t => t.listName !== 'Trash');
     }, [isGenerating, selectedTaskIds, allTasks]);
+
 
     const tasksUsedCount = useMemo(() => currentSummary?.taskIds.length ?? 0, [currentSummary]);
     const summaryTimestamp = useMemo(() => currentSummary ? formatDateTime(currentSummary.createdAt, preferences?.language) : null, [currentSummary, preferences]);
@@ -752,7 +737,7 @@ const SummaryView: React.FC = () => {
                     </div>
 
                     <div className="flex-1 min-h-0 relative">
-                        {isWaitingForFirstChunk && (
+                        {isGenerating && !summaryDisplayContent && (
                             <div
                                 className="absolute inset-0 bg-white/70 dark:bg-neutral-800/70 backdrop-blur-sm flex items-center justify-center z-10">
                                 <Icon name="loader" size={20} strokeWidth={1.5}
@@ -771,8 +756,8 @@ const SummaryView: React.FC = () => {
                                     className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-2 text-center">
                                     <Icon name="sparkles" size={32} strokeWidth={1}
                                           className="mb-3 text-grey-light/70 dark:text-neutral-500/70 opacity-80"/>
-                                    <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">{t('summary.noSummary.title', 'No summary available')}</p>
-                                    <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">{t('summary.noSummary.description', 'Select tasks and generate a new summary.')}</p>
+                                    <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">{t('summary.noSummary.title', {defaultValue: 'No summary available'})}</p>
+                                    <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">{t('summary.noSummary.description', {defaultValue: 'Select tasks and generate a new summary.'})}</p>
                                 </div>
                             )
                         ) : (

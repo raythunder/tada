@@ -7,26 +7,15 @@ import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {
     addNotificationAtom,
     appearanceSettingsAtom,
-    appearanceSettingsErrorAtom,
-    appearanceSettingsLoadingAtom,
-    currentFilterAtom,
-    currentUserAtom,
-    currentUserErrorAtom,
-    currentUserLoadingAtom,
     defaultAppearanceSettingsForApi,
     defaultPreferencesSettingsForApi,
+    currentFilterAtom,
     notificationsAtom,
     preferencesSettingsAtom,
-    preferencesSettingsErrorAtom,
-    preferencesSettingsLoadingAtom,
     selectedTaskIdAtom,
     storedSummariesAtom,
-    storedSummariesErrorAtom,
-    storedSummariesLoadingAtom,
     tasksAtom,
-    tasksErrorAtom,
-    tasksLoadingAtom,
-    userListsAtom,
+    userListsAtom, aiSettingsAtom,
 } from './store/atoms';
 import {startOfDay} from "@/utils/dateUtils";
 import {APP_THEMES} from "@/config/themes";
@@ -34,14 +23,10 @@ import Icon from "@/components/common/Icon";
 import {AnimatePresence, motion} from "framer-motion";
 import {twMerge} from "tailwind-merge";
 import {useTranslation} from "react-i18next";
-import PaymentModal from "@/components/premium/PaymentModal.tsx";
 
 const MainPage = lazy(() => import('./pages/MainPage'));
 const SummaryPage = lazy(() => import('./pages/SummaryPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 
 const AppLoadingSpinner: React.FC = () => (
     <div
@@ -81,17 +66,10 @@ const SettingsApplicator: React.FC = () => {
         document.documentElement.style.setProperty('--color-primary-light-hsl', selectedTheme.colors.light);
         document.documentElement.style.setProperty('--color-primary-dark-hsl', selectedTheme.colors.dark);
 
-        if (appearance.backgroundImageUrl && appearance.backgroundImageUrl !== 'none') {
-            document.documentElement.style.setProperty('--app-background-image', `url('${appearance.backgroundImageUrl}')`);
-            const brightnessValue = (appearance.backgroundImageBrightness ?? 100) / 100;
-            const filterValue = `brightness(${brightnessValue}) ${appearance.backgroundImageBlur > 0 ? `blur(${appearance.backgroundImageBlur}px)` : ''}`;
-            document.documentElement.style.setProperty('--app-background-filter', filterValue.trim());
-            document.body.style.backgroundColor = 'transparent';
-        } else {
-            document.documentElement.style.removeProperty('--app-background-image');
-            document.documentElement.style.removeProperty('--app-background-filter');
-            document.body.style.backgroundColor = '';
-        }
+        document.documentElement.style.removeProperty('--app-background-image');
+        document.documentElement.style.removeProperty('--app-background-filter');
+        document.body.style.backgroundColor = '';
+
 
         return () => {
             if (mediaQueryListener && appearance && appearance.darkMode === 'system') {
@@ -180,66 +158,18 @@ const DailyTaskRefresh: React.FC = () => {
 DailyTaskRefresh.displayName = 'DailyTaskRefresh';
 
 const GlobalStatusDisplay: React.FC = () => {
-    const {t} = useTranslation();
-    const isLoadingCurrentUser = useAtomValue(currentUserLoadingAtom);
-    const isLoadingTasks = useAtomValue(tasksLoadingAtom);
-    const isLoadingAppearance = useAtomValue(appearanceSettingsLoadingAtom);
-    const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
-    const isLoadingSummaries = useAtomValue(storedSummariesLoadingAtom);
-    const anyLoading = isLoadingCurrentUser || isLoadingTasks || isLoadingAppearance || isLoadingPreferences || isLoadingSummaries;
-
-    const errorCurrentUser = useAtomValue(currentUserErrorAtom);
-    const errorTasks = useAtomValue(tasksErrorAtom);
-    const errorAppearance = useAtomValue(appearanceSettingsErrorAtom);
-    const errorPreferences = useAtomValue(preferencesSettingsErrorAtom);
-    const errorSummaries = useAtomValue(storedSummariesErrorAtom);
-
     const [notifications, setNotifications] = useAtom(notificationsAtom);
-    const addNotification = useSetAtom(addNotificationAtom);
-    const existingErrorMessages = useRef(new Set<string>());
-
-    useEffect(() => {
-        const errors = [
-            errorCurrentUser, errorTasks, errorAppearance, errorPreferences, errorSummaries
-        ].filter((e): e is string => typeof e === 'string');
-
-        errors.forEach(errorMsg => {
-            if (!existingErrorMessages.current.has(errorMsg)) {
-                addNotification({
-                    type: 'error',
-                    message: errorMsg,
-                });
-                existingErrorMessages.current.add(errorMsg);
-                setTimeout(() => {
-                    existingErrorMessages.current.delete(errorMsg);
-                }, 5100); // Slightly longer than notification timeout
-            }
-        });
-    }, [errorCurrentUser, errorTasks, errorAppearance, errorPreferences, errorSummaries, addNotification]);
 
     const removeNotification = (id: number) => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     };
 
-    if (!anyLoading && notifications.length === 0) return null;
+    if (notifications.length === 0) return null;
 
     return (
         <div
             className="fixed bottom-4 right-4 z-[10000] space-y-2 max-w-sm w-full flex flex-col items-end">
             <AnimatePresence>
-                {anyLoading && (
-                    <motion.div
-                        key="loading-indicator"
-                        initial={{opacity: 0, y: 10, scale: 0.95}}
-                        animate={{opacity: 1, y: 0, scale: 1}}
-                        exit={{opacity: 0, y: 10, scale: 0.95}}
-                        transition={{duration: 0.2, ease: "easeOut"}}
-                        className="p-3 bg-neutral-800 text-white rounded-lg shadow-xl text-xs flex items-center w-fit"
-                    >
-                        <Icon name="loader" size={14} className="animate-spin mr-2"/>
-                        <span>{t('global.loading')}</span>
-                    </motion.div>
-                )}
                 {notifications.map((notification) => (
                     <motion.div
                         key={notification.id}
@@ -273,62 +203,40 @@ const GlobalStatusDisplay: React.FC = () => {
 };
 GlobalStatusDisplay.displayName = 'GlobalStatusDisplay';
 
-const ProtectedRoute: React.FC = () => {
-    const currentUser = useAtomValue(currentUserAtom);
-    const isLoadingUser = useAtomValue(currentUserLoadingAtom);
-    const location = useLocation();
-
-    if (isLoadingUser) {
-        return <AppLoadingSpinner/>;
-    }
-
-    if (!currentUser) {
-        return <Navigate to="/login" state={{from: location}} replace/>;
-    }
-    return <Outlet/>;
-};
-ProtectedRoute.displayName = 'ProtectedRoute';
-
 const AppRoutes: React.FC = () => {
     const { t } = useTranslation();
 
     return (
         <Routes>
-            <Route path="/login" element={<LoginPage/>}/>
-            <Route path="/register" element={<RegisterPage/>}/>
-            <Route path="/forgot-password" element={<ForgotPasswordPage/>}/>
-
-            <Route element={<ProtectedRoute/>}>
-                <Route path="/" element={<MainLayout/>}>
-                    <Route element={<RouteChangeHandler/>}>
-                        <Route index element={<Navigate to="/all" replace/>}/>
-                        <Route path="all" element={<MainPage title={t('sidebar.allTasks')} filter="all"/>}/>
-                        <Route path="today" element={<MainPage title={t('sidebar.today')} filter="today"/>}/>
-                        <Route path="next7days" element={<MainPage title={t('sidebar.next7Days')} filter="next7days"/>}/>
-                        <Route path="completed" element={<MainPage title={t('sidebar.completed')} filter="completed"/>}/>
-                        <Route path="trash" element={<MainPage title={t('sidebar.trash')} filter="trash"/>}/>
-                        <Route path="summary" element={<SummaryPage/>}/>
-                        <Route path="calendar" element={<CalendarPage/>}/>
-                        <Route path="list/:listName" element={<ListPageWrapper/>}/>
-                        <Route path="list/" element={<Navigate to="/list/Inbox" replace/>}/>
-                        <Route path="tag/:tagName" element={<TagPageWrapper/>}/>
-                        <Route path="tag/" element={<Navigate to="/all" replace/>}/>
-                        <Route path="*" element={<Navigate to="/all" replace/>}/>
-                    </Route>
+            <Route path="/" element={<MainLayout/>}>
+                <Route element={<RouteChangeHandler/>}>
+                    <Route index element={<Navigate to="/all" replace/>}/>
+                    <Route path="all" element={<MainPage title={t('sidebar.allTasks')} filter="all"/>}/>
+                    <Route path="today" element={<MainPage title={t('sidebar.today')} filter="today"/>}/>
+                    <Route path="next7days" element={<MainPage title={t('sidebar.next7Days')} filter="next7days"/>}/>
+                    <Route path="completed" element={<MainPage title={t('sidebar.completed')} filter="completed"/>}/>
+                    <Route path="trash" element={<MainPage title={t('sidebar.trash')} filter="trash"/>}/>
+                    <Route path="summary" element={<SummaryPage/>}/>
+                    <Route path="calendar" element={<CalendarPage/>}/>
+                    <Route path="list/:listName" element={<ListPageWrapper/>}/>
+                    <Route path="list/" element={<Navigate to="/list/Inbox" replace/>}/>
+                    <Route path="tag/:tagName" element={<TagPageWrapper/>}/>
+                    <Route path="tag/" element={<Navigate to="/all" replace/>}/>
+                    <Route path="*" element={<Navigate to="/all" replace/>}/>
                 </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/login" replace/>}/>
+            <Route path="*" element={<Navigate to="/all" replace/>}/>
         </Routes>
     );
 }
 
 const App: React.FC = () => {
-    // These calls ensure the atoms are initialized and start fetching data on app load if necessary.
-    useAtomValue(currentUserAtom);
+    // These calls ensure the atoms are initialized and start loading data from localStorage on app load.
     useAtomValue(tasksAtom);
     useAtomValue(userListsAtom);
     useAtomValue(appearanceSettingsAtom);
     useAtomValue(preferencesSettingsAtom);
+    useAtomValue(aiSettingsAtom);
     useAtomValue(storedSummariesAtom);
 
     return (
@@ -336,7 +244,6 @@ const App: React.FC = () => {
             <SettingsApplicator/>
             <DailyTaskRefresh/>
             <GlobalStatusDisplay/>
-            <PaymentModal />
             <Suspense fallback={<AppLoadingSpinner/>}>
                 <AppRoutes />
             </Suspense>

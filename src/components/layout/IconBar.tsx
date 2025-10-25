@@ -2,18 +2,16 @@
 import React, {memo, useCallback, useMemo} from 'react';
 import {NavLink, useLocation} from 'react-router-dom';
 import Icon from '../common/Icon';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {currentUserAtom, isSettingsOpenAtom, settingsSelectedTabAtom} from '@/store/atoms';
+import {useAtom, useSetAtom} from 'jotai';
+import {isSettingsOpenAtom, settingsSelectedTabAtom} from '@/store/atoms';
 import {twMerge} from 'tailwind-merge';
 import Button from "@/components/common/Button";
 import {IconName} from "@/components/common/IconMap";
 import * as SortTooltip from '@radix-ui/react-tooltip';
 import {useTranslation} from "react-i18next";
-import UserAvatar from "@/components/common/UserAvatar";
 
 const IconBar: React.FC = memo(() => {
     const {t} = useTranslation();
-    const currentUser = useAtomValue(currentUserAtom);
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
     const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
     const location = useLocation();
@@ -24,8 +22,8 @@ const IconBar: React.FC = memo(() => {
         {path: '/summary', icon: 'sparkles', labelKey: 'iconBar.aiSummary'},
     ], []);
 
-    const handleAvatarClick = useCallback(() => {
-        setSettingsTab('account');
+    const handleSettingsClick = useCallback(() => {
+        setSettingsTab('appearance');
         setIsSettingsOpen(true);
     }, [setIsSettingsOpen, setSettingsTab]);
 
@@ -107,10 +105,10 @@ const IconBar: React.FC = memo(() => {
             <div className="mt-auto mb-1">
                 <SortTooltip.Root delayDuration={200}>
                     <SortTooltip.Trigger asChild>
-                        <Button onClick={handleAvatarClick} variant="ghost" size="icon"
+                        <Button onClick={handleSettingsClick} variant="ghost" size="icon"
                                 className="w-9 h-9 rounded-full overflow-hidden p-0 hover:bg-grey-ultra-light dark:hover:bg-grey-deep focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep"
                                 aria-label={t('iconBar.accountSettings')}>
-                            <UserAvatar user={currentUser} size={36}/>
+                            <Icon name="settings" size={18} strokeWidth={1.5} />
                         </Button>
                     </SortTooltip.Trigger>
                     <SortTooltip.Portal>

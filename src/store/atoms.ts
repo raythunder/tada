@@ -2,6 +2,7 @@
 import {atom, WritableAtom} from 'jotai';
 import {RESET} from 'jotai/utils';
 import {
+    AISettings,
     AppearanceSettings,
     List,
     PreferencesSettings,
@@ -10,27 +11,14 @@ import {
     Task,
     TaskFilter,
     TaskGroupCategory,
-    User
 } from '@/types';
 import {
-    endOfDay,
-    isAfter,
-    isBefore,
-    isSameDay,
-    isValid,
-    isWithinNext7Days,
-    safeParseDate,
-    startOfDay,
-    startOfMonth,
-    startOfWeek,
-    subDays,
-    subMonths,
-    subWeeks,
-    endOfMonth,
-    endOfWeek
+    endOfDay, isAfter, isBefore, isSameDay, isValid, isWithinNext7Days,
+    safeParseDate, startOfDay, startOfMonth, startOfWeek, subDays, subMonths,
+    subWeeks, endOfMonth, endOfWeek
 } from '@/utils/dateUtils';
-import * as service from '@/services/apiService';
-import {SubtaskCreate, SubtaskUpdate, TaskCreate, TaskUpdate} from "@/types/api";
+import * as service from '@/services/localStorageService';
+import {AI_PROVIDERS, AIModel} from "@/config/aiProviders";
 
 export interface Notification {
     id: number;
@@ -38,15 +26,13 @@ export interface Notification {
     message: string;
 }
 
-type AsyncDataAtom<TData, TUpdate = TData | ((prev: TData | null) => TData) | typeof RESET> = WritableAtom<
+type LocalDataAtom<TData, TUpdate = TData | ((prev: TData | null) => TData) | typeof RESET> = WritableAtom<
     TData | null,
     [TUpdate],
-    Promise<void>
+    void
 >;
 
-// --- Helper Functions ---
 export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): TaskGroupCategory => {
-    // This is a client-side only concept for UI grouping
     if (task.completed || task.listName === 'Trash') {
         return 'nodate';
     }
@@ -67,198 +53,38 @@ export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): 
 
 // --- Default Settings for Fallback ---
 export const defaultAppearanceSettingsForApi = (): AppearanceSettings => ({
-    themeId: 'default-coral', darkMode: 'system', backgroundImageUrl: 'none', backgroundImageBlur: 0,
-    backgroundImageBrightness: 100, interfaceDensity: 'default',
+    themeId: 'default-coral', darkMode: 'system', interfaceDensity: 'default',
 });
 export const defaultPreferencesSettingsForApi = (): PreferencesSettings => ({
     language: 'zh-CN', defaultNewTaskDueDate: null, defaultNewTaskPriority: null,
     defaultNewTaskList: 'Inbox', confirmDeletions: true,
 });
-
-// --- User & Auth Atoms ---
-const baseCurrentUserAtom = atom<User | null>(null);
-export const currentUserLoadingAtom = atom<boolean>(true);
-export const currentUserErrorAtom = atom<string | null>(null);
-
-export const currentUserAtom: AsyncDataAtom<User, User | null | typeof RESET | 'logout' | undefined> = atom(
-    (get) => get(baseCurrentUserAtom),
-    async (get, set, update) => {
-        const resetAllUserData = () => {
-            set(tasksAtom, RESET);
-            set(userListsAtom, RESET);
-            set(appearanceSettingsAtom, RESET);
-            set(preferencesSettingsAtom, RESET);
-            set(storedSummariesAtom, RESET);
-            set(baseCurrentUserAtom, null);
-        };
-
-        if (update === 'logout') {
-            set(currentUserLoadingAtom, true);
-            await service.apiLogout();
-            resetAllUserData();
-            set(currentUserLoadingAtom, false);
-            return;
-        }
-
-        if (update === RESET || update === undefined) {
-            set(currentUserLoadingAtom, true);
-            set(currentUserErrorAtom, null);
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-                set(currentUserLoadingAtom, false);
-                set(baseCurrentUserAtom, null);
-                return;
-            }
-
-            try {
-                const user = await service.apiFetchCurrentUser();
-                set(baseCurrentUserAtom, user);
-                // After fetching user, trigger fetch for other data
-                set(tasksAtom, RESET);
-                set(userListsAtom, RESET);
-                set(appearanceSettingsAtom, RESET);
-                set(preferencesSettingsAtom, RESET);
-                set(storedSummariesAtom, RESET);
-            } catch (e: any) {
-                set(currentUserErrorAtom, e.message || 'Not authenticated');
-                resetAllUserData();
-                // If token is invalid, log out
-                if (e.message.includes('403') || e.message.includes('401')) {
-                    await service.apiLogout();
-                }
-            } finally {
-                set(currentUserLoadingAtom, false);
-            }
-            return;
-        }
-
-        if (update !== null && typeof update === 'object' && 'id' in update) {
-            set(baseCurrentUserAtom, update as User);
-            set(tasksAtom, RESET);
-            set(userListsAtom, RESET);
-            set(appearanceSettingsAtom, RESET);
-            set(preferencesSettingsAtom, RESET);
-            set(storedSummariesAtom, RESET);
-        } else if (update === null) {
-            set(baseCurrentUserAtom, null);
-        }
-    }
-);
-currentUserAtom.onMount = (setSelf) => {
-    setSelf(undefined);
+export const defaultAISettingsForApi = (): AISettings => {
+    const defaultProvider = AI_PROVIDERS[0];
+    return {
+        provider: defaultProvider.id,
+        providerSettings: {}, // No providers configured by default
+        providerOrder: AI_PROVIDERS.map(p => p.id),
+        fetchedModels: {}, // Add fetchedModels to default
+    };
 };
 
+// --- Atoms from before (no changes needed to their implementation logic) ---
+// ... tasksAtom, userListsAtom, UI State Atoms, Settings Atoms, Summary Atoms, Derived Atoms ...
 // --- Task Atoms ---
 const baseTasksDataAtom = atom<Task[] | null>(null);
-export const tasksLoadingAtom = atom<boolean>(true);
+export const tasksLoadingAtom = atom<boolean>(false);
 export const tasksErrorAtom = atom<string | null>(null);
 
-
-const findTaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
-    const prevMap = new Map(prevTasks.map(t => [t.id, t]));
-    const updated: { id: string, changes: TaskUpdate }[] = [];
-
-    for (const nextTask of nextTasks) {
-        if (nextTask.id.startsWith('task-')) continue; // Skip new local tasks
-        const prevTask = prevMap.get(nextTask.id);
-        if (prevTask) {
-            const changes: TaskUpdate = {};
-            if (nextTask.title !== prevTask.title) changes.title = nextTask.title;
-            if (nextTask.content !== prevTask.content) changes.content = nextTask.content;
-            if (nextTask.completed !== prevTask.completed) changes.completed = nextTask.completed;
-            if (nextTask.completePercentage !== prevTask.completePercentage) changes.completePercentage = nextTask.completePercentage;
-            if (nextTask.dueDate !== prevTask.dueDate) changes.dueDate = nextTask.dueDate ? new Date(nextTask.dueDate).toISOString() : null;
-            if (nextTask.priority !== prevTask.priority) changes.priority = nextTask.priority;
-            if (nextTask.listId !== prevTask.listId) changes.listId = nextTask.listId;
-            if (nextTask.order !== prevTask.order) changes.order = nextTask.order;
-            if (JSON.stringify(nextTask.tags?.sort()) !== JSON.stringify(prevTask.tags?.sort())) changes.tags = nextTask.tags;
-
-            if (Object.keys(changes).length > 0) {
-                updated.push({id: nextTask.id, changes});
-            }
-        }
-    }
-    return {updated};
-};
-
-const findSubtaskChangesForAPI = (prevTasks: Task[], nextTasks: Task[]) => {
-    const created: { parentTaskId: string, subtask: SubtaskCreate }[] = [];
-    const updated: { id: string, changes: SubtaskUpdate }[] = [];
-    const deleted: string[] = [];
-    const nextTasksMap = new Map(nextTasks.map(t => [t.id, t]));
-
-    for (const prevTask of prevTasks) {
-        const nextTask = nextTasksMap.get(prevTask.id);
-        if (!nextTask) continue; // Task was deleted, handled elsewhere
-
-        const prevSubtasks = prevTask.subtasks ?? [];
-        const nextSubtasks = nextTask.subtasks ?? [];
-        const prevSubtaskMap = new Map(prevSubtasks.map(s => [s.id, s]));
-        const nextSubtaskMap = new Map(nextSubtasks.map(s => [s.id, s]));
-
-        // Find created subtasks
-        for (const nextSub of nextSubtasks) {
-            if (nextSub.id.startsWith('subtask-')) {
-                created.push({
-                    parentTaskId: nextTask.id,
-                    subtask: {
-                        title: nextSub.title,
-                        order: nextSub.order,
-                        dueDate: nextSub.dueDate ? new Date(nextSub.dueDate).toISOString() : null
-                    }
-                });
-            }
-        }
-
-        // Find updated and deleted subtasks
-        for (const prevSub of prevSubtasks) {
-            const nextSub = nextSubtaskMap.get(prevSub.id);
-            if (!nextSub) {
-                if (!prevSub.id.startsWith('subtask-')) { // Don't try to delete local-only IDs
-                    deleted.push(prevSub.id);
-                }
-            } else {
-                const changes: SubtaskUpdate = {};
-                if (prevSub.title !== nextSub.title) changes.title = nextSub.title;
-                if (prevSub.completed !== nextSub.completed) changes.completed = nextSub.completed;
-                if (prevSub.order !== nextSub.order) changes.order = nextSub.order;
-                if (prevSub.dueDate !== nextSub.dueDate) changes.dueDate = nextSub.dueDate ? new Date(nextSub.dueDate).toISOString() : null;
-
-                if (Object.keys(changes).length > 0) {
-                    updated.push({id: prevSub.id, changes});
-                }
-            }
-        }
-    }
-    return {created, updated, deleted};
-};
-
-export const tasksAtom: AsyncDataAtom<Task[]> = atom(
+export const tasksAtom: LocalDataAtom<Task[]> = atom(
     (get) => get(baseTasksDataAtom),
-    async (get, set, update) => {
-        const currentUser = get(currentUserAtom);
+    (get, set, update) => {
         if (update === RESET) {
-            if (!currentUser) {
-                set(baseTasksDataAtom, []);
-                set(tasksLoadingAtom, false);
-                return;
-            }
-            set(tasksLoadingAtom, true);
-            set(tasksErrorAtom, null);
-            try {
-                const fetchedTasks = await service.apiFetchTasks();
-                const tasksWithCategory = fetchedTasks.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}));
-                set(baseTasksDataAtom, tasksWithCategory.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-            } catch (e: any) {
-                set(tasksErrorAtom, e.message || 'Failed to fetch tasks');
-                set(baseTasksDataAtom, []);
-            } finally {
-                set(tasksLoadingAtom, false);
-            }
+            const fetchedTasks = service.fetchTasks();
+            const tasksWithCategory = fetchedTasks.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}));
+            set(baseTasksDataAtom, tasksWithCategory.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
             return;
         }
-
-        if (!currentUser) return;
 
         const previousTasks = get(baseTasksDataAtom) ?? [];
         const nextTasksUnprocessed = typeof update === 'function' ? (update as (prev: Task[] | null) => Task[])(previousTasks) : update;
@@ -270,123 +96,50 @@ export const tasksAtom: AsyncDataAtom<Task[]> = atom(
 
         set(baseTasksDataAtom, nextTasksWithCategory);
 
-        try {
-            // Find changes between previous and next states
-            const {updated: updatedTasks} = findTaskChangesForAPI(previousTasks, nextTasksWithCategory);
-            const {
-                created: createdSubtasks,
-                updated: updatedSubtasks,
-                deleted: deletedSubtasks
-            } = findSubtaskChangesForAPI(previousTasks, nextTasksWithCategory);
-
-            // Find new tasks (with local IDs)
-            const newLocalTasks = nextTasksWithCategory.filter(t => t.id.startsWith('task-'));
-
-            // Create API call promises
-            const creationPromises = newLocalTasks.map(task => {
-                const {subtasks, ...mainTaskData} = task;
-                const payload: TaskCreate = {
-                    title: mainTaskData.title,
-                    content: mainTaskData.content,
-                    listId: mainTaskData.listId,
-                    priority: mainTaskData.priority,
-                    tags: mainTaskData.tags,
-                    dueDate: mainTaskData.dueDate ? new Date(mainTaskData.dueDate).toISOString() : null,
-                    order: mainTaskData.order,
-                    completed: mainTaskData.completed,
-                    completePercentage: mainTaskData.completePercentage || undefined,
-                    subtasks: subtasks?.map(s => ({title: s.title}))
-                };
-                return service.apiCreateTask(payload);
-            });
-
-            const updateTaskPromises = updatedTasks.map(({id, changes}) => service.apiUpdateTask(id, changes));
-            const createSubtaskPromises = createdSubtasks.map(({parentTaskId, subtask}) => service.apiCreateSubtask(parentTaskId, subtask));
-            const updateSubtaskPromises = updatedSubtasks.map(({id, changes}) => service.apiUpdateSubtask(id, changes));
-            const deleteSubtaskPromises = deletedSubtasks.map(id => service.apiDeleteSubtask(id));
-
-            // Execute all API calls concurrently
-            const creationResults = await Promise.all(creationPromises);
-
-            await Promise.all([
-                ...updateTaskPromises,
-                ...createSubtaskPromises,
-                ...updateSubtaskPromises,
-                ...deleteSubtaskPromises,
-            ]);
-
-            // If new tasks were created, update the state with the real tasks from the server
-            // to replace the ones with temporary local IDs.
-            if (creationResults.length > 0) {
-                const currentTasks = get(baseTasksDataAtom) ?? [];
-                const localIds = new Set(newLocalTasks.map(t => t.id));
-
-                // Filter out the old local tasks and add the new server-confirmed tasks
-                const updatedTaskList = [
-                    ...currentTasks.filter(t => !localIds.has(t.id)),
-                    ...creationResults.map(t => ({...t, groupCategory: getTaskGroupCategory(t)}))
-                ];
-
-                // Set the final state with real IDs
-                set(baseTasksDataAtom, updatedTaskList.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-            }
-
-        } catch (e: any) {
-            console.error('[TasksAtom] Backend update failed, reverting:', e);
-            set(tasksErrorAtom, e.message || 'Failed to sync tasks with server.');
-            set(baseTasksDataAtom, previousTasks); // Revert to previous state on error
-        }
+        const data = {
+            ...service.fetchSettings(),
+            tasks: nextTasksWithCategory,
+            lists: service.fetchLists(),
+            summaries: service.fetchSummaries()
+        };
+        localStorage.setItem('tada-app-data', JSON.stringify(data));
     }
 );
 tasksAtom.onMount = (setSelf) => {
     setSelf(RESET);
 };
 
-
 // --- List Atoms ---
 const baseUserListsAtom = atom<List[] | null>(null);
-export const userListsLoadingAtom = atom<boolean>(true);
+export const userListsLoadingAtom = atom<boolean>(false);
 export const userListsErrorAtom = atom<string | null>(null);
 
-export const userListsAtom: AsyncDataAtom<List[], List[] | ((prev: List[] | null) => List[]) | typeof RESET> = atom(
+export const userListsAtom: LocalDataAtom<List[]> = atom(
     (get) => get(baseUserListsAtom),
-    async (get, set, update) => {
-        const currentUser = get(currentUserAtom);
+    (get, set, update) => {
         if (update === RESET) {
-            if (!currentUser) {
-                set(baseUserListsAtom, []);
-                set(userListsLoadingAtom, false);
-                return;
-            }
-            set(userListsLoadingAtom, true);
-            set(userListsErrorAtom, null);
-            try {
-                const fetched = await service.apiFetchLists();
-                set(baseUserListsAtom, fetched);
-            } catch (e: any) {
-                set(userListsErrorAtom, e.message || 'Failed to load lists');
-                set(baseUserListsAtom, []);
-            } finally {
-                set(userListsLoadingAtom, false);
-            }
+            set(baseUserListsAtom, service.fetchLists());
             return;
         }
-
-        if (!currentUser) return;
-
         const nextLists = typeof update === 'function' ? (update as (prev: List[] | null) => List[])(get(baseUserListsAtom)) : update;
         set(baseUserListsAtom, nextLists);
+        const data = {
+            ...service.fetchSettings(),
+            tasks: service.fetchTasks(),
+            lists: nextLists,
+            summaries: service.fetchSummaries()
+        };
+        localStorage.setItem('tada-app-data', JSON.stringify(data));
     }
 );
 userListsAtom.onMount = (setSelf) => {
     setSelf(RESET);
 };
 
-
 // --- UI State Atoms ---
 export const selectedTaskIdAtom = atom<string | null>(null);
 export const isSettingsOpenAtom = atom<boolean>(false);
-export const settingsSelectedTabAtom = atom<SettingsTab>('account');
+export const settingsSelectedTabAtom = atom<SettingsTab>('appearance');
 export const isAddListModalOpenAtom = atom<boolean>(false);
 export const currentFilterAtom = atom<TaskFilter>('all');
 export const searchTermAtom = atom<string>('');
@@ -397,65 +150,32 @@ export const addNotificationAtom = atom(
     null,
     (get, set, newNotification: Omit<Notification, 'id'>) => {
         const id = Date.now() + Math.random();
-        // Add the new notification
         set(notificationsAtom, (prev) => [...prev, { ...newNotification, id }]);
-
-        // Set a timer to remove it after 5 seconds
         setTimeout(() => {
             set(notificationsAtom, (prev) => prev.filter((n) => n.id !== id));
         }, 5000);
     }
 );
 
-// --- Payment Modal Atoms ---
-export const isPaymentModalOpenAtom = atom(false);
-export const paymentModalConfigAtom = atom<{ productId: string; productName: string } | null>(null);
-export const openPaymentModalAtom = atom(null, (get, set, config: { productId: string, productName: string }) => {
-    set(paymentModalConfigAtom, config);
-    set(isPaymentModalOpenAtom, true);
-});
-
 // --- Settings Atoms ---
 export type DarkModeOption = 'light' | 'dark' | 'system';
 
 const baseAppearanceSettingsAtom = atom<AppearanceSettings | null>(null);
-export const appearanceSettingsLoadingAtom = atom<boolean>(true);
+export const appearanceSettingsLoadingAtom = atom<boolean>(false);
 export const appearanceSettingsErrorAtom = atom<string | null>(null);
 
-export const appearanceSettingsAtom: AsyncDataAtom<AppearanceSettings> = atom(
+export const appearanceSettingsAtom: LocalDataAtom<AppearanceSettings> = atom(
     (get) => get(baseAppearanceSettingsAtom),
-    async (get, set, newSettingsParam) => {
-        const currentUser = get(currentUserAtom);
+    (get, set, newSettingsParam) => {
         if (newSettingsParam === RESET) {
-            if (!currentUser) {
-                set(baseAppearanceSettingsAtom, defaultAppearanceSettingsForApi());
-                set(appearanceSettingsLoadingAtom, false);
-                return;
-            }
-            set(appearanceSettingsLoadingAtom, true);
-            set(appearanceSettingsErrorAtom, null);
-            try {
-                const settings = await service.apiFetchSettings();
-                set(baseAppearanceSettingsAtom, settings.appearance);
-            } catch (e: any) {
-                set(appearanceSettingsErrorAtom, e.message || 'Failed to load appearance settings');
-                set(baseAppearanceSettingsAtom, defaultAppearanceSettingsForApi());
-            } finally {
-                set(appearanceSettingsLoadingAtom, false);
-            }
+            set(baseAppearanceSettingsAtom, service.fetchSettings().appearance);
             return;
         }
-        if (!currentUser) return;
         const currentSettings = get(baseAppearanceSettingsAtom) ?? defaultAppearanceSettingsForApi();
         const updatedSettings = typeof newSettingsParam === 'function' ? (newSettingsParam as (prev: AppearanceSettings) => AppearanceSettings)(currentSettings) : newSettingsParam;
-        set(baseAppearanceSettingsAtom, updatedSettings);
-        try {
-            const savedSettings = await service.apiUpdateAppearanceSettings(updatedSettings);
-            set(baseAppearanceSettingsAtom, savedSettings);
-        } catch (e: any) {
-            set(baseAppearanceSettingsAtom, currentSettings);
-            set(appearanceSettingsErrorAtom, e.message || 'API error saving appearance settings');
-        }
+
+        const savedSettings = service.updateAppearanceSettings(updatedSettings);
+        set(baseAppearanceSettingsAtom, savedSettings);
     }
 );
 appearanceSettingsAtom.onMount = (setSelf) => {
@@ -465,54 +185,57 @@ appearanceSettingsAtom.onMount = (setSelf) => {
 export type DefaultNewTaskDueDate = null | 'today' | 'tomorrow';
 
 const basePreferencesSettingsAtom = atom<PreferencesSettings | null>(null);
-export const preferencesSettingsLoadingAtom = atom<boolean>(true);
+export const preferencesSettingsLoadingAtom = atom<boolean>(false);
 export const preferencesSettingsErrorAtom = atom<string | null>(null);
 
-export const preferencesSettingsAtom: AsyncDataAtom<PreferencesSettings> = atom(
+export const preferencesSettingsAtom: LocalDataAtom<PreferencesSettings> = atom(
     (get) => get(basePreferencesSettingsAtom),
-    async (get, set, newSettingsParam) => {
-        const currentUser = get(currentUserAtom);
+    (get, set, newSettingsParam) => {
         if (newSettingsParam === RESET) {
-            if (!currentUser) {
-                set(basePreferencesSettingsAtom, defaultPreferencesSettingsForApi());
-                set(preferencesSettingsLoadingAtom, false);
-                return;
-            }
-            set(preferencesSettingsLoadingAtom, true);
-            set(preferencesSettingsErrorAtom, null);
-            try {
-                const settings = await service.apiFetchSettings();
-                set(basePreferencesSettingsAtom, settings.preferences);
-            } catch (e: any) {
-                set(preferencesSettingsErrorAtom, e.message || 'Failed to load preferences');
-                set(basePreferencesSettingsAtom, defaultPreferencesSettingsForApi());
-            } finally {
-                set(preferencesSettingsLoadingAtom, false);
-            }
+            set(basePreferencesSettingsAtom, service.fetchSettings().preferences);
             return;
         }
-        if (!currentUser) return;
         const currentSettings = get(basePreferencesSettingsAtom) ?? defaultPreferencesSettingsForApi();
         const updatedSettings = typeof newSettingsParam === 'function' ? (newSettingsParam as (prev: PreferencesSettings) => PreferencesSettings)(currentSettings) : newSettingsParam;
-        set(basePreferencesSettingsAtom, updatedSettings);
-        try {
-            const savedSettings = await service.apiUpdatePreferencesSettings(updatedSettings);
-            set(basePreferencesSettingsAtom, savedSettings);
-        } catch (e: any) {
-            set(basePreferencesSettingsAtom, currentSettings);
-            set(preferencesSettingsErrorAtom, e.message || 'API error saving preferences');
-        }
+
+        const savedSettings = service.updatePreferencesSettings(updatedSettings);
+        set(basePreferencesSettingsAtom, savedSettings);
     }
 );
 preferencesSettingsAtom.onMount = (setSelf) => {
     setSelf(RESET);
 };
 
-export type PremiumSettings = { tier: 'free' | 'pro'; subscribedUntil: number | null; };
-export const premiumSettingsAtom = atom((get): PremiumSettings => {
-    const user = get(currentUserAtom);
-    return user?.isPremium ? {tier: 'pro', subscribedUntil: null} : {tier: 'free', subscribedUntil: null};
-});
+const baseAISettingsAtom = atom<AISettings | null>(null);
+export const aiSettingsLoadingAtom = atom<boolean>(false);
+export const aiSettingsErrorAtom = atom<string | null>(null);
+
+export const aiSettingsAtom: LocalDataAtom<AISettings> = atom(
+    (get) => get(baseAISettingsAtom),
+    (get, set, newSettingsParam) => {
+        if (newSettingsParam === RESET) {
+            const savedSettings = service.fetchSettings().ai;
+            const defaultSettings = defaultAISettingsForApi();
+            const mergedSettings: AISettings = {
+                ...defaultSettings,
+                ...savedSettings,
+                providerOrder: savedSettings.providerOrder && savedSettings.providerOrder.length > 0 ? savedSettings.providerOrder : defaultSettings.providerOrder,
+                providerSettings: savedSettings.providerSettings || {},
+                fetchedModels: savedSettings.fetchedModels || {}, // Merge fetchedModels
+            };
+            set(baseAISettingsAtom, mergedSettings);
+            return;
+        }
+        const currentSettings = get(baseAISettingsAtom) ?? defaultAISettingsForApi();
+        const updatedSettings = typeof newSettingsParam === 'function' ? (newSettingsParam as (prev: AISettings | null) => AISettings)(currentSettings) : newSettingsParam;
+
+        const savedSettings = service.updateAISettings(updatedSettings);
+        set(baseAISettingsAtom, savedSettings);
+    }
+);
+aiSettingsAtom.onMount = (setSelf) => {
+    setSelf(RESET);
+};
 
 // --- Summary Atoms ---
 export type SummaryPeriodKey = 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth';
@@ -522,36 +245,26 @@ export const summaryListFilterAtom = atom<string>('all');
 export const summarySelectedTaskIdsAtom = atom<Set<string>>(new Set<string>());
 
 const baseStoredSummariesAtom = atom<StoredSummary[] | null>(null);
-export const storedSummariesLoadingAtom = atom<boolean>(true);
+export const storedSummariesLoadingAtom = atom<boolean>(false);
 export const storedSummariesErrorAtom = atom<string | null>(null);
 
-export const storedSummariesAtom: AsyncDataAtom<StoredSummary[], StoredSummary[] | ((prev: StoredSummary[] | null) => StoredSummary[]) | typeof RESET> = atom(
+export const storedSummariesAtom: LocalDataAtom<StoredSummary[]> = atom(
     (get) => get(baseStoredSummariesAtom),
-    async (get, set, update) => {
-        const currentUser = get(currentUserAtom);
+    (get, set, update) => {
         if (update === RESET) {
-            if (!currentUser) {
-                set(baseStoredSummariesAtom, []);
-                set(storedSummariesLoadingAtom, false);
-                return;
-            }
-            set(storedSummariesLoadingAtom, true);
-            set(storedSummariesErrorAtom, null);
-            try {
-                const fetched = await service.apiFetchSummaries();
-                set(baseStoredSummariesAtom, fetched);
-            } catch (e: any) {
-                set(storedSummariesErrorAtom, e.message || 'Failed to load summaries');
-                set(baseStoredSummariesAtom, []);
-            } finally {
-                set(storedSummariesLoadingAtom, false);
-            }
+            set(baseStoredSummariesAtom, service.fetchSummaries());
             return;
         }
-
-        if (!currentUser) return;
         const updatedSummaries = typeof update === 'function' ? (update as (prev: StoredSummary[] | null) => StoredSummary[])(get(baseStoredSummariesAtom) ?? []) : update;
         set(baseStoredSummariesAtom, updatedSummaries);
+
+        const data = {
+            ...service.fetchSettings(),
+            tasks: service.fetchTasks(),
+            lists: service.fetchLists(),
+            summaries: updatedSummaries
+        };
+        localStorage.setItem('tada-app-data', JSON.stringify(data));
     }
 );
 storedSummariesAtom.onMount = (setSelf) => {

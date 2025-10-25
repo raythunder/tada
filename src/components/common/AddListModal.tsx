@@ -1,11 +1,11 @@
 // src/components/common/AddListModal.tsx
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {useAtom, useAtomValue} from 'jotai';
-import {isAddListModalOpenAtom, userListNamesAtom} from '@/store/atoms';
+import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import {isAddListModalOpenAtom, tasksAtom, userListNamesAtom, userListsAtom} from '@/store/atoms';
 import Button from './Button';
 import {twMerge} from 'tailwind-merge';
 import * as Dialog from '@radix-ui/react-dialog';
-import * as service from '@/services/apiService';
+import * as service from '@/services/localStorageService';
 import {useTranslation} from "react-i18next";
 
 interface AddListModalProps {
@@ -49,7 +49,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
             return;
         }
         const lowerTrimmedName = trimmedName.toLowerCase();
-        if (allListNames.some(name => name.toLowerCase() === lowerTrimmedName)) {
+        if ((allListNames ?? []).some(name => name.toLowerCase() === lowerTrimmedName)) {
             setError(t('addListModal.errorExists', {name: trimmedName}));
             inputRef.current?.select();
             return;
@@ -65,9 +65,10 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
         setIsLoading(true);
 
         try {
-            await service.apiCreateList({name: trimmedName});
-            onAddSuccess(); // Notify parent of success
-            handleOpenChange(false); // Close modal
+            // Use the local storage service
+            service.createList({name: trimmedName});
+            onAddSuccess();
+            handleOpenChange(false);
         } catch (e: any) {
             setError(e.message || "Failed to create list.");
         } finally {
