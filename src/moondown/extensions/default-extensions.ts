@@ -36,6 +36,17 @@ export const themeCompartment = new Compartment();
 export const wysiwygCompartment = new Compartment();
 
 /**
+ * Compartment for dynamically toggling read-only state
+ */
+export const readOnlyCompartment = new Compartment();
+
+/**
+ * Compartment for dynamically setting placeholder text
+ */
+export const placeholderCompartment = new Compartment();
+
+
+/**
  * Extensions that provide the WYSIWYG experience
  * These will be toggled on/off by the "Hide Syntax" switch.
  */

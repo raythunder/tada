@@ -1,8 +1,10 @@
 // src/moondown/moondown.ts
 import { EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import {EditorView, placeholder as viewPlaceholder, ViewUpdate} from '@codemirror/view';
 import {
     defaultExtensions,
+    placeholderCompartment,
+    readOnlyCompartment,
     themeCompartment,
     wysiwygCompartment,
     wysiwygExtensions
@@ -39,9 +41,25 @@ class Moondown {
      * @param config - Optional configuration
      */
     constructor(element: HTMLElement, initialDoc: string = '', config?: EditorConfig) {
+        const extensions = [
+            ...defaultExtensions,
+            readOnlyCompartment.of(EditorState.readOnly.of(config?.readOnly ?? false)),
+            placeholderCompartment.of(config?.placeholder ? viewPlaceholder(config.placeholder) : []),
+            EditorView.updateListener.of((update) => {
+                config?.onChange?.(update);
+                if (update.focusChanged) {
+                    if (update.view.hasFocus) {
+                        config?.onFocus?.();
+                    } else {
+                        config?.onBlur?.();
+                    }
+                }
+            })
+        ];
+
         const state = EditorState.create({
             doc: initialDoc,
-            extensions: [...defaultExtensions]
+            extensions: extensions
         });
 
         this.view = new EditorView({
@@ -95,6 +113,27 @@ class Moondown {
             effects: themeCompartment.reconfigure(theme === 'dark' ? darkTheme : lightTheme)
         });
     }
+
+    /**
+     * Sets the editor's read-only state
+     * @param enabled - True to make editor read-only, false for editable.
+     */
+    setReadOnly(enabled: boolean): void {
+        this.view.dispatch({
+            effects: readOnlyCompartment.reconfigure(EditorState.readOnly.of(enabled))
+        });
+    }
+
+    /**
+     * Sets the editor's placeholder text
+     * @param text - The placeholder text to display
+     */
+    setPlaceholder(text: string): void {
+        this.view.dispatch({
+            effects: placeholderCompartment.reconfigure(text ? viewPlaceholder(text) : [])
+        });
+    }
+
 
     /**
      * Gets the underlying CodeMirror EditorView instance

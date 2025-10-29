@@ -258,4 +258,164 @@
     .custom-switch-thumb-off {
         @apply translate-x-0;
     }
+
+    /* --- Bubble Menu Styles --- */
+
+    /* Light Mode Bubble Menu */
+    .cm-bubble-menu {
+        position: absolute;
+        display: flex;
+        gap: 4px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        padding: 6px;
+        z-index: 1000;
+        will-change: opacity, transform;
+    }
+
+    .cm-bubble-menu-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: transparent;
+        border: none;
+        padding: 6px;
+        border-radius: 6px;
+        color: #1a1a1a;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .cm-bubble-menu-item:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    .cm-bubble-menu-item.active {
+        background: hsl(var(--color-primary-hsl) / 0.1);
+        color: hsl(var(--color-primary-hsl));
+    }
+
+    .cm-bubble-menu-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cm-bubble-menu-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 180px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        padding: 4px;
+        margin-top: 8px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.2s ease;
+    }
+
+    .cm-bubble-menu-item:hover .cm-bubble-menu-dropdown {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .cm-bubble-menu-sub-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .cm-bubble-menu-sub-item:hover {
+        background: rgba(0, 0, 0, 0.05);
+    }
+
+    .cm-bubble-menu-sub-item.active {
+        background: hsl(var(--color-primary-hsl) / 0.1);
+        color: hsl(var(--color-primary-hsl));
+    }
+
+    .cm-bubble-menu-sub-item.active .cm-bubble-menu-sub-icon {
+        color: hsl(var(--color-primary-hsl));
+    }
+
+    .cm-bubble-menu-sub-item.active .cm-bubble-menu-sub-label {
+        color: hsl(var(--color-primary-hsl));
+    }
+
+    .cm-bubble-menu-sub-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+    }
+
+    .cm-bubble-menu-sub-label {
+        font-size: 14px;
+        color: #1a1a1a;
+    }
+
+    /* Dark Mode Bubble Menu */
+    .dark .cm-bubble-menu {
+        background: rgba(30, 30, 30, 0.85);
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .dark .cm-bubble-menu-item {
+        color: #e0e0e0;
+    }
+
+    .dark .cm-bubble-menu-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .dark .cm-bubble-menu-item.active {
+        background: hsl(var(--color-primary-light-hsl) / 0.15);
+        color: hsl(var(--color-primary-light-hsl));
+    }
+
+    .dark .cm-bubble-menu-dropdown {
+        background: rgba(30, 30, 30, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .dark .cm-bubble-menu-sub-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .dark .cm-bubble-menu-sub-item.active {
+        background: hsl(var(--color-primary-light-hsl) / 0.15);
+        color: hsl(var(--color-primary-light-hsl));
+    }
+
+    .dark .cm-bubble-menu-sub-item.active .cm-bubble-menu-sub-icon {
+        color: hsl(var(--color-primary-light-hsl));
+    }
+
+    .dark .cm-bubble-menu-sub-item.active .cm-bubble-menu-sub-label {
+        color: hsl(var(--color-primary-light-hsl));
+    }
+
+    .dark .cm-bubble-menu-sub-label {
+        color: #e0e0e0;
+    }
 }

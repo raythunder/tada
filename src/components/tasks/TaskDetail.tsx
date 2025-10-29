@@ -127,9 +127,12 @@ const TaskDetail: React.FC = () => {
     const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
 
 
-    const [localTitle, setLocalTitle] = useState('');
-    const [localContent, setLocalContent] = useState('');
-    const [localDueDate, setLocalDueDate] = useState<Date | undefined>(undefined);
+    const [localTitle, setLocalTitle] = useState(selectedTask?.title || '');
+    const [localContent, setLocalContent] = useState(selectedTask?.content || '');
+    const [localDueDate, setLocalDueDate] = useState<Date | undefined>(() => {
+        const date = safeParseDate(selectedTask?.dueDate);
+        return date && isValid(date) ? date : undefined;
+    });
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isPermanentDeleteDialogOpen, setIsPermanentDeleteDialogOpen] = useState(false);
@@ -154,11 +157,9 @@ const TaskDetail: React.FC = () => {
     const titleInputRef = useRef<HTMLInputElement>(null);
     const editorRef = useRef<CodeMirrorEditorRef>(null);
     const moreActionsButtonRef = useRef<HTMLButtonElement>(null);
-    const latestTitleRef = useRef(localTitle);
-    const latestContentRef = useRef(localContent);
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     const hasUnsavedChangesRef = useRef(false);
-    const isMountedRef = useRef(true);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
 
@@ -167,31 +168,31 @@ const TaskDetail: React.FC = () => {
         "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
     ), []);
 
-    const savePendingChanges = useCallback((taskId: string, title: string, content: string, dueDate: Date | undefined) => {
-        if (!taskId || !hasUnsavedChangesRef.current || !isMountedRef.current) return;
+    const savePendingChanges = useCallback(() => {
+        if (!selectedTask || !hasUnsavedChangesRef.current) return;
 
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = null;
         }
 
-        const processedTitle = title.trim();
-        const processedDueDateTimestamp = dueDate && isValid(dueDate) ? dueDate.getTime() : null;
+        const processedTitle = localTitle.trim();
+        const processedDueDateTimestamp = localDueDate && isValid(localDueDate) ? localDueDate.getTime() : null;
 
         setTasks(prevTasksValue => {
             const prevTasks = prevTasksValue ?? [];
-            const originalTaskState = prevTasks.find(t => t.id === taskId);
+            const originalTaskState = prevTasks.find(t => t.id === selectedTask.id);
             if (!originalTaskState) return prevTasks;
 
             const changesToSave: Partial<Task> = {};
             if (processedTitle !== originalTaskState.title) changesToSave.title = processedTitle || t('common.untitledTask');
-            if (content !== (originalTaskState.content || '')) changesToSave.content = content;
+            if (localContent !== (originalTaskState.content || '')) changesToSave.content = localContent;
 
             const originalDueTime = originalTaskState.dueDate ?? null;
             if (processedDueDateTimestamp !== originalDueTime) changesToSave.dueDate = processedDueDateTimestamp;
 
             if (Object.keys(changesToSave).length > 0) {
-                return prevTasks.map(t => (t.id === taskId ? {
+                return prevTasks.map(t => (t.id === selectedTask.id ? {
                     ...t, ...changesToSave,
                     updatedAt: Date.now()
                 } : t));
@@ -200,71 +201,29 @@ const TaskDetail: React.FC = () => {
         });
 
         hasUnsavedChangesRef.current = false;
-    }, [setTasks, t]);
+    }, [selectedTask, localTitle, localContent, localDueDate, setTasks, t]);
+
 
     useEffect(() => {
-        isMountedRef.current = true;
-        const currentSelectedTaskId = selectedTask?.id;
-
         return () => {
-            isMountedRef.current = false;
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-            if (currentSelectedTaskId && hasUnsavedChangesRef.current) {
-                savePendingChanges(currentSelectedTaskId, latestTitleRef.current, latestContentRef.current, localDueDate);
+            if (hasUnsavedChangesRef.current) {
+                savePendingChanges();
+            }
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
             }
         };
-    }, [selectedTask?.id, localDueDate, savePendingChanges]);
+    }, [savePendingChanges]);
 
     useEffect(() => {
-        const prevTaskId = selectedTask?.id;
-        if (prevTaskId && hasUnsavedChangesRef.current) {
-            savePendingChanges(prevTaskId, latestTitleRef.current, latestContentRef.current, localDueDate);
+        if (selectedTask && selectedTask.title === '' && titleInputRef.current) {
+            const timer = setTimeout(() => {
+                titleInputRef.current?.focus();
+                titleInputRef.current?.select();
+            }, 350);
+            return () => clearTimeout(timer);
         }
-
-        setNewSubtaskTitle('');
-        setNewSubtaskDueDate(undefined);
-        hasUnsavedChangesRef.current = false;
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-
-        if (selectedTask) {
-            const taskTitle = selectedTask.title;
-            const taskContent = selectedTask.content || '';
-            const taskDueDateObj = safeParseDate(selectedTask.dueDate);
-
-            setLocalTitle(taskTitle);
-            setLocalContent(taskContent);
-            setLocalDueDate(taskDueDateObj && isValid(taskDueDateObj) ? taskDueDateObj : undefined);
-
-            latestTitleRef.current = taskTitle;
-            latestContentRef.current = taskContent;
-
-            if (taskTitle === '' &&
-                document.activeElement !== titleInputRef.current &&
-                !editorRef.current?.getView()?.hasFocus) {
-                const timer = setTimeout(() => {
-                    if (isMountedRef.current && titleInputRef.current) {
-                        titleInputRef.current.focus();
-                        titleInputRef.current.select();
-                    }
-                }, 350);
-                return () => clearTimeout(timer);
-            }
-        } else {
-            setLocalTitle('');
-            latestTitleRef.current = '';
-            setLocalContent('');
-            latestContentRef.current = '';
-            setLocalDueDate(undefined);
-            setNewSubtaskTitle('');
-            setNewSubtaskDueDate(undefined);
-            setIsDeleteDialogOpen(false);
-            setIsPermanentDeleteDialogOpen(false);
-            setIsFooterDatePickerOpen(false);
-            setIsInfoPopoverOpen(false);
-            setIsHeaderMenuDatePickerOpen(false);
-            setIsHeaderMenuTagsPopoverOpen(false);
-        }
-    }, [selectedTask, savePendingChanges]);
+    }, [selectedTask]);
 
 
     useEffect(() => {
@@ -275,28 +234,24 @@ const TaskDetail: React.FC = () => {
         }
     }, [newSubtaskDueDate, isNewSubtaskDatePickerOpen]);
 
-
     const triggerSave = useCallback(() => {
-        if (!selectedTask || !isMountedRef.current) return;
         hasUnsavedChangesRef.current = true;
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => {
-            if (selectedTask) {
-                savePendingChanges(selectedTask.id, latestTitleRef.current, latestContentRef.current, localDueDate);
-            }
+            savePendingChanges();
         }, 700);
-    }, [selectedTask, localDueDate, savePendingChanges]);
+    }, [savePendingChanges]);
 
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'subtasks'>>) => {
-        if (!selectedTask || !isMountedRef.current) return;
+        if (!selectedTask) return;
+
         if (hasUnsavedChangesRef.current) {
-            savePendingChanges(selectedTask.id, latestTitleRef.current, latestContentRef.current, localDueDate);
+            savePendingChanges();
         }
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = null;
         }
-        hasUnsavedChangesRef.current = false;
 
         setTasks(prevTasksValue => {
             const prevTasks = prevTasksValue ?? [];
@@ -305,33 +260,28 @@ const TaskDetail: React.FC = () => {
                 updatedAt: Date.now()
             } : t));
         });
-    }, [selectedTask, setTasks, localDueDate, savePendingChanges]);
+    }, [selectedTask, setTasks, savePendingChanges]);
 
 
     const handleClose = useCallback(() => {
-        if (selectedTask) {
-            savePendingChanges(selectedTask.id, latestTitleRef.current, latestContentRef.current, localDueDate);
-        }
         setSelectedTaskId(null);
-    }, [selectedTask, setSelectedTaskId, localDueDate, savePendingChanges]);
+    }, [setSelectedTaskId]);
 
     const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalTitle(e.target.value);
-        latestTitleRef.current = e.target.value;
         triggerSave();
     }, [triggerSave]);
 
     const handleContentChange = useCallback((newValue: string) => {
         setLocalContent(newValue);
-        latestContentRef.current = newValue;
         triggerSave();
     }, [triggerSave]);
 
     const handleMainContentBlur = useCallback(() => {
-        if (hasUnsavedChangesRef.current && selectedTask) {
-            savePendingChanges(selectedTask.id, latestTitleRef.current, latestContentRef.current, localDueDate);
+        if (hasUnsavedChangesRef.current) {
+            savePendingChanges();
         }
-    }, [selectedTask, localDueDate, savePendingChanges]);
+    }, [savePendingChanges]);
 
     const handleFooterDatePickerSelect = useCallback((dateWithTime: Date | undefined) => {
         setLocalDueDate(dateWithTime);
@@ -446,17 +396,13 @@ const TaskDetail: React.FC = () => {
 
     const handleDuplicateTask = useCallback(() => {
         if (!selectedTask) return;
-        if (hasUnsavedChangesRef.current && selectedTask) {
-            savePendingChanges(selectedTask.id, latestTitleRef.current, latestContentRef.current, localDueDate);
-        }
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        hasUnsavedChangesRef.current = false;
+
+        savePendingChanges();
 
         const now = Date.now();
         const localId = `task-${now}-${Math.random().toString(16).slice(2)}`;
-        const taskToDuplicate = selectedTask;
 
-        const duplicatedSubtasks = (taskToDuplicate.subtasks || []).map(sub => ({
+        const duplicatedSubtasks = (selectedTask.subtasks || []).map(sub => ({
             ...sub,
             id: `subtask-${now}-${Math.random().toString(16).slice(2)}`,
             parentId: localId,
@@ -466,10 +412,12 @@ const TaskDetail: React.FC = () => {
         }));
 
         const newTaskData: Omit<Task, 'groupCategory'> & { groupCategory?: TaskGroupCategory } = {
-            ...taskToDuplicate,
+            ...selectedTask,
             id: localId,
-            title: `${taskToDuplicate.title || t('common.untitledTask')} (Copy)`,
-            order: (taskToDuplicate.order ?? 0) + 0.01,
+            title: `${localTitle || t('common.untitledTask')} (Copy)`,
+            content: localContent,
+            dueDate: localDueDate ? localDueDate.getTime() : null,
+            order: (selectedTask.order ?? 0) + 0.01,
             createdAt: now,
             updatedAt: now,
             completed: false,
@@ -481,7 +429,7 @@ const TaskDetail: React.FC = () => {
 
         setTasks(prevValue => {
             const prev = prevValue ?? [];
-            const index = prev.findIndex(t => t.id === taskToDuplicate.id);
+            const index = prev.findIndex(t => t.id === selectedTask.id);
             const newTasks = [...prev];
             newTasks.splice(index !== -1 ? index + 1 : prev.length, 0, newTaskData as Task);
             return newTasks;
@@ -489,25 +437,22 @@ const TaskDetail: React.FC = () => {
 
         setSelectedTaskId(localId);
         setIsMoreActionsOpen(false);
-    }, [selectedTask, setTasks, setSelectedTaskId, savePendingChanges, localDueDate, t]);
+    }, [selectedTask, localTitle, localContent, localDueDate, setTasks, setSelectedTaskId, t, savePendingChanges]);
 
 
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (selectedTask) savePendingChanges(selectedTask.id, latestTitleRef.current, latestContentRef.current, localDueDate);
+            savePendingChanges();
             titleInputRef.current?.blur();
         } else if (e.key === 'Escape' && selectedTask) {
             e.preventDefault();
             if (localTitle !== selectedTask.title) {
                 setLocalTitle(selectedTask.title);
-                latestTitleRef.current = selectedTask.title;
-                if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                hasUnsavedChangesRef.current = false;
             }
             titleInputRef.current?.blur();
         }
-    }, [selectedTask, localTitle, localDueDate, savePendingChanges]);
+    }, [selectedTask, localTitle, savePendingChanges]);
 
     const isTrash = useMemo(() => selectedTask?.listName === 'Trash', [selectedTask?.listName]);
     const isCompleted = useMemo(() => (selectedTask?.completed || (selectedTask?.completePercentage ?? 0) === 100) && !isTrash, [selectedTask?.completed, selectedTask?.completePercentage, isTrash]);
@@ -588,7 +533,7 @@ const TaskDetail: React.FC = () => {
     };
 
     const displayDueDateForPicker = localDueDate;
-    const displayDueDateForRender = localDueDate ?? safeParseDate(selectedTask?.dueDate);
+    const displayDueDateForRender = localDueDate;
     const overdue = useMemo(() => displayDueDateForRender && isValid(displayDueDateForRender) && !isCompleted && !isTrash && isOverdue(displayDueDateForRender), [displayDueDateForRender, isCompleted, isTrash]);
     const displayCreatedAt = useMemo(() => selectedTask ? formatDateTime(selectedTask.createdAt, preferences?.language) : '', [selectedTask, preferences]);
     const displayUpdatedAt = useMemo(() => selectedTask ? formatDateTime(selectedTask.updatedAt, preferences?.language) : '', [selectedTask, preferences]);
@@ -623,7 +568,7 @@ const TaskDetail: React.FC = () => {
     }, [selectedTask, taskListPriorityMap, t]);
 
     const titleInputClasses = useMemo(() => twMerge("flex-1 text-lg font-medium border-none focus:ring-0 focus:outline-none bg-transparent p-0 leading-tight", "placeholder:text-grey-medium dark:placeholder:text-neutral-500 placeholder:font-normal", (isInteractiveDisabled) && "line-through text-grey-medium dark:text-neutral-400/80", "text-grey-dark dark:text-neutral-100 tracking-tight"), [isInteractiveDisabled]);
-    const editorContainerClass = useMemo(() => twMerge("flex-1 min-h-0 overflow-hidden", "prose dark:prose-invert max-w-none prose-sm prose-p:my-2 prose-headings:my-3 prose-ul:my-2 prose-ol:my-2"), []);
+    const editorContainerClass = useMemo(() => twMerge("flex-1 min-h-0 overflow-hidden"), []);
     const editorClasses = useMemo(() => twMerge("!h-full text-sm !bg-transparent !border-none !shadow-none", (isInteractiveDisabled) && "opacity-60 cursor-not-allowed", isTrash && "pointer-events-none", "dark:!text-neutral-300"), [isInteractiveDisabled, isTrash]);
     const footerClass = useMemo(() => twMerge("px-4 py-2 h-11 flex items-center justify-between flex-shrink-0", "border-t border-grey-light/50 dark:border-neutral-700/50", "bg-white/70 dark:bg-neutral-850/70 backdrop-blur-sm"), []);
     const actionButtonClass = useMemo(() => twMerge("text-grey-medium dark:text-neutral-400", "hover:bg-black/5 dark:hover:bg-white/10", "hover:text-grey-dark dark:hover:text-neutral-200", "focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1", "focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-850"), []);
@@ -1009,11 +954,16 @@ const TaskDetail: React.FC = () => {
 
                 <div
                     className="flex-1 overflow-y-auto styled-scrollbar-thin flex flex-col bg-transparent">
-                    <div className={twMerge(editorContainerClass, "p-5 pb-3")}>
-                        <CodeMirrorEditor ref={editorRef} value={localContent} onChange={handleContentChange}
-                                          onBlur={handleMainContentBlur}
-                                          placeholder={t('taskDetail.notesPlaceholder')}
-                                          className={editorClasses} readOnly={isInteractiveDisabled}/>
+                    <div className={editorContainerClass}>
+                        <CodeMirrorEditor
+                            key={selectedTask.id}
+                            ref={editorRef}
+                            value={localContent}
+                            onChange={handleContentChange}
+                            onBlur={handleMainContentBlur}
+                            placeholder={t('taskDetail.notesPlaceholder')}
+                            className={editorClasses}
+                            readOnly={isInteractiveDisabled}/>
                     </div>
                     <div
                         className={twMerge(

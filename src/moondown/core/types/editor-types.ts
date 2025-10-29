@@ -1,6 +1,5 @@
 // src/moondown/core/types/editor-types.ts
-
-import type { EditorView } from "@codemirror/view";
+import type {EditorView, ViewUpdate} from "@codemirror/view";
 import type { EditorState } from "@codemirror/state";
 
 /**
@@ -12,42 +11,52 @@ export type Theme = 'light' | 'dark';
 
 /** Editor configuration options */
 export interface EditorConfig {
-  /** Initial document content */
-  initialDoc?: string;
-  /** Initial theme */
-  theme?: Theme;
-  /** Enable syntax hiding */
-  syntaxHiding?: boolean;
+    /** Initial document content */
+    initialDoc?: string;
+    /** Initial theme */
+    theme?: Theme;
+    /** Enable syntax hiding */
+    syntaxHiding?: boolean;
+    /** Placeholder text */
+    placeholder?: string;
+    /** Make editor read-only */
+    readOnly?: boolean;
+    /** Content change callback */
+    onChange?: (update: ViewUpdate) => void;
+    /** Focus event callback */
+    onFocus?: () => void;
+    /** Blur event callback */
+    onBlur?: () => void;
 }
 
 /** Position range in the document */
 export interface Range {
-  from: number;
-  to: number;
+    from: number;
+    to: number;
 }
 
 /** Text selection with content */
 export interface Selection extends Range {
-  text: string;
+    text: string;
 }
 
 /** Coordinates in the viewport */
 export interface Coordinates {
-  x: number;
-  y: number;
-  top?: number;
-  left?: number;
-  bottom?: number;
-  right?: number;
+    x: number;
+    y: number;
+    top?: number;
+    left?: number;
+    bottom?: number;
+    right?: number;
 }
 
 /** Line information */
 export interface LineInfo {
-  number: number;
-  from: number;
-  to: number;
-  text: string;
-  length: number;
+    number: number;
+    from: number;
+    to: number;
+    text: string;
+    length: number;
 }
 
 /** Action handler function type */

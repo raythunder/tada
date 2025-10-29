@@ -44,8 +44,6 @@ const light = {
     blockquoteColorDeep: "#4b5563",
 
     // --- Styles aligned with table formatting ---
-    italic: "#6366f1",
-    underlineColor: "#3b82f6",
     inlineCodeBg: "#f3f4f6",
     inlineCodeColor: "#e11d48",
     inlineCodeBorder: "#e5e7eb",
@@ -101,8 +99,6 @@ const dark = {
     blockquoteColorDeep: "#cbd5e1",
 
     // --- Styles aligned with table formatting ---
-    italic: "#818cf8",
-    underlineColor: "#60a5fa",
     inlineCodeBg: "#0f172a",
     inlineCodeColor: "#fb7185",
     inlineCodeBorder: "#1e293b",
@@ -122,11 +118,15 @@ const codeFont = "'Fira Code', 'Roboto Mono', monospace";
 // --- Base Theme Structure ---
 const createEditorTheme = (colors: typeof light | typeof dark, isDark: boolean) => {
     const animationName = isDark ? 'colorChangeDark' : 'colorChangeLight';
+    const visibleMarkdownColor = isDark
+        ? 'hsl(var(--color-primary-light-hsl) / 0.6)' // Use primary-light for dark mode markers
+        : 'hsl(var(--color-primary-hsl) / 0.5)'; // Use primary for light mode markers
 
     return EditorView.theme({
         "&": {
             color: colors.primaryText,
             backgroundColor: colors.background,
+            height: '100%', // Ensure the editor wrapper takes full height
             // Define CSS variables for blockquote styling
             "--bq-bar-width": "3px",
             "--bq-bar-gap": "12px",
@@ -138,13 +138,17 @@ const createEditorTheme = (colors: typeof light | typeof dark, isDark: boolean) 
             "--bq-color-3": colors.blockquoteColor3,
             "--bq-color-deep": colors.blockquoteColorDeep,
         },
+        ".cm-scroller": {
+            fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+            fontSize: "13.5px", // Match body font size
+            lineHeight: "1.65", // Match body line height
+            overflow: "auto !important", // FIX: Ensure scrolling
+        },
         "&.cm-focused": {
             outline: "none",
         },
         ".cm-content": {
-            fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-            fontSize: "16px",
-            lineHeight: "1.6",
+            padding: "16px 8px 16px 16px", // Adjust padding for scrollbar
         },
         ".cm-content.cm-focused": {
             outline: "none",
@@ -190,7 +194,10 @@ const createEditorTheme = (colors: typeof light | typeof dark, isDark: boolean) 
 
         // Syntax hiding
         ".cm-hidden-markdown": { display: "none" },
-        ".cm-visible-markdown": { color: colors.secondaryText, opacity: "0.8" },
+        ".cm-visible-markdown, .cm-meta": {
+            color: visibleMarkdownColor,
+            opacity: "1"
+        },
 
         ".cm-link-definition-widget": {
             color: colors.secondaryText,
@@ -451,7 +458,7 @@ const createEditorTheme = (colors: typeof light | typeof dark, isDark: boolean) 
         },
         ".cm-underline-widget": {
             textDecoration: "underline",
-            textDecorationColor: colors.underlineColor,
+            textDecorationColor: isDark ? 'hsl(var(--color-primary-light-hsl))' : 'hsl(var(--color-primary-hsl))',
             textDecorationThickness: "2px",
             textUnderlineOffset: "2px",
         },
@@ -547,7 +554,6 @@ const createHighlightStyle = (colors: typeof light | typeof dark) => HighlightSt
     {tag: tags.typeName, color: colors.codeType, fontFamily: codeFont},
     {tag: tags.className, color: colors.codeType, fontFamily: codeFont},
     {tag: tags.comment, color: colors.codeComment, fontStyle: "italic", fontFamily: codeFont},
-    {tag: tags.meta, color: colors.codeKeyword, fontFamily: codeFont},
     {tag: tags.invalid, color: colors.codeTag, fontFamily: codeFont},
     {tag: tags.variableName, color: colors.codeVariable, fontFamily: codeFont},
     {tag: tags.operator, color: colors.codeOperator, fontFamily: codeFont},
@@ -556,6 +562,9 @@ const createHighlightStyle = (colors: typeof light | typeof dark) => HighlightSt
     {tag: tags.tagName, color: colors.codeTag, fontFamily: codeFont},
     {tag: tags.attributeName, color: colors.codeAttribute, fontFamily: codeFont},
     {tag: tags.attributeValue, color: colors.codeString, fontFamily: codeFont},
+
+    {tag: tags.meta, class: "cm-meta"},
+    {tag: tags.processingInstruction, class: "cm-meta"},
 ]);
 
 // --- Export Light Theme ---
