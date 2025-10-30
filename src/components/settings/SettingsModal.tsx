@@ -124,7 +124,6 @@ const DarkModeSelector: React.FC<{ value: DarkModeOption; onChange: (value: Dark
 });
 DarkModeSelector.displayName = 'DarkModeSelector';
 
-
 const ColorSwatch: React.FC<{
     colorValue: string;
     selected: boolean;
@@ -244,7 +243,6 @@ const PreferencesSettings: React.FC = memo(() => {
     }
     const currentPreferences = preferences ?? defaultPreferencesFromAtoms;
 
-
     const handleLanguageChange = (value: string) => setPreferences(p => ({
         ...(p ?? defaultPreferencesFromAtoms),
         language: value as 'en' | 'zh-CN'
@@ -265,7 +263,6 @@ const PreferencesSettings: React.FC = memo(() => {
         ...(p ?? defaultPreferencesFromAtoms),
         confirmDeletions: checked
     }));
-
 
     const dueDateOptions = [
         {value: 'none', label: t('settings.preferences.dueDateOptions.none')},
@@ -366,6 +363,180 @@ const SortableItem: React.FC<{ item: { id: string; name: string }; isDragging: b
     );
 };
 
+const ProviderCard: React.FC<{
+    provider: AIProvider;
+    isSelected: boolean;
+    onClick: () => void;
+}> = memo(({ provider, isSelected, onClick }) => {
+    const { t } = useTranslation();
+
+    return (
+        <button
+            onClick={onClick}
+            className={twMerge(
+                "flex items-center px-3 py-2 rounded-lg border transition-all duration-200 w-full h-11",
+                isSelected
+                    ? "border-primary dark:border-primary-light bg-primary/5 dark:bg-primary-dark/20"
+                    : "border-grey-light dark:border-neutral-600 hover:border-grey-medium dark:hover:border-neutral-500 hover:bg-grey-ultra-light dark:hover:bg-neutral-700/50"
+            )}
+        >
+            <div className="w-6 h-6 mr-3 flex items-center justify-center flex-shrink-0">
+                <img
+                    src={`/icons/ai-providers/${provider.id}.png`}
+                    alt={t(provider.nameKey)}
+                    className="w-6 h-6 object-contain"
+                    onError={(e) => {
+                        // Fallback to generic AI icon if provider icon is missing
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                    }}
+                />
+                <Icon
+                    name="sparkles"
+                    size={20}
+                    className={twMerge(
+                        "hidden",
+                        isSelected ? "text-primary dark:text-primary-light" : "text-grey-medium dark:text-neutral-400"
+                    )}
+                />
+            </div>
+            <span className={twMerge(
+                "text-[13px] font-medium truncate",
+                isSelected ? "text-primary dark:text-primary-light" : "text-grey-dark dark:text-neutral-200"
+            )}>
+                {t(provider.nameKey)}
+            </span>
+        </button>
+    );
+});
+ProviderCard.displayName = 'ProviderCard';
+
+// About Settings Component
+const AboutSettings: React.FC = memo(() => {
+    const { t } = useTranslation();
+    const [showChangelog, setShowChangelog] = useState(false);
+    const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+    const [showTermsOfUse, setShowTermsOfUse] = useState(false);
+
+    return (
+        <div className="space-y-0">
+            <SettingsRow
+                label={t('settings.about.version')}
+                value={APP_VERSION}
+            />
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+
+            <SettingsRow
+                label={t('settings.about.changelog')}
+                action={
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowChangelog(!showChangelog)}
+                        className="text-[13px]"
+                    >
+                        {showChangelog ? t('settings.about.hide') : t('settings.about.view')}
+                    </Button>
+                }
+            />
+            {showChangelog && (
+                <div className="pl-0 pr-0 pb-4">
+                    <div
+                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar"
+                        dangerouslySetInnerHTML={{ __html: CHANGELOG_HTML }}
+                    />
+                </div>
+            )}
+
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+
+            <SettingsRow
+                label={t('settings.about.privacyPolicy')}
+                action={
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowPrivacyPolicy(!showPrivacyPolicy)}
+                        className="text-[13px]"
+                    >
+                        {showPrivacyPolicy ? t('settings.about.hide') : t('settings.about.view')}
+                    </Button>
+                }
+            />
+            {showPrivacyPolicy && (
+                <div className="pl-0 pr-0 pb-4">
+                    <div
+                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar"
+                        dangerouslySetInnerHTML={{ __html: PRIVACY_POLICY_HTML }}
+                    />
+                </div>
+            )}
+
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+
+            <SettingsRow
+                label={t('settings.about.termsOfUse')}
+                action={
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowTermsOfUse(!showTermsOfUse)}
+                        className="text-[13px]"
+                    >
+                        {showTermsOfUse ? t('settings.about.hide') : t('settings.about.view')}
+                    </Button>
+                }
+            />
+            {showTermsOfUse && (
+                <div className="pl-0 pr-0 pb-4">
+                    <div
+                        className="text-[12px] text-grey-medium dark:text-neutral-400 bg-grey-ultra-light dark:bg-neutral-700 rounded-base p-3 max-h-[200px] overflow-y-auto styled-scrollbar"
+                        dangerouslySetInnerHTML={{ __html: TERMS_OF_USE_HTML }}
+                    />
+                </div>
+            )}
+
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+
+            <SettingsRow
+                label={t('settings.about.feedback')}
+                description={t('settings.about.feedbackDescription')}
+                action={
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="mail"
+                        onClick={() => window.open('mailto:feedback@example.com')}
+                        className="text-[13px]"
+                    >
+                        {t('settings.about.sendEmail')}
+                    </Button>
+                }
+            />
+
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+
+            <SettingsRow
+                label={t('settings.about.reportIssue')}
+                description={t('settings.about.reportIssueDescription')}
+                action={
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="external-link"
+                        onClick={() => window.open('https://github.com/example/issues')}
+                        className="text-[13px]"
+                    >
+                        {t('settings.about.reportButton')}
+                    </Button>
+                }
+            />
+        </div>
+    );
+});
+AboutSettings.displayName = 'AboutSettings';
+
+// New simplified AI Settings component
 const AISettings: React.FC = memo(() => {
     const { t } = useTranslation();
     const [aiSettings, setAISettings] = useAtom(aiSettingsAtom);
@@ -379,6 +550,7 @@ const AISettings: React.FC = memo(() => {
 
     const currentSettings = aiSettings ?? defaultAISettingsForApi();
     const currentProvider = AI_PROVIDERS.find(p => p.id === currentSettings.provider) ?? AI_PROVIDERS[0];
+    const availableModels = currentSettings.availableModels ?? currentProvider.models;
 
     const handleProviderChange = (providerId: AIProvider['id']) => {
         const newProvider = AI_PROVIDERS.find(p => p.id === providerId);
@@ -387,10 +559,10 @@ const AISettings: React.FC = memo(() => {
         setAISettings({
             ...currentSettings,
             provider: providerId,
-            model: newProvider.models[0]?.id || '',
-            baseUrl: newProvider.defaultBaseUrl || '',
-            fetchedModels: [],
-            isConnected: false,
+            apiKey: providerId === currentSettings.provider ? currentSettings.apiKey : '',
+            model: newProvider.models[0]?.id ?? '',
+            baseUrl: newProvider.defaultBaseUrl ?? '',
+            availableModels: newProvider.models,
         });
     };
 
@@ -398,15 +570,6 @@ const AISettings: React.FC = memo(() => {
         setAISettings({
             ...currentSettings,
             apiKey,
-            isConnected: false,
-        });
-    };
-
-    const handleBaseUrlChange = (baseUrl: string) => {
-        setAISettings({
-            ...currentSettings,
-            baseUrl,
-            isConnected: false,
         });
     };
 
@@ -417,44 +580,12 @@ const AISettings: React.FC = memo(() => {
         });
     };
 
-    const handleTestConnection = useCallback(async () => {
-        if (!currentProvider) return;
-
-        setIsTestingConnection(true);
-        try {
-            const isConnected = await testConnection(currentSettings);
-            setAISettings({
-                ...currentSettings,
-                isConnected,
-            });
-
-            if (isConnected) {
-                addNotification({
-                    type: 'success',
-                    message: `Successfully connected to ${currentProvider.name}`
-                });
-
-                // 自动获取模型
-                if (currentProvider.listModelsEndpoint) {
-                    handleFetchModels();
-                }
-            } else {
-                addNotification({
-                    type: 'error',
-                    message: `Failed to connect to ${currentProvider.name}`
-                });
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Connection failed";
-            addNotification({ type: 'error', message: errorMessage });
-            setAISettings({
-                ...currentSettings,
-                isConnected: false,
-            });
-        } finally {
-            setIsTestingConnection(false);
-        }
-    }, [currentProvider, currentSettings, setAISettings, addNotification]);
+    const handleBaseUrlChange = (baseUrl: string) => {
+        setAISettings({
+            ...currentSettings,
+            baseUrl,
+        });
+    };
 
     const handleFetchModels = useCallback(async () => {
         if (!currentProvider || isFetchingModels) return;
@@ -469,98 +600,86 @@ const AISettings: React.FC = memo(() => {
             const models = await fetchProviderModels(currentSettings);
             setAISettings({
                 ...currentSettings,
-                fetchedModels: models,
+                availableModels: models,
+                model: models[0]?.id ?? currentSettings.model,
             });
-
-            // 如果当前没有选择模型，自动选择第一个
-            if (!currentSettings.model && models.length > 0) {
-                setAISettings({
-                    ...currentSettings,
-                    fetchedModels: models,
-                    model: models[0].id,
-                });
-            }
-
             addNotification({
                 type: 'success',
-                message: `Successfully fetched ${models.length} models`
+                message: `Successfully fetched ${models.length} models for ${t(currentProvider.nameKey)}.`
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to fetch models";
-            addNotification({ type: 'error', message: errorMessage });
+            const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+            addNotification({ type: 'error', message: `Failed to fetch models: ${errorMessage}` });
         } finally {
             setIsFetchingModels(false);
         }
-    }, [currentProvider, currentSettings, isFetchingModels, setAISettings, addNotification]);
+    }, [currentProvider, currentSettings, isFetchingModels, setAISettings, addNotification, t]);
 
-    const modelOptions = useMemo(() => {
-        const defaultModels = currentProvider.models || [];
-        const fetchedModels = currentSettings.fetchedModels || [];
+    const handleTestConnection = useCallback(async () => {
+        if (!currentProvider || isTestingConnection) return;
 
-        // 合并默认模型和获取的模型，去重
-        const allModels = [...defaultModels, ...fetchedModels];
-        const uniqueModels = Array.from(
-            new Map(allModels.map(m => [m.id, m])).values()
-        );
+        if (currentProvider.requiresApiKey && !currentSettings.apiKey) {
+            addNotification({ type: 'error', message: "API key is required to test connection." });
+            return;
+        }
 
-        return uniqueModels.map(m => ({ value: m.id, label: m.name }));
-    }, [currentProvider.models, currentSettings.fetchedModels]);
+        if (!currentSettings.model) {
+            addNotification({ type: 'error', message: "Please select a model first." });
+            return;
+        }
 
-    const providerOptions = useMemo(() =>
-            AI_PROVIDERS.map(p => ({ value: p.id, label: p.name })),
-        []
-    );
+        setIsTestingConnection(true);
+        try {
+            const success = await testConnection(currentSettings);
+            if (success) {
+                addNotification({ type: 'success', message: t('settings.ai.connectionSuccessful') });
+            } else {
+                addNotification({ type: 'error', message: t('settings.ai.connectionFailed') });
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : t('settings.ai.connectionFailed');
+            addNotification({ type: 'error', message: errorMessage });
+        } finally {
+            setIsTestingConnection(false);
+        }
+    }, [currentProvider, currentSettings, isTestingConnection, addNotification, t]);
+
+    const modelOptions = availableModels.map(m => ({ value: m.id, label: m.name }));
 
     return (
         <div className="space-y-6">
             {/* Provider Selection */}
-            <div className="space-y-4">
-                <div>
-                    <h3 className="text-[14px] font-medium text-grey-dark dark:text-neutral-100 mb-3">
-                        {t('settings.ai.provider')}
+            <div>
+                <div className="mb-4">
+                    <h3 className="text-[13px] text-grey-dark dark:text-neutral-200 font-normal">
+                        {t('settings.ai.selectProvider')}
                     </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        {AI_PROVIDERS.map((provider) => (
-                            <button
-                                key={provider.id}
-                                onClick={() => handleProviderChange(provider.id)}
-                                className={twMerge(
-                                    "p-4 rounded-lg border transition-all duration-200",
-                                    "text-left hover:shadow-sm",
-                                    currentSettings.provider === provider.id
-                                        ? "border-primary bg-primary/5 dark:bg-primary-dark/10"
-                                        : "border-grey-light dark:border-neutral-600 bg-white dark:bg-neutral-700"
-                                )}
-                            >
-                                <div className="flex items-start space-x-3">
-                                    <span className="text-2xl">{provider.icon}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-[13px] font-medium text-grey-dark dark:text-neutral-100">
-                                            {provider.name}
-                                        </div>
-                                        <div className="text-[11px] text-grey-medium dark:text-neutral-400 mt-1">
-                                            {provider.description}
-                                        </div>
-                                    </div>
-                                    {currentSettings.provider === provider.id && (
-                                        <Icon name="check" size={16} className="text-primary dark:text-primary-light flex-shrink-0" />
-                                    )}
-                                </div>
-                            </button>
-                        ))}
-                    </div>
+                    <p className="text-[11px] text-grey-medium dark:text-neutral-400 mt-0.5">
+                        {t('settings.ai.selectProviderDescription')}
+                    </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    {AI_PROVIDERS.map(provider => (
+                        <ProviderCard
+                            key={provider.id}
+                            provider={provider}
+                            isSelected={currentSettings.provider === provider.id}
+                            onClick={() => handleProviderChange(provider.id)}
+                        />
+                    ))}
                 </div>
             </div>
 
             <div className="h-px bg-grey-light dark:bg-neutral-700"></div>
 
-            {/* Configuration */}
+            {/* Configuration Section */}
             <div className="space-y-0">
+                {/* API Key */}
                 {currentProvider.requiresApiKey && (
                     <>
                         <SettingsRow
                             label={t('settings.ai.apiKey')}
-                            description={`Enter your ${currentProvider.name} API key`}
+                            description={t('settings.ai.apiKeyDescription', { providerName: t(currentProvider.nameKey) })}
                             htmlFor="apiKeyInput"
                         >
                             <div className="flex items-center space-x-2">
@@ -569,17 +688,26 @@ const AISettings: React.FC = memo(() => {
                                     type="password"
                                     value={currentSettings.apiKey}
                                     onChange={(e) => handleApiKeyChange(e.target.value)}
-                                    placeholder="sk-..."
+                                    placeholder={t('settings.ai.apiKeyPlaceholder')}
                                     className={twMerge(
-                                        "w-[200px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
+                                        "w-[240px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
                                         "bg-grey-ultra-light dark:bg-neutral-700",
                                         "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
                                         "text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out",
                                         "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
                                     )}
                                 />
-                                {currentSettings.isConnected && (
-                                    <Icon name="check-circle" size={16} className="text-green-500" />
+                                {currentProvider.listModelsEndpoint && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        icon="refresh-cw"
+                                        onClick={handleFetchModels}
+                                        disabled={isFetchingModels || !currentSettings.apiKey}
+                                        loading={isFetchingModels}
+                                        className="w-7 h-7 text-grey-medium dark:text-neutral-400"
+                                        aria-label="Fetch models"
+                                    />
                                 )}
                             </div>
                         </SettingsRow>
@@ -587,19 +715,20 @@ const AISettings: React.FC = memo(() => {
                     </>
                 )}
 
+                {/* Base URL for custom/local providers */}
                 {currentProvider.requiresBaseUrl && (
                     <>
                         <SettingsRow
                             label={t('settings.ai.baseUrl')}
-                            description="Base URL for the API endpoint"
+                            description={t('settings.ai.baseUrlDescription')}
                             htmlFor="baseUrlInput"
                         >
                             <input
                                 id="baseUrlInput"
                                 type="url"
-                                value={currentSettings.baseUrl || ''}
+                                value={currentSettings.baseUrl ?? ''}
                                 onChange={(e) => handleBaseUrlChange(e.target.value)}
-                                placeholder={currentProvider.defaultBaseUrl || "http://localhost:11434"}
+                                placeholder={currentProvider.defaultBaseUrl ?? 'http://localhost:11434'}
                                 className={twMerge(
                                     "w-[240px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
                                     "bg-grey-ultra-light dark:bg-neutral-700",
@@ -613,44 +742,27 @@ const AISettings: React.FC = memo(() => {
                     </>
                 )}
 
-                <SettingsRow
-                    label="Connection Test"
-                    description="Test the connection to your AI provider"
-                >
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleTestConnection}
-                        loading={isTestingConnection}
-                        disabled={isTestingConnection || (currentProvider.requiresApiKey && !currentSettings.apiKey)}
-                        className="w-[120px]"
-                    >
-                        {isTestingConnection ? "Testing..." : "Test Connection"}
-                    </Button>
-                </SettingsRow>
-
-                <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-
+                {/* Model Selection */}
                 <SettingsRow
                     label={t('settings.ai.model')}
-                    description="Select the AI model to use"
-                    htmlFor="aiModelSelect"
+                    description={t('settings.ai.modelDescription')}
+                    htmlFor="modelSelect"
                 >
                     <div className="flex items-center space-x-2">
                         {renderSelect(
-                            'aiModelSelect',
+                            'modelSelect',
                             currentSettings.model,
                             handleModelChange,
                             modelOptions,
                             "Select Model"
                         )}
-                        {currentProvider.listModelsEndpoint && (
+                        {currentProvider.listModelsEndpoint && !currentProvider.requiresApiKey && (
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 icon="refresh-cw"
                                 onClick={handleFetchModels}
-                                disabled={isFetchingModels || (currentProvider.requiresApiKey && !currentSettings.apiKey)}
+                                disabled={isFetchingModels}
                                 loading={isFetchingModels}
                                 className="w-7 h-7 text-grey-medium dark:text-neutral-400"
                                 aria-label="Fetch models"
@@ -658,97 +770,49 @@ const AISettings: React.FC = memo(() => {
                         )}
                     </div>
                 </SettingsRow>
+
+                <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+
+                {/* Connection Test */}
+                <SettingsRow
+                    label={t('settings.ai.connectionTest')}
+                    description={t('settings.ai.connectionTestDescription')}
+                >
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        icon="wifi"
+                        onClick={handleTestConnection}
+                        disabled={isTestingConnection || !currentSettings.model || (currentProvider.requiresApiKey && !currentSettings.apiKey)}
+                        loading={isTestingConnection}
+                        className="text-[13px]"
+                    >
+                        {t('settings.ai.testConnection')}
+                    </Button>
+                </SettingsRow>
             </div>
 
-            {/* Status */}
-            {currentSettings.isConnected && currentSettings.model && (
-                <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="flex items-center space-x-2">
-                        <Icon name="check-circle" size={16} className="text-green-600 dark:text-green-400" />
-                        <span className="text-[13px] text-green-700 dark:text-green-300">
-                            AI is configured and ready to use with {currentProvider.name} ({currentSettings.model})
-                        </span>
-                    </div>
+            {/* Status indicator */}
+            <div className="pt-4 border-t border-grey-light dark:border-neutral-700">
+                <div className="flex items-center space-x-2">
+                    <div className={twMerge(
+                        "w-2 h-2 rounded-full",
+                        currentSettings.apiKey && currentSettings.model
+                            ? "bg-green-500"
+                            : "bg-orange-400"
+                    )} />
+                    <span className="text-[11px] text-grey-medium dark:text-neutral-400">
+                        {currentSettings.apiKey && currentSettings.model
+                            ? t('settings.ai.statusReady')
+                            : t('settings.ai.statusIncomplete')
+                        }
+                    </span>
                 </div>
-            )}
+            </div>
         </div>
     );
 });
 AISettings.displayName = 'AISettings';
-
-
-// ... (AboutSettings and SettingsModal components are unchanged)
-const AboutSettings: React.FC = memo(() => {
-    const {t} = useTranslation();
-    const [activeContent, setActiveContent] = useState<'changelog' | 'privacy' | 'terms' | null>(null);
-
-    const contentMap = useMemo(() => ({
-        changelog: {title: t('settings.about.changelog'), html: CHANGELOG_HTML},
-        privacy: {title: t('settings.about.privacyPolicy'), html: PRIVACY_POLICY_HTML},
-        terms: {title: t('settings.about.termsOfUse'), html: TERMS_OF_USE_HTML},
-    }), [t]);
-
-    const renderContent = () => {
-        if (!activeContent || !contentMap[activeContent]) return null;
-        return (
-            <div
-                className="mt-4 p-4 rounded-base border border-grey-light dark:border-neutral-700 bg-grey-ultra-light/50 dark:bg-neutral-750/50 max-h-[300px] overflow-y-auto styled-scrollbar-thin">
-                <h4 className="text-md font-semibold text-grey-dark dark:text-neutral-100 mb-3">{contentMap[activeContent].title}</h4>
-                <div dangerouslySetInnerHTML={{__html: contentMap[activeContent].html}}/>
-            </div>
-        );
-    };
-
-    return (
-        <div className="space-y-0">
-            <SettingsRow label={t('settings.about.version')} value={APP_VERSION}/>
-            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label={t('settings.about.changelog')} action={
-                <Button variant="link" size="sm"
-                        onClick={() => setActiveContent(activeContent === 'changelog' ? null : 'changelog')}>
-                    {activeContent === 'changelog' ? t('settings.about.hide') : t('settings.about.view')}
-                </Button>
-            }/>
-            {activeContent === 'changelog' && renderContent()}
-            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label={t('settings.about.privacyPolicy')} action={
-                <Button variant="link" size="sm"
-                        onClick={() => setActiveContent(activeContent === 'privacy' ? null : 'privacy')}>
-                    {activeContent === 'privacy' ? t('settings.about.hide') : t('settings.about.view')}
-                </Button>
-            }/>
-            {activeContent === 'privacy' && renderContent()}
-            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label={t('settings.about.termsOfUse')} action={
-                <Button variant="link" size="sm"
-                        onClick={() => setActiveContent(activeContent === 'terms' ? null : 'terms')}>
-                    {activeContent === 'terms' ? t('settings.about.hide') : t('settings.about.view')}
-                </Button>
-            }/>
-            {activeContent === 'terms' && renderContent()}
-            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label={t('settings.about.feedback')}
-                         description={t('settings.about.feedbackDescription')}>
-                <Button as="a" href="mailto:feedback@tada-app.example.com?subject=Tada App Feedback"
-                        variant="secondary"
-                        size="sm" icon="mail">
-                    {t('settings.about.sendEmail')}
-                </Button>
-            </SettingsRow>
-            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
-            <SettingsRow label={t('settings.about.reportIssue')}
-                         description={t('settings.about.reportIssueDescription')}>
-                <Button as="a" href="mailto:support@tada-app.example.com?subject=Tada App Issue Report"
-                        variant="secondary" size="sm" icon="alert-circle"
-                        className="text-warning hover:!bg-warning/10 dark:text-warning dark:hover:!bg-warning/20">
-                    {t('settings.about.reportButton')}
-                </Button>
-            </SettingsRow>
-        </div>
-    );
-});
-AboutSettings.displayName = 'AboutSettings';
-
 
 const SettingsModal: React.FC = () => {
     const {t} = useTranslation();
@@ -785,7 +849,7 @@ const SettingsModal: React.FC = () => {
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
-                        "bg-white dark:bg-neutral-800 w-full max-w-5xl h-[85vh] max-h-[750px]", // Changed size
+                        "bg-white dark:bg-neutral-800 w-full max-w-5xl h-[85vh] max-h-[750px]",
                         "rounded-base shadow-modal flex overflow-hidden",
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}

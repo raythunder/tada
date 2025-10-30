@@ -17,9 +17,8 @@ const getApiEndpoint = (settings: AISettings, type: 'chat' | 'models'): string =
     if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
 
     let endpoint = type === 'chat' ? provider.apiEndpoint : provider.listModelsEndpoint;
-    if (!endpoint) throw new Error(`Endpoint type '${type}' not available for ${provider.name}.`);
+    if (!endpoint) throw new Error(`Endpoint type '${type}' not available for ${provider.id}.`);
 
-    // Handle custom/ollama base URL
     if ((provider.id === 'custom' || provider.id === 'ollama') && settings.baseUrl) {
         const baseUrl = settings.baseUrl.endsWith('/') ? settings.baseUrl.slice(0, -1) : settings.baseUrl;
         endpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -43,67 +42,17 @@ const getApiHeaders = (settings: AISettings): Record<string, string> => {
     return baseHeaders;
 };
 
-export const testConnection = async (settings: AISettings): Promise<boolean> => {
-    const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
-    if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
-
-    // For providers that don't require API key (like Ollama)
-    if (!provider.requiresApiKey && !settings.apiKey) {
-        if (provider.listModelsEndpoint) {
-            try {
-                const endpoint = getApiEndpoint(settings, 'models');
-                const response = await fetch(endpoint, {
-                    method: 'GET',
-                    headers: getApiHeaders(settings),
-                });
-                return response.ok;
-            } catch (error) {
-                return false;
-            }
-        }
-        return true; // Assume connection is OK if no way to test
-    }
-
-    if (!settings.apiKey) return false;
-
-    try {
-        if (provider.listModelsEndpoint) {
-            const models = await fetchProviderModels(settings);
-            return models.length > 0;
-        }
-
-        // Fallback: try a simple chat completion
-        const payload = {
-            model: settings.model || 'test',
-            messages: [{ role: 'user', content: 'Hello' }],
-            max_tokens: 1,
-        };
-
-        const response = await fetch(getApiEndpoint(settings, 'chat'), {
-            method: 'POST',
-            headers: getApiHeaders(settings),
-            body: JSON.stringify(payload),
-        });
-
-        return response.ok;
-    } catch (error) {
-        return false;
-    }
-};
-
 export const fetchProviderModels = async (settings: AISettings): Promise<AIModel[]> => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
     if (!provider || !provider.listModelsEndpoint || !provider.parseModels) {
         throw new Error("This provider does not support dynamic model fetching.");
     }
-
-    // For Ollama, API key is not required
     if (provider.requiresApiKey && !settings.apiKey) {
         throw new Error("API key is required to fetch models.");
     }
 
     const endpoint = getApiEndpoint(settings, 'models');
-    const headers = getApiHeaders(settings);
+    const headers = provider.getHeaders(settings.apiKey);
 
     try {
         const response = await fetch(endpoint, {
@@ -119,11 +68,51 @@ export const fetchProviderModels = async (settings: AISettings): Promise<AIModel
         const data = await response.json();
         return provider.parseModels(data);
     } catch (error) {
-        console.error(`Error fetching models for ${provider.name}:`, error);
+        console.error(`Error fetching models for ${provider.id}:`, error);
         if (error instanceof TypeError) {
-            throw new Error("Network error occurred. Please check your connection and CORS settings.");
+            throw new Error("Network error occurred. This might be a CORS issue or connection problem.");
         }
         throw error;
+    }
+};
+
+export const testConnection = async (settings: AISettings): Promise<boolean> => {
+    const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
+    if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
+
+    if (provider.requiresApiKey && !settings.apiKey) {
+        throw new Error("API key is required to test connection.");
+    }
+
+    try {
+        // For providers that support model listing, use that as a test
+        if (provider.listModelsEndpoint) {
+            await fetchProviderModels(settings);
+            return true;
+        }
+
+        // For providers that don't support model listing, try a simple chat request
+        let payload = {
+            model: settings.model,
+            messages: [{ role: "user", content: "Hi" }],
+            max_tokens: 1,
+        };
+
+        if (provider.requestBodyTransformer) {
+            const transformedPayload = provider.requestBodyTransformer(payload);
+            payload = transformedPayload;
+        }
+
+        const response = await fetch(getApiEndpoint(settings, 'chat'), {
+            method: 'POST',
+            headers: getApiHeaders(settings),
+            body: JSON.stringify(payload),
+        });
+
+        return response.ok;
+    } catch (error) {
+        console.error('Connection test failed:', error);
+        return false;
     }
 };
 
@@ -176,7 +165,11 @@ Analyze the user's prompt and extract these details. If a detail is not present,
 Be concise and accurate. Do not add any extra text outside of the JSON object.`;
 
     const useJsonFormat = ['openai', 'openrouter', 'deepseek', 'custom'].includes(provider.id);
-    const payload = createOpenAICompatiblePayload(settings.model, systemPrompt, prompt, useJsonFormat);
+    let payload = createOpenAICompatiblePayload(settings.model, systemPrompt, prompt, useJsonFormat);
+
+    if (provider.requestBodyTransformer) {
+        payload = provider.requestBodyTransformer(payload);
+    }
 
     try {
         const response = await fetch(getApiEndpoint(settings, 'chat'), {
@@ -263,8 +256,8 @@ Be insightful and professional. Do not add any extra text or pleasantries outsid
 
     const userPrompt = `Please summarize the following tasks:\n\n${tasksString}`;
 
-    // --- Non-streaming path for Gemini due to its unique API structure ---
-    if (provider.id === 'gemini') {
+    // --- Non-streaming path for providers that don't support streaming well ---
+    if (provider.id === 'gemini' || provider.id === 'ollama') {
         let payload: any = createOpenAICompatiblePayload(settings.model, systemPrompt, userPrompt, false);
         if (provider.requestBodyTransformer) {
             payload = provider.requestBodyTransformer(payload);
@@ -280,11 +273,11 @@ Be insightful and professional. Do not add any extra text or pleasantries outsid
         }
         const data = await response.json();
         const summaryText = extractContentFromResponse(data, provider.id);
-        onDelta(summaryText); // Send the full text in one go
+        onDelta(summaryText);
         return service.createSummary({periodKey, listKey, taskIds, summaryText});
     }
 
-    // --- Streaming path for all other providers ---
+    // --- Streaming path for other providers ---
     let payload: any = createOpenAICompatiblePayload(settings.model, systemPrompt, userPrompt, false);
     payload.stream = true;
 

@@ -37,7 +37,7 @@ export interface Task {
     updatedAt: number;
     tags?: string[];
     priority?: number | null;
-    groupCategory: TaskGroupCategory; // This is a derived, client-side only property
+    groupCategory: TaskGroupCategory;
     subtasks?: Subtask[];
 }
 
@@ -87,12 +87,11 @@ export interface PreferencesSettings {
     confirmDeletions: boolean;
 }
 
-// 简化的AI设置接口
+// Simplified AI Settings - single provider, single model
 export interface AISettings {
-    provider: AIProvider['id']; // 当前选择的提供商
-    apiKey: string; // API密钥
-    model: string; // 选择的模型
-    baseUrl?: string; // 自定义base URL (用于ollama、custom等)
-    fetchedModels?: AIModel[]; // 获取到的模型列表
-    isConnected?: boolean; // 连接状态
+    provider: AIProvider['id'];
+    apiKey: string;
+    model: string;
+    baseUrl?: string; // for custom/ollama providers
+    availableModels?: AIModel[]; // cached available models
 }

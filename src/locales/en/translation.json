@@ -123,6 +123,8 @@
     },
     "ai": {
       "title": "AI Settings",
+      "selectProvider": "Select AI Provider",
+      "selectProviderDescription": "Choose your preferred AI service provider for intelligent features.",
       "provider": "LLM Provider",
       "providerDescription": "Select the language model provider for AI features.",
       "apiKey": "API Key",
@@ -131,13 +133,16 @@
       "apiKeyPlaceholder": "Enter your API key here",
       "baseUrl": "Custom Base URL",
       "baseUrlDescription": "Provide a custom base URL for OpenAI-compatible services.",
-      "baseUrlPlaceholder": "e.g., https://api.example.com/v1",
+      "baseUrlPlaceholder": "e.g., api.example.com/v1",
       "model": "Model",
       "modelDescription": "Select a model for the chosen provider.",
-      "providerPriority": {
-        "title": "Provider Priority",
-        "description": "Drag to reorder the display sequence of providers in the selection menu."
-      }
+      "connectionTest": "Connection Test",
+      "connectionTestDescription": "Test the connection to verify your settings.",
+      "testConnection": "Test Connection",
+      "connectionSuccessful": "Connection test successful!",
+      "connectionFailed": "Connection test failed.",
+      "statusReady": "AI features are ready to use",
+      "statusIncomplete": "Complete configuration to enable AI features"
     },
     "about": {
       "title": "About",
@@ -154,6 +159,27 @@
       "reportIssueDescription": "Found a bug? Let us know.",
       "reportButton": "Report Issue"
     }
+  },
+  "aiProviders": {
+    "openai": "OpenAI",
+    "claude": "Anthropic Claude",
+    "gemini": "Google Gemini",
+    "xai": "xAI",
+    "cohere": "Cohere",
+    "groq": "Groq",
+    "openrouter": "OpenRouter",
+    "siliconflow": "SiliconFlow",
+    "302ai": "302.AI",
+    "moonshot": "Moonshot AI",
+    "deepseek": "DeepSeek",
+    "qwen": "Alibaba Qwen",
+    "zhipu": "Zhipu AI",
+    "baidu": "Baidu Wenxin",
+    "tencent": "Tencent Hunyuan",
+    "bytedance": "ByteDance Doubao",
+    "minimax": "MiniMax",
+    "ollama": "Ollama (Local)",
+    "custom": "Custom Service"
   },
   "taskList": {
     "rescheduleAll": "Reschedule All",

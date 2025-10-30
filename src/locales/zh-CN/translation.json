@@ -123,6 +123,8 @@
     },
     "ai": {
       "title": "AI 设置",
+      "selectProvider": "选择 AI 服务商",
+      "selectProviderDescription": "选择您首选的 AI 服务提供商来启用智能功能。",
       "provider": "LLM 提供商",
       "providerDescription": "选择用于 AI 功能的语言模型提供商。",
       "apiKey": "API 密钥",
@@ -131,13 +133,16 @@
       "apiKeyPlaceholder": "在此输入您的 API 密钥",
       "baseUrl": "自定义接口地址",
       "baseUrlDescription": "为兼容 OpenAI 的服务提供自定义基础 URL。",
-      "baseUrlPlaceholder": "例如: https://api.example.com/v1",
+      "baseUrlPlaceholder": "例如: api.example.com/v1",
       "model": "模型",
       "modelDescription": "为所选提供商选择一个模型。",
-      "providerPriority": {
-        "title": "提供商优先级",
-        "description": "拖动以重新排序提供商在选择菜单中的显示顺序。"
-      }
+      "connectionTest": "连接测试",
+      "connectionTestDescription": "测试连接以验证您的设置。",
+      "testConnection": "测试连接",
+      "connectionSuccessful": "连接测试成功！",
+      "connectionFailed": "连接测试失败。",
+      "statusReady": "AI 功能已就绪",
+      "statusIncomplete": "请完成配置以启用 AI 功能"
     },
     "about": {
       "title": "关于",
@@ -155,8 +160,29 @@
       "reportButton": "报告问题"
     }
   },
+  "aiProviders": {
+    "openai": "OpenAI",
+    "claude": "Anthropic Claude",
+    "gemini": "Google Gemini",
+    "xai": "xAI",
+    "cohere": "Cohere",
+    "groq": "Groq",
+    "openrouter": "OpenRouter",
+    "siliconflow": "硅基流动",
+    "302ai": "302.AI",
+    "moonshot": "月之暗面",
+    "deepseek": "深度求索",
+    "qwen": "阿里通义千问",
+    "zhipu": "智谱AI",
+    "baidu": "百度文心一言",
+    "tencent": "腾讯混元",
+    "bytedance": "字节豆包",
+    "minimax": "MiniMax",
+    "ollama": "Ollama（本地）",
+    "custom": "自定义服务"
+  },
   "taskList": {
-    "addTaskPlaceholder": "添加任务到 “{{listName}}”",
+    "addTaskPlaceholder": "添加任务到 \"{{listName}}\"",
     "aiTaskPlaceholder": "用AI描述任务 (例如, \"下个月策划一次团建活动\")",
     "aiTaskButton": {
       "label": "AI 任务",

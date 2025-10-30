@@ -37,7 +37,7 @@ const getDefaultData = (): AppData => {
         appearanceSettings: defaultAppearanceSettingsForApi(),
         preferencesSettings: {
             ...defaultPreferencesSettingsForApi(),
-            defaultNewTaskList: 'Inbox' // Ensure default list exists
+            defaultNewTaskList: 'Inbox'
         },
         aiSettings: defaultAISettingsForApi(),
     };
@@ -53,7 +53,6 @@ const loadData = (): AppData => {
             return {
                 ...getDefaultData(),
                 ...parsedData,
-                // Ensure nested settings objects are also merged with defaults
                 aiSettings: {
                     ...getDefaultData().aiSettings,
                     ...(parsedData.aiSettings || {}),
@@ -63,7 +62,6 @@ const loadData = (): AppData => {
     } catch (error) {
         console.error("Failed to load data from localStorage", error);
     }
-    // If anything fails, return fresh default data
     const defaultData = getDefaultData();
     saveData(defaultData);
     return defaultData;
@@ -146,7 +144,6 @@ export const updateList = (listId: string, updates: Partial<List>): List => {
 
     if (!updatedList) throw new Error("List not found");
 
-    // If name was updated, update all tasks in that list
     if (updates.name && originalName && updates.name !== originalName) {
         data.tasks = data.tasks.map(task =>
             task.listId === listId ? { ...task, listName: updates.name! } : task
@@ -166,14 +163,11 @@ export const deleteList = (listId: string): { message: string } => {
     const inbox = data.lists.find(l => l.name === 'Inbox');
     if (!inbox) throw new Error("Inbox not found, cannot delete list.");
 
-    // Move tasks to Inbox, unless they are already in the trash
     data.tasks = data.tasks.map(task => {
         if (task.listId === listId) {
-            // If task is already in trash, keep it there. Just nullify the listId.
             if (task.listName === 'Trash') {
                 return { ...task, listId: null };
             }
-            // Otherwise, move to Inbox.
             return { ...task, listId: inbox.id, listName: inbox.name };
         }
         return task;
@@ -198,7 +192,7 @@ export const createTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'
         id: `task-${now}-${Math.random()}`,
         createdAt: now,
         updatedAt: now,
-        groupCategory: 'nodate', // This will be recalculated in atoms
+        groupCategory: 'nodate',
     };
     data.tasks.push(newTask);
     saveData(data);
@@ -280,7 +274,7 @@ export const deleteSubtask = (subtaskId: string): void => {
             const initialLength = task.subtasks.length;
             task.subtasks = task.subtasks.filter(s => s.id !== subtaskId);
             if(task.subtasks.length < initialLength) {
-                break; // Found and deleted
+                break;
             }
         }
     }
@@ -302,7 +296,7 @@ export const createSummary = (summaryData: Omit<StoredSummary, 'id' | 'createdAt
         createdAt: now,
         updatedAt: now,
     };
-    data.summaries.unshift(newSummary); // Add to the beginning
+    data.summaries.unshift(newSummary);
     saveData(data);
     return newSummary;
 };

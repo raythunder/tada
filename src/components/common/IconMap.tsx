@@ -34,6 +34,7 @@ export const iconMap = {
     'git-fork': LucideIcons.GitFork,
     'check': LucideIcons.Check,
     'x': LucideIcons.X,
+    'wifi': LucideIcons.WifiIcon,
     'arrow-left': LucideIcons.ArrowLeft,
     'arrow-right': LucideIcons.ArrowRight,
     'star': LucideIcons.Star,

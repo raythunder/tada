@@ -64,8 +64,7 @@ export const defaultAISettingsForApi = (): AISettings => ({
     apiKey: '',
     model: '',
     baseUrl: '',
-    fetchedModels: [],
-    isConnected: false,
+    availableModels: [],
 });
 
 // --- Task Atoms ---
