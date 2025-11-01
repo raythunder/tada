@@ -18,6 +18,7 @@ interface CodeMirrorEditorProps {
     readOnly?: boolean;
     onBlur?: () => void;
     onFocus?: () => void;
+    taskTitle?: string; // New prop for context
 }
 
 export interface CodeMirrorEditorRef {
@@ -26,7 +27,7 @@ export interface CodeMirrorEditorRef {
 }
 
 const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
-    ({value, onChange, className, placeholder, readOnly = false, onBlur, onFocus}, ref) => {
+    ({value, onChange, className, placeholder, readOnly = false, onBlur, onFocus, taskTitle = ''}, ref) => {
         const editorContainerRef = useRef<HTMLDivElement>(null);
         const moondownInstanceRef = useRef<Moondown | null>(null);
         const appearance = useAtomValue(appearanceSettingsAtom);
@@ -54,6 +55,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             'moondown.slash.orderedList': t('moondown.slash.orderedList'),
             'moondown.slash.unorderedList': t('moondown.slash.unorderedList'),
             'moondown.slash.codeBlock': t('moondown.slash.codeBlock'),
+            'moondown.prompts.textContinuation': t('prompts.textContinuation'),
         }), [t]);
 
         const handleAIStream = useCallback(async (
@@ -64,8 +66,9 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             if (!aiSettings || !aiSettings.provider || !aiSettings.apiKey || !aiSettings.model) {
                 throw new Error("AI is not configured. Please check your AI settings.");
             }
-            return streamChatCompletionForEditor(aiSettings, systemPrompt, userPrompt, signal);
-        }, [aiSettings]);
+            const contextualizedUserPrompt = `Task Title: ${taskTitle}\n\n${userPrompt}`;
+            return streamChatCompletionForEditor(aiSettings, systemPrompt, contextualizedUserPrompt, signal);
+        }, [aiSettings, taskTitle]);
 
         useImperativeHandle(ref, () => ({
             focus: () => moondownInstanceRef.current?.focus(),

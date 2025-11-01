@@ -1,5 +1,5 @@
 // src/services/aiService.ts
-import {AISettings, StoredSummary} from '@/types';
+import {AISettings, StoredSummary, Task} from '@/types';
 import * as service from './localStorageService';
 import {AI_PROVIDERS, AIModel, AIProvider} from "@/config/aiProviders";
 
@@ -150,27 +150,13 @@ const extractContentFromResponse = (data: any, providerId: AISettings['provider'
     }
 }
 
-export const analyzeTaskInputWithAI = async (prompt: string, settings: AISettings): Promise<AiTaskAnalysis> => {
+export const analyzeTaskInputWithAI = async (prompt: string, settings: AISettings, systemPrompt: string): Promise<AiTaskAnalysis> => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
     if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
 
     if (provider.requiresApiKey && !settings.apiKey) {
         throw new Error("API key is not set for the selected provider.");
     }
-
-    const systemPrompt = `You are a helpful assistant that analyzes a user's task input and converts it into a structured JSON object.
-The current date is ${new Date().toLocaleDateString()}.
-Your output MUST be a valid JSON object with the following schema:
-{
-  "title": "string (max 60 chars)",
-  "content": "string (optional, can be a longer description, in markdown)",
-  "subtasks": [ { "title": "string", "dueDate": "string (optional, YYYY-MM-DD format)" } ],
-  "tags": [ "string" ],
-  "priority": "number (1 for high, 2 for medium, 3 for low, or null for none)",
-  "dueDate": "string (optional, YYYY-MM-DD format)"
-}
-Analyze the user's prompt and extract these details. If a detail is not present, use a reasonable default or omit it (e.g., empty array for subtasks/tags, null for priority/dueDate).
-Be concise and accurate. Do not add any extra text outside of the JSON object.`;
 
     const useJsonFormat = ['openai', 'openrouter', 'deepseek', 'custom'].includes(provider.id);
     let payload: any = createOpenAICompatiblePayload(settings.model, systemPrompt, prompt, useJsonFormat, false);
@@ -331,29 +317,34 @@ export const streamChatCompletionForEditor = async (
 
 export const generateAiSummary = async (
     taskIds: string[],
+    futureTaskIds: string[],
     periodKey: string,
     listKey: string,
     settings: AISettings,
+    systemPrompt: string,
     onDelta: (chunk: string) => void,
 ): Promise<StoredSummary> => {
     const allTasks = service.fetchTasks();
     const tasksToSummarize = allTasks.filter(t => taskIds.includes(t.id));
+    const futureTasks = allTasks.filter(t => futureTaskIds.includes(t.id));
 
-    if (tasksToSummarize.length === 0) {
+    if (tasksToSummarize.length === 0 && futureTasks.length === 0) {
         throw new Error("No tasks were provided for summary.");
     }
 
-    const tasksString = tasksToSummarize.map(t =>
+    const tasksString = tasksToSummarize.length > 0
+        ? "## Tasks from the summary period:\n" + tasksToSummarize.map(t =>
         `- Task: "${t.title}" (Status: ${t.completed ? 'Completed' : 'Incomplete'}${t.completePercentage ? `, ${t.completePercentage}% done` : ''})\n  Notes: ${t.content || 'N/A'}`
-    ).join('\n');
+    ).join('\n')
+        : "No tasks were selected for the primary summary period.";
 
-    const systemPrompt = `You are an assistant that summarizes a list of tasks.
-Analyze the provided tasks and generate a concise summary in Markdown format.
-Focus on key achievements, pending items, and potential blockers.
-Structure the summary with headings like "### Key Achievements", "### Pending Items", and "### Blockers".
-Be insightful and professional. Do not add any extra text or pleasantries outside of the summary itself.`;
+    const futureTasksString = futureTasks.length > 0
+        ? "\n\n## Upcoming tasks for future planning context:\n" + futureTasks.map(t =>
+        `- Task: "${t.title}" (Due: ${t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'N/A'})`
+    ).join('\n')
+        : "\n\nNo specific upcoming tasks were provided for context.";
 
-    const userPrompt = `Please summarize the following tasks:\n\n${tasksString}`;
+    const userPrompt = `${tasksString}${futureTasksString}`;
 
     const stream = await streamChatCompletionForEditor(settings, systemPrompt, userPrompt, new AbortController().signal);
     const reader = stream.getReader();

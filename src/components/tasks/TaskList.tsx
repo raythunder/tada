@@ -138,7 +138,7 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
     const groupTitles: Record<TaskGroupCategory, string> = useMemo(() => ({
         overdue: t('taskGroup.overdue'),
         today: t('taskGroup.today'),
-        next7days: t('taskGroup.next7days'),
+        next7days: t('taskGroup.next7Days'),
         later: t('taskGroup.later'),
         nodate: t('taskGroup.nodate'),
     }), [t]);
@@ -493,7 +493,8 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         setIsAiProcessing(true);
 
         try {
-            const aiAnalysis = await analyzeTaskInputWithAI(sentence, aiSettings);
+            const systemPrompt = t('prompts.taskAnalysis', { currentDate: new Date().toLocaleDateString() });
+            const aiAnalysis = await analyzeTaskInputWithAI(sentence, aiSettings, systemPrompt);
 
             const targetList = allUserLists?.find(l => l.name === newTaskListState);
             const inboxList = allUserLists?.find(l => l.name === 'Inbox');

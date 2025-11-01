@@ -5,19 +5,6 @@ import { slashCommandPlugin } from "./slash-command";
 import { CSS_CLASSES, TIMING } from "../../core/constants";
 import {onAIStreamState, translationsState} from "../default-extensions";
 
-const completionPrompt: string = 'You are an AI assistant specializing in text continuation. ' +
-    'The user will provide text with a prefix, a {FILL_ME} marker, and a suffix. ' +
-    'Your task is to analyze the context of the prefix and suffix and write a coherent continuation at the {FILL_ME} position. ' +
-    'Please adhere to the following guidelines: ' +
-    '1. As a small model, use simple and clear sentences. Avoid complex vocabulary and grammar. ' +
-    '2. Carefully read the prefix and suffix to understand the main idea, tone, and logic before writing. ' +
-    '3. Write a continuation of about 200 characters at the {FILL_ME} position. ' +
-    '4. Avoid repeating content that is already present in the prefix or suffix. ' +
-    '5. You are a text continuation assistant, not a conversational one. Do not ask questions or provide hints. ' +
-    '6. Focus on the topic, emotional tone, logical connections, and style of the surrounding text. ' +
-    '7. Only output the content for the {FILL_ME} position. Do not repeat the prefix or suffix. ' +
-    'Now, read the following prefix and suffix and provide a continuation for {FILL_ME}:';
-
 /**
  * Loading widget displayed during AI text generation
  */
@@ -113,6 +100,8 @@ export async function ghostWriterExecutor(view: EditorView): Promise<AbortContro
 
     const onAIStream = state.field(onAIStreamState);
     const translations = state.field(translationsState);
+
+    const completionPrompt = translations['moondown.prompts.textContinuation'] || 'You are a helpful assistant that continues writing text for the user.';
 
     const abortController = new AbortController();
     const plugin = view.plugin(slashCommandPlugin);

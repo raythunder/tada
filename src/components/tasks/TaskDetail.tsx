@@ -963,7 +963,9 @@ const TaskDetail: React.FC = () => {
                             onBlur={handleMainContentBlur}
                             placeholder={t('taskDetail.notesPlaceholder')}
                             className={editorClasses}
-                            readOnly={isInteractiveDisabled}/>
+                            readOnly={isInteractiveDisabled}
+                            taskTitle={localTitle}
+                        />
                     </div>
                     <div
                         className={twMerge(

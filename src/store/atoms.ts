@@ -236,6 +236,7 @@ export type SummaryPeriodOption = SummaryPeriodKey | { start: number; end: numbe
 export const summaryPeriodFilterAtom = atom<SummaryPeriodOption>('thisWeek');
 export const summaryListFilterAtom = atom<string>('all');
 export const summarySelectedTaskIdsAtom = atom<Set<string>>(new Set<string>());
+export const summarySelectedFutureTaskIdsAtom = atom<Set<string>>(new Set<string>()); // New atom for future plans
 
 const baseStoredSummariesAtom = atom<StoredSummary[] | null>(null);
 export const storedSummariesLoadingAtom = atom<boolean>(false);
@@ -363,6 +364,62 @@ export const rawSearchResultsAtom = atom<Task[]>((get) => {
     });
 });
 
+const getPeriodDates = (period: SummaryPeriodOption) => {
+    const todayStart = startOfDay(new Date());
+    switch (period) {
+        case 'today': return { startDate: todayStart, endDate: endOfDay(todayStart) };
+        case 'yesterday': return { startDate: startOfDay(subDays(todayStart, 1)), endDate: endOfDay(subDays(todayStart, 1)) };
+        case 'thisWeek': return { startDate: startOfWeek(todayStart), endDate: endOfWeek(todayStart) };
+        case 'lastWeek': return { startDate: startOfWeek(subWeeks(todayStart, 1)), endDate: endOfWeek(subWeeks(todayStart, 1)) };
+        case 'thisMonth': return { startDate: startOfMonth(todayStart), endDate: endOfMonth(todayStart) };
+        case 'lastMonth': return { startDate: startOfMonth(subMonths(todayStart, 1)), endDate: endOfMonth(subMonths(todayStart, 1)) };
+        default:
+            if (typeof period === 'object' && period.start && period.end) {
+                return { startDate: startOfDay(new Date(period.start)), endDate: endOfDay(new Date(period.end)) };
+            }
+            return { startDate: null, endDate: null };
+    }
+}
+
+export const filteredTasksForSummaryAtom = atom<Task[]>((get) => {
+    const allTasks = get(tasksAtom) ?? [];
+    const period = get(summaryPeriodFilterAtom);
+    const listFilter = get(summaryListFilterAtom);
+
+    const { startDate, endDate } = getPeriodDates(period);
+    if (!startDate || !endDate) return [];
+
+    return allTasks.filter(task => {
+        if (task.listName === 'Trash') return false;
+        if (listFilter !== 'all' && task.listName !== listFilter) return false;
+        const relevantDateTimestamp = task.completed && task.completedAt ? task.completedAt
+            : !task.completed && task.dueDate ? task.dueDate
+                : task.updatedAt;
+        if (!relevantDateTimestamp) return false;
+
+        const relevantDate = safeParseDate(relevantDateTimestamp);
+        return relevantDate && isValid(relevantDate) && !isBefore(relevantDate, startDate) && !isAfter(relevantDate, endDate);
+    }).sort((a, b) => (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
+});
+
+export const futureTasksForSummaryAtom = atom<Task[]>((get) => {
+    const allTasks = get(tasksAtom) ?? [];
+    const period = get(summaryPeriodFilterAtom);
+    const listFilter = get(summaryListFilterAtom);
+
+    const { endDate } = getPeriodDates(period);
+    if (!endDate) return [];
+
+    return allTasks.filter(task => {
+        if (task.listName === 'Trash' || task.completed) return false;
+        if (listFilter !== 'all' && task.listName !== listFilter) return false;
+        if (!task.dueDate) return false;
+
+        const dueDate = safeParseDate(task.dueDate);
+        return dueDate && isValid(dueDate) && isAfter(dueDate, endDate);
+    }).sort((a, b) => (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity));
+});
+
 export const currentSummaryFilterKeyAtom = atom<string>((get) => {
     const period = get(summaryPeriodFilterAtom);
     const list = get(summaryListFilterAtom);
@@ -378,66 +435,6 @@ export const currentSummaryFilterKeyAtom = atom<string>((get) => {
     return `${periodStr}__${listStr}`;
 });
 
-export const filteredTasksForSummaryAtom = atom<Task[]>((get) => {
-    const allTasks = get(tasksAtom) ?? [];
-    const period = get(summaryPeriodFilterAtom);
-    const listFilter = get(summaryListFilterAtom);
-    const todayStart = startOfDay(new Date());
-    let startDateNum: number | null = null, endDateNum: number | null = null;
-    switch (period) {
-        case 'today':
-            startDateNum = todayStart.getTime();
-            endDateNum = endOfDay(new Date()).getTime();
-            break;
-        case 'yesterday':
-            startDateNum = startOfDay(subDays(todayStart, 1)).getTime();
-            endDateNum = endOfDay(new Date(startDateNum)).getTime();
-            break;
-        case 'thisWeek':
-            startDateNum = startOfWeek(todayStart).getTime();
-            endDateNum = endOfWeek(todayStart).getTime();
-            break;
-        case 'lastWeek':
-            startDateNum = startOfWeek(subWeeks(todayStart, 1)).getTime();
-            endDateNum = endOfWeek(new Date(startDateNum)).getTime();
-            break;
-        case 'thisMonth':
-            startDateNum = startOfMonth(todayStart).getTime();
-            endDateNum = endOfMonth(todayStart).getTime();
-            break;
-        case 'lastMonth':
-            startDateNum = startOfMonth(subMonths(todayStart, 1)).getTime();
-            endDateNum = endOfMonth(new Date(startDateNum)).getTime();
-            break;
-        default:
-            if (typeof period === 'object' && period.start && period.end) {
-                startDateNum = startOfDay(new Date(period.start)).getTime();
-                endDateNum = endOfDay(new Date(period.end)).getTime();
-            }
-            break;
-    }
-    if (!startDateNum || !endDateNum) return [];
-    const startDateObj = new Date(startDateNum);
-    const endDateObj = new Date(endDateNum);
-    if (!isValid(startDateObj) || !isValid(endDateObj)) return [];
-    return allTasks.filter(task => {
-        if (task.listName === 'Trash') return false;
-        if (listFilter !== 'all' && task.listName !== listFilter) return false;
-        let relevantDateTimestamp: number | null = null;
-        if (task.completed && task.completedAt) {
-            relevantDateTimestamp = task.completedAt;
-        } else if (!task.completed && task.dueDate) {
-            relevantDateTimestamp = task.dueDate;
-        } else {
-            relevantDateTimestamp = task.updatedAt;
-        }
-        if (!relevantDateTimestamp) return false;
-        const relevantDate = safeParseDate(relevantDateTimestamp);
-        if (!relevantDate || !isValid(relevantDate)) return false;
-        const relevantDateDayStart = startOfDay(relevantDate);
-        return !isBefore(relevantDateDayStart, startDateObj) && !isAfter(relevantDateDayStart, endDateObj);
-    }).sort((a, b) => (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity) || (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
-});
 
 export const relevantStoredSummariesAtom = atom<StoredSummary[]>((get) => {
     const allSummaries = get(storedSummariesAtom) ?? [];

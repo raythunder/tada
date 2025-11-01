@@ -13,6 +13,7 @@ import {
     currentSummaryFilterKeyAtom,
     currentSummaryIndexAtom,
     filteredTasksForSummaryAtom,
+    futureTasksForSummaryAtom,
     isGeneratingSummaryAtom,
     preferencesSettingsAtom,
     referencedTasksForSummaryAtom,
@@ -21,6 +22,7 @@ import {
     summaryListFilterAtom,
     summaryPeriodFilterAtom,
     SummaryPeriodOption,
+    summarySelectedFutureTaskIdsAtom,
     summarySelectedTaskIdsAtom,
     tasksAtom,
     userListNamesAtom,
@@ -65,7 +67,9 @@ const SummaryView: React.FC = () => {
     const [listFilter, setListFilter] = useAtom(summaryListFilterAtom);
     const availableLists = useAtomValue(userListNamesAtom);
     const filteredTasks = useAtomValue(filteredTasksForSummaryAtom);
+    const futureTasks = useAtomValue(futureTasksForSummaryAtom);
     const [selectedTaskIds, setSelectedTaskIds] = useAtom(summarySelectedTaskIdsAtom);
+    const [selectedFutureTaskIds, setSelectedFutureTaskIds] = useAtom(summarySelectedFutureTaskIdsAtom);
     const relevantSummaries = useAtomValue(relevantStoredSummariesAtom);
     const allStoredSummariesData = useAtomValue(storedSummariesAtom);
     const allStoredSummaries = useMemo(() => allStoredSummariesData ?? [], [allStoredSummariesData]);
@@ -104,9 +108,10 @@ const SummaryView: React.FC = () => {
 
     useEffect(() => {
         setSelectedTaskIds(new Set());
+        setSelectedFutureTaskIds(new Set());
         setCurrentIndex(0);
         setEditMode(false);
-    }, [period, listFilter, setCurrentIndex, setSelectedTaskIds]);
+    }, [period, listFilter, setCurrentIndex, setSelectedTaskIds, setSelectedFutureTaskIds]);
 
     useEffect(() => {
         if (editMode) return;
@@ -159,12 +164,18 @@ const SummaryView: React.FC = () => {
         setCurrentIndex(-1);
 
         const tasksToSummarize = allTasks.filter(t => selectedTaskIds.has(t.id));
-        if (tasksToSummarize.length === 0) {
+        const futureTasksToConsider = allTasks.filter(t => selectedFutureTaskIds.has(t.id));
+
+        if (tasksToSummarize.length === 0 && futureTasksToConsider.length === 0) {
             setIsGenerating(false);
             return;
         }
+
         const taskIdsToSummarize = tasksToSummarize.map(t => t.id);
+        const futureTaskIdsToConsider = futureTasksToConsider.map(t => t.id);
         const [periodKey, listKey] = filterKey.split('__');
+
+        const systemPrompt = t('prompts.taskSummary');
 
         // Non-AI fallback
         if (!isAiEnabled) {
@@ -179,6 +190,10 @@ const SummaryView: React.FC = () => {
             if (pendingTasks.length > 0) {
                 summaryText += `### ⏳ Pending Tasks (${pendingTasks.length})\n`;
                 summaryText += pendingTasks.map(t => `- ${t.title}`).join('\n') + '\n\n';
+            }
+            if (futureTasksToConsider.length > 0) {
+                summaryText += `### 🚀 Future Plans (${futureTasksToConsider.length})\n`;
+                summaryText += futureTasksToConsider.map(t => `- ${t.title}`).join('\n') + '\n\n';
             }
 
             const newSummary = service.createSummary({periodKey, listKey, taskIds: taskIdsToSummarize, summaryText});
@@ -196,7 +211,12 @@ const SummaryView: React.FC = () => {
                 setSummaryDisplayContent(prev => prev + chunk);
             };
 
-            const finalSummary = await generateAiSummary(taskIdsToSummarize, periodKey, listKey, aiSettings!, onDelta);
+            const finalSummary = await generateAiSummary(
+                taskIdsToSummarize, futureTaskIdsToConsider,
+                periodKey, listKey,
+                aiSettings!, systemPrompt,
+                onDelta
+            );
 
             setStoredSummaries(prev => [finalSummary, ...(prev ?? []).filter(s => s.id !== finalSummary.id)]);
             setTimeout(() => setCurrentIndex(0), 100);
@@ -209,7 +229,11 @@ const SummaryView: React.FC = () => {
         } finally {
             setIsGenerating(false);
         }
-    }, [isGenerating, forceSaveCurrentSummary, allTasks, selectedTaskIds, filterKey, setStoredSummaries, setCurrentIndex, setIsGenerating, aiSettings, addNotification, isAiEnabled]);
+    }, [
+        isGenerating, forceSaveCurrentSummary, allTasks, selectedTaskIds, selectedFutureTaskIds,
+        filterKey, setStoredSummaries, setCurrentIndex, setIsGenerating, aiSettings, addNotification,
+        isAiEnabled, t
+    ]);
 
 
     const handleEditorChange = useCallback((newValue: string) => {
@@ -250,17 +274,30 @@ const SummaryView: React.FC = () => {
         }
     }, [setSelectedTaskIds]);
 
-    const handleSelectAllTasks = useCallback(() => {
-        const nonTrashedTaskIds = filteredTasks.filter(t => t.listName !== 'Trash').map(t => t.id);
-        setSelectedTaskIds(new Set(nonTrashedTaskIds));
-    }, [filteredTasks, setSelectedTaskIds]);
+    const handleFutureTaskSelectionChange = useCallback((taskId: string, isSelected: boolean | 'indeterminate') => {
+        if (typeof isSelected === 'boolean') {
+            setSelectedFutureTaskIds(prev => {
+                const newSet = new Set(prev);
+                if (isSelected) newSet.add(taskId); else newSet.delete(taskId);
+                return newSet;
+            });
+        }
+    }, [setSelectedFutureTaskIds]);
 
-    const handleDeselectAllTasks = useCallback(() => {
-        setSelectedTaskIds(new Set());
-    }, [setSelectedTaskIds]);
+    const handleSelectAllTasks = useCallback((type: 'current' | 'future') => {
+        const tasksToSelect = type === 'current' ? filteredTasks : futureTasks;
+        const setter = type === 'current' ? setSelectedTaskIds : setSelectedFutureTaskIds;
+        const nonTrashedTaskIds = tasksToSelect.filter(t => t.listName !== 'Trash').map(t => t.id);
+        setter(new Set(nonTrashedTaskIds));
+    }, [filteredTasks, futureTasks, setSelectedTaskIds, setSelectedFutureTaskIds]);
 
-    const handleSelectAllToggle = useCallback((isChecked: boolean | 'indeterminate') => {
-        if (isChecked === true) handleSelectAllTasks(); else handleDeselectAllTasks();
+    const handleDeselectAllTasks = useCallback((type: 'current' | 'future') => {
+        const setter = type === 'current' ? setSelectedTaskIds : setSelectedFutureTaskIds;
+        setter(new Set());
+    }, [setSelectedTaskIds, setSelectedFutureTaskIds]);
+
+    const handleSelectAllToggle = useCallback((type: 'current' | 'future') => (isChecked: boolean | 'indeterminate') => {
+        if (isChecked === true) handleSelectAllTasks(type); else handleDeselectAllTasks(type);
     }, [handleSelectAllTasks, handleDeselectAllTasks]);
 
     const handlePrevSummary = useCallback(() => {
@@ -328,23 +365,28 @@ const SummaryView: React.FC = () => {
 
     const isGenerateDisabled = useMemo(() => {
         if (isGenerating) return true;
-        if (selectedTaskIds.size === 0) return true;
+        if (selectedTaskIds.size === 0 && selectedFutureTaskIds.size === 0) return true;
         const tasksForSummary = allTasks.filter(t => selectedTaskIds.has(t.id));
-        return !tasksForSummary.some(t => t.listName !== 'Trash');
-    }, [isGenerating, selectedTaskIds, allTasks]);
+        return !tasksForSummary.some(t => t.listName !== 'Trash') && selectedFutureTaskIds.size === 0;
+    }, [isGenerating, selectedTaskIds, selectedFutureTaskIds, allTasks]);
 
 
     const tasksUsedCount = useMemo(() => currentSummary?.taskIds.length ?? 0, [currentSummary]);
     const summaryTimestamp = useMemo(() => currentSummary ? formatDateTime(currentSummary.createdAt, preferences?.language) : null, [currentSummary, preferences]);
-    const selectableTasks = useMemo(() => filteredTasks.filter(t => t.listName !== 'Trash'), [filteredTasks]);
-    const allSelectableTasksSelected = useMemo(() => selectableTasks.length > 0 && selectableTasks.every(task => selectedTaskIds.has(task.id)), [selectableTasks, selectedTaskIds]);
-    const someSelectableTasksSelected = useMemo(() => selectableTasks.some(task => selectedTaskIds.has(task.id)) && !allSelectableTasksSelected, [selectedTaskIds, allSelectableTasksSelected, selectableTasks]);
 
-    const selectAllState = useMemo(() => {
-        if (allSelectableTasksSelected) return true;
-        if (someSelectableTasksSelected) return 'indeterminate';
+    const createSelectAllState = (tasks: Task[], selectedIds: Set<string>) => {
+        const allSelected = tasks.length > 0 && tasks.every(task => selectedIds.has(task.id));
+        const someSelected = tasks.some(task => selectedIds.has(task.id)) && !allSelected;
+        if (allSelected) return true;
+        if (someSelected) return 'indeterminate';
         return false;
-    }, [allSelectableTasksSelected, someSelectableTasksSelected]);
+    };
+
+    const selectableTasks = useMemo(() => filteredTasks.filter(t => t.listName !== 'Trash'), [filteredTasks]);
+    const selectAllState = useMemo(() => createSelectAllState(selectableTasks, selectedTaskIds), [selectableTasks, selectedTaskIds]);
+
+    const selectableFutureTasks = useMemo(() => futureTasks.filter(t => t.listName !== 'Trash'), [futureTasks]);
+    const selectAllFutureState = useMemo(() => createSelectAllState(selectableFutureTasks, selectedFutureTaskIds), [selectableFutureTasks, selectedFutureTaskIds]);
 
     const totalRelevantSummaries = useMemo(() => relevantSummaries?.length ?? 0, [relevantSummaries]);
     const displayedIndexForUi = useMemo(() => {
@@ -652,8 +694,8 @@ const SummaryView: React.FC = () => {
                             id="select-all-summary-tasks"
                             checked={selectAllState === true}
                             indeterminate={selectAllState === 'indeterminate'}
-                            onChange={handleSelectAllToggle}
-                            aria-label={allSelectableTasksSelected ? t('summary.deselectAll') : (someSelectableTasksSelected ? t('summary.deselectSome') : t('summary.selectAll'))}
+                            onChange={handleSelectAllToggle('current')}
+                            aria-label={selectAllState === true ? t('summary.deselectAll') : (selectAllState === 'indeterminate' ? t('summary.deselectSome') : t('summary.selectAll'))}
                             className="mr-1"
                             size={16}
                             disabled={selectableTasks.length === 0 || isGenerating}
@@ -674,7 +716,37 @@ const SummaryView: React.FC = () => {
                                                     onSelectionChange={handleTaskSelectionChange}/>))
                         )}
                     </div>
+                    {/* Future Plans Section */}
+                    <div className="h-px bg-grey-light/50 dark:bg-neutral-700/50 my-2"></div>
+                    <div
+                        className="px-4 py-3 border-b border-grey-light/50 dark:border-neutral-700/50 flex justify-between items-center flex-shrink-0 h-12">
+                        <h2 className="text-[16px] font-normal text-grey-dark dark:text-neutral-100 truncate">
+                            {t('summary.futurePlansTitle')} ({selectableFutureTasks.length})
+                        </h2>
+                        <SelectionCheckboxRadix
+                            id="select-all-future-tasks"
+                            checked={selectAllFutureState === true}
+                            indeterminate={selectAllFutureState === 'indeterminate'}
+                            onChange={handleSelectAllToggle('future')}
+                            aria-label={selectAllFutureState === true ? t('summary.deselectAll') : (selectAllFutureState === 'indeterminate' ? t('summary.deselectSome') : t('summary.selectAll'))}
+                            className="mr-1"
+                            size={16}
+                            disabled={selectableFutureTasks.length === 0 || isGenerating}
+                        />
+                    </div>
+                    <div className="flex-1 overflow-y-auto styled-scrollbar-thin p-2 space-y-1">
+                        {futureTasks.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-4 text-center">
+                                <p className="text-[12px] font-light">No upcoming tasks found.</p>
+                            </div>
+                        ) : (
+                            futureTasks.map(task => (
+                                <TaskItemMiniInline key={task.id} task={task} isSelected={selectedFutureTaskIds.has(task.id)}
+                                                    onSelectionChange={handleFutureTaskSelectionChange}/>))
+                        )}
+                    </div>
                 </div>
+
 
                 <div className="hidden md:block w-px bg-grey-light/50 dark:bg-neutral-700/50 self-stretch my-0"></div>
 
