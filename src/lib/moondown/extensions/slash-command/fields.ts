@@ -1,4 +1,4 @@
-// src/moondown/extensions/slash-command/fields.ts
+// src/lib/moondown/extensions/slash-command/fields.ts
 import {StateEffect, StateField} from "@codemirror/state";
 
 export const toggleSlashCommand = StateEffect.define<boolean>()

@@ -1,4 +1,4 @@
-// src/moondown/core/index.ts
+// src/lib/moondown/core/index.ts
 
 /**
  * Core module exports

@@ -1,4 +1,4 @@
-// src/moondown/extensions/correct-list/list-keymap.ts
+// src/lib/moondown/extensions/correct-list/list-keymap.ts
 import { EditorView, type KeyBinding } from "@codemirror/view";
 import { indentLess, indentMore, deleteCharBackward, deleteCharForward } from "@codemirror/commands";
 import { updateListEffect } from "./update-list-effect";

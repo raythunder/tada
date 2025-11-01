@@ -1,4 +1,4 @@
-// src/components/summary/SummaryHistoryModal.tsx
+// src/components/features/summary/SummaryHistoryModal.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {twMerge} from 'tailwind-merge';
 import Button from '@/components/ui/Button.tsx';

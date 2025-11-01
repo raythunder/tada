@@ -1,4 +1,4 @@
-// src/moondown/extensions/slash-command/ghost-writer.ts
+// src/lib/moondown/extensions/slash-command/ghost-writer.ts
 import { Decoration, type DecorationSet, EditorView, WidgetType } from "@codemirror/view";
 import { EditorSelection, StateEffect, StateField } from "@codemirror/state";
 import { slashCommandPlugin } from "./slash-command";

@@ -1,4 +1,4 @@
-// src/components/common/Button.tsx
+// src/components/ui/Button.tsx
 import React from 'react';
 import {twMerge} from 'tailwind-merge';
 import {clsx} from 'clsx';

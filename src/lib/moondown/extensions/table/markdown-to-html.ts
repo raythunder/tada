@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/markdown-to-html.ts
+// src/lib/moondown/extensions/table/markdown-to-html.ts
 import { markdownToAST } from './table-ast.ts'
 import { type ASTNode, type GenericNode } from './table-ast.ts'
 

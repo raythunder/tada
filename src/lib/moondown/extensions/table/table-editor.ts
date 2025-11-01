@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/table-editor.ts
+// src/lib/moondown/extensions/table/table-editor.ts
 import buildPipeTable from './build-pipe.ts'
 import computeCSS from './compute-css.ts'
 import type {ColAlignment, TableEditorOptions} from './types.ts'

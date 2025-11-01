@@ -1,4 +1,4 @@
-// src/moondown/extensions/correct-list/bullet-widget.ts
+// src/lib/moondown/extensions/correct-list/bullet-widget.ts
 import { WidgetType } from "@codemirror/view";
 
 export class BulletWidget extends WidgetType {

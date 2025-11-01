@@ -1,4 +1,4 @@
-// src/moondown/extensions/correct-list/constants.ts
+// src/lib/moondown/extensions/correct-list/constants.ts
 
 /**
  * Constants for list functionality

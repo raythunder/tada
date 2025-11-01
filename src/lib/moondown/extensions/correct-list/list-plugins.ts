@@ -1,4 +1,4 @@
-// src/moondown/extensions/correct-list/list-plugins.ts
+// src/lib/moondown/extensions/correct-list/list-plugins.ts
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { updateListEffect } from "./update-list-effect";
 import { updateLists } from "./list-functions";

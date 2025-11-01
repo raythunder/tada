@@ -1,4 +1,4 @@
-// src/moondown/extensions/underline-parser/underline-parser-extension.ts
+// src/lib/moondown/extensions/underline-parser/underline-parser-extension.ts
 
 /**
  * Underline markdown parser extension

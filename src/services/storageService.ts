@@ -1,4 +1,4 @@
-// src/services/localStorageService.ts
+// src/services/storageService.ts
 import {
     AISettings,
     AppearanceSettings,

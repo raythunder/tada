@@ -1,4 +1,4 @@
-// src/moondown/extensions/final-new-line/final-new-line.ts
+// src/lib/moondown/extensions/final-new-line/final-new-line.ts
 import {EditorView, type PluginValue, ViewPlugin, ViewUpdate} from "@codemirror/view";
 import {Text} from "@codemirror/state";
 

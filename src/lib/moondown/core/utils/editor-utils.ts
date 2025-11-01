@@ -1,4 +1,4 @@
-// src/moondown/core/utils/editor-utils.ts
+// src/lib/moondown/core/utils/editor-utils.ts
 
 import { EditorState, type ChangeSpec } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";

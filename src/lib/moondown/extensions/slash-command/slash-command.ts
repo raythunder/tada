@@ -1,4 +1,4 @@
-// src/moondown/extensions/slash-command/slash-command.ts
+// src/lib/moondown/extensions/slash-command/slash-command.ts
 import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { createIcons, icons } from 'lucide';
 import { slashCommandState, toggleSlashCommand } from "./fields";

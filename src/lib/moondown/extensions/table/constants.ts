@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/constants.ts
+// src/lib/moondown/extensions/table/constants.ts
 
 /**
  * Constants for table editor functionality

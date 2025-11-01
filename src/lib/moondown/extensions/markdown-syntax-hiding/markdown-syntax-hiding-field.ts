@@ -1,4 +1,4 @@
-// src/moondown/extensions/markdown-syntax-hiding/markdown-syntax-hiding-field.ts
+// src/lib/moondown/extensions/markdown-syntax-hiding/markdown-syntax-hiding-field.ts
 import { StateField, EditorState, StateEffect } from '@codemirror/state';
 import { EditorView, Decoration, type DecorationSet } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';

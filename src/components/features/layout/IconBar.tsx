@@ -1,4 +1,4 @@
-// src/components/layout/IconBar.tsx
+// src/components/features/layout/IconBar.tsx
 import React, {memo, useCallback, useMemo} from 'react';
 import {NavLink, useLocation} from 'react-router-dom';
 import Icon from '@/components/ui/Icon.tsx';

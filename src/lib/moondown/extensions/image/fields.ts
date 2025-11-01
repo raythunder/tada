@@ -1,4 +1,4 @@
-// src/moondown/extensions/image/fields.ts
+// src/lib/moondown/extensions/image/fields.ts
 import {StateField} from "@codemirror/state";
 import {Decoration, type DecorationSet, EditorView, WidgetType} from "@codemirror/view";
 import {imageLoadedEffect, type ImageSizes, updateImagePlaceholder} from "./types.ts";

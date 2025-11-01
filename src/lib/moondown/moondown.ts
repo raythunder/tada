@@ -1,4 +1,4 @@
-// src/moondown/moondown.ts
+// src/lib/moondown/moondown.ts
 import { EditorState } from '@codemirror/state';
 import {EditorView, placeholder as viewPlaceholder, ViewUpdate} from '@codemirror/view';
 import {

@@ -1,4 +1,4 @@
-// src/moondown/extensions/fenced-code/decorations.ts
+// src/lib/moondown/extensions/fenced-code/decorations.ts
 import {Decoration} from "@codemirror/view";
 
 export const fencedCodeDecoration = Decoration.line({

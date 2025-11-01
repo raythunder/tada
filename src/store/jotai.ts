@@ -1,4 +1,4 @@
-// src/store/atoms.ts
+// src/store/jotai.ts
 import {atom, WritableAtom} from 'jotai';
 import {RESET} from 'jotai/utils';
 import {

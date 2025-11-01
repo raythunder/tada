@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/types.ts
+// src/lib/moondown/extensions/table/types.ts
 
 /**
  * TypeScript type definitions for table editor functionality

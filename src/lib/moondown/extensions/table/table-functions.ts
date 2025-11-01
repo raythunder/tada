@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/table-functions.ts
+// src/lib/moondown/extensions/table/table-functions.ts
 import {EditorState} from "@codemirror/state";
 import {type SyntaxNode} from "@lezer/common";
 import {parseNode as parse} from "./table-ast.ts";

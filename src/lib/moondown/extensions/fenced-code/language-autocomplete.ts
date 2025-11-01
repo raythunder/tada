@@ -1,4 +1,4 @@
-// src/moondown/extensions/fenced-code/language-autocomplete.ts
+// src/lib/moondown/extensions/fenced-code/language-autocomplete.ts
 
 /**
  * Language identifier autocompletion for fenced code blocks

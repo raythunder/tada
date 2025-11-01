@@ -1,4 +1,4 @@
-// src/moondown/extensions/correct-list/list-functions.ts
+// src/lib/moondown/extensions/correct-list/list-functions.ts
 import { EditorView } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 

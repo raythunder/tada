@@ -1,4 +1,4 @@
-// src/moondown/extensions/slash-command/index.ts
+// src/lib/moondown/extensions/slash-command/index.ts
 import {type Extension} from "@codemirror/state";
 import {EditorView} from "@codemirror/view";
 import {handleKeyDown, slashCommandKeymap} from "./keymap.ts";

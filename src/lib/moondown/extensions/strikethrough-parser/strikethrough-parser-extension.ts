@@ -1,4 +1,4 @@
-// src/moondown/extensions/strikethrough-parser/strikethrough-parser-extension.ts
+// src/lib/moondown/extensions/strikethrough-parser/strikethrough-parser-extension.ts
 
 /**
  * Strikethrough markdown parser extension

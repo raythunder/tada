@@ -1,4 +1,4 @@
-// src/moondown/extensions/fenced-code/fenced-code-plugin.ts
+// src/lib/moondown/extensions/fenced-code/fenced-code-plugin.ts
 import {EditorView, Decoration} from "@codemirror/view"
 import {StateField, RangeSetBuilder, EditorState} from "@codemirror/state"
 import {syntaxTree} from "@codemirror/language"

@@ -1,4 +1,4 @@
-// src/components/common/SelectionCheckbox.tsx
+// src/components/ui/SelectionCheckbox.tsx
 import React, {memo, useMemo} from 'react';
 import {twMerge} from 'tailwind-merge';
 import Icon from './Icon';

@@ -1,4 +1,4 @@
-// src/moondown/core/constants.ts
+// src/lib/moondown/core/constants.ts
 
 /**
  * Core constants for the Moondown editor

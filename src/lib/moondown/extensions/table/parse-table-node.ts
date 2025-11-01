@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/parse-table-node.ts
+// src/lib/moondown/extensions/table/parse-table-node.ts
 
 /**
  * Table node parser for markdown table AST conversion

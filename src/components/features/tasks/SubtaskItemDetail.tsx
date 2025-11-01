@@ -1,4 +1,4 @@
-// src/components/tasks/SubtaskItemDetail.tsx
+// src/components/features/tasks/SubtaskItemDetail.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Subtask} from '@/types';
 import Button from '@/components/ui/Button.tsx';

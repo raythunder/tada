@@ -1,4 +1,4 @@
-// src/moondown/extensions/markdown-syntax-hiding/link-widget.ts
+// src/lib/moondown/extensions/markdown-syntax-hiding/link-widget.ts
 import { EditorView, WidgetType } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 import { addHighlightEffect } from "./highlight-effects";

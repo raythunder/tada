@@ -1,4 +1,4 @@
-// src/components/layout/MainLayout.tsx
+// src/components/features/layout/MainLayout.tsx
 import React, {Suspense, useMemo} from 'react';
 import {Outlet, useLocation} from 'react-router-dom';
 import IconBar from './IconBar';

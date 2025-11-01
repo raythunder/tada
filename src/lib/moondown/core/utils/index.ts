@@ -1,4 +1,4 @@
-// src/moondown/core/utils/index.ts
+// src/lib/moondown/core/utils/index.ts
 
 /**
  * Centralized exports for all utility functions

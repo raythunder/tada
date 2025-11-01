@@ -1,4 +1,4 @@
-// src/moondown/core/types/editor-types.ts
+// src/lib/moondown/core/types/editor-types.ts
 import type {EditorView, ViewUpdate} from "@codemirror/view";
 import type { EditorState } from "@codemirror/state";
 

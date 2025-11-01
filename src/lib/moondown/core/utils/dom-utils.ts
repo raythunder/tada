@@ -1,4 +1,4 @@
-// src/moondown/core/utils/dom-utils.ts
+// src/lib/moondown/core/utils/dom-utils.ts
 
 /**
  * Utility functions for DOM manipulation

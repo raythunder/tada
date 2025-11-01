@@ -1,4 +1,4 @@
-// src/components/tasks/TaskItem.tsx
+// src/components/features/tasks/TaskItem.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Task, TaskGroupCategory} from '@/types';
 import {formatDate, formatRelativeDate, isOverdue, isValid, safeParseDate} from '@/utils/dateUtils';

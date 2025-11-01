@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/compute-css.ts
+// src/lib/moondown/extensions/table/compute-css.ts
 /**
  * Generates CSS styles for table helper interface
  *

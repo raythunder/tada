@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/render-tables.ts
+// src/lib/moondown/extensions/table/render-tables.ts
 import {WidgetType, EditorView, Decoration, type DecorationSet} from '@codemirror/view'
 import { StateField, EditorState } from '@codemirror/state'
 import { syntaxTree } from '@codemirror/language'

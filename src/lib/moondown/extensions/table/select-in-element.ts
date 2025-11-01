@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/select-in-element.ts
+// src/lib/moondown/extensions/table/select-in-element.ts
 export function selectElementContents(node: Node, from: number = 0, to: number = 0): void {
     const sel = window.getSelection()
     // From MDN: Firefox may return null, other browsers may return a Selection

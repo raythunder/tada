@@ -1,4 +1,4 @@
-// src/moondown/extensions/mark-parser/mark-parser-extension.ts
+// src/lib/moondown/extensions/mark-parser/mark-parser-extension.ts
 
 /**
  * Mark (highlight) markdown parser extension

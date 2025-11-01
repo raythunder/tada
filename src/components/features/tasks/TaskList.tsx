@@ -1,4 +1,4 @@
-// src/components/tasks/TaskList.tsx
+// src/components/features/tasks/TaskList.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import TaskItem from './TaskItem';
 import {useAtomValue, useSetAtom} from 'jotai';

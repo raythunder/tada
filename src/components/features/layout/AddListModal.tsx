@@ -1,4 +1,4 @@
-// src/components/common/AddListModal.tsx
+// src/components/features/layout/AddListModal.tsx
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {isAddListModalOpenAtom, tasksAtom, userListNamesAtom, userListsAtom} from '@/store/jotai.ts';

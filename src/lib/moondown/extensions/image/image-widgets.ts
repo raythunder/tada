@@ -1,4 +1,4 @@
-// src/moondown/extensions/image/image-widgets.ts
+// src/lib/moondown/extensions/image/image-widgets.ts
 import { EditorView, WidgetType } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 import errorImageGeneric from "./error-image-generic.png";

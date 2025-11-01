@@ -1,4 +1,4 @@
-// src/components/common/IconMap.tsx
+// src/components/ui/IconMap.ts
 import * as LucideIcons from "lucide-react";
 
 export const iconMap = {

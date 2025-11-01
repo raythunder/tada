@@ -1,4 +1,4 @@
-// src/components/summary/SummaryView.tsx
+// src/components/features/summary/SummaryView.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';

@@ -1,4 +1,4 @@
-// src/moondown/extensions/image/types.ts
+// src/lib/moondown/extensions/image/types.ts
 import {StateEffect} from "@codemirror/state";
 import {ImageWidget} from "./image-widgets.ts";
 

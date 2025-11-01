@@ -1,4 +1,4 @@
-// src/components/layout/Sidebar.tsx
+// src/components/features/layout/Sidebar.tsx
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate} from 'react-router-dom';
 import Icon from '@/components/ui/Icon.tsx';

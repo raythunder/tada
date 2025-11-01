@@ -1,4 +1,4 @@
-// src/components/calendar/CalendarView.tsx
+// src/components/features/calendar/CalendarView.tsx
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';

@@ -1,4 +1,4 @@
-// src/moondown/extensions/bubble-menu/fields.ts
+// src/lib/moondown/extensions/bubble-menu/fields.ts
 import {StateEffect, StateField} from "@codemirror/state";
 import {type BubbleMenuItem} from "./types.ts";
 

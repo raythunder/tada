@@ -1,4 +1,4 @@
-// src/moondown/extensions/fenced-code/index.ts
+// src/lib/moondown/extensions/fenced-code/index.ts
 import {type Extension} from "@codemirror/state";
 import {codeBlockInputHandler, fencedCodeBackgroundPlugin} from "./fenced-code-plugin.ts";
 import {languageIdentifierAutocomplete} from "./language-autocomplete.ts";

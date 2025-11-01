@@ -1,4 +1,4 @@
-// src/moondown/extensions/markdown-syntax-hiding/widgets.ts
+// src/lib/moondown/extensions/markdown-syntax-hiding/widgets.ts
 import { EditorView, WidgetType } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 

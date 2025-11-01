@@ -1,4 +1,4 @@
-// src/components/common/AddTagsPopoverContent.tsx
+// src/components/ui/TagInput.tsx
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useAtomValue} from 'jotai';
 import {userTagNamesAtom} from '@/store/jotai.ts';

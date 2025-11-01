@@ -1,4 +1,4 @@
-// src/components/settings/SettingsModal.tsx
+// src/components/features/settings/SettingsModal.tsx
 import React, {memo, useCallback, useMemo, useState} from 'react';
 import {useAtom, useAtomValue, useSetAtom} from 'jotai';
 import {

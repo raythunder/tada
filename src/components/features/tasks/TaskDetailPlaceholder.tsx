@@ -1,4 +1,4 @@
-// src/components/tasks/TaskDetailPlaceholder.tsx
+// src/components/features/tasks/TaskDetailPlaceholder.tsx
 import React from 'react';
 import Icon from '@/components/ui/Icon.tsx';
 import {twMerge} from 'tailwind-merge';

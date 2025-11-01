@@ -1,4 +1,4 @@
-// src/moondown/extensions/image/image-renderer.ts
+// src/lib/moondown/extensions/image/image-renderer.ts
 import {RangeSetBuilder} from "@codemirror/state"
 import {
     EditorView,

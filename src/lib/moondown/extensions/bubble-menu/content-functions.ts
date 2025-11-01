@@ -1,4 +1,4 @@
-// src/moondown/extensions/bubble-menu/content-functions.ts
+// src/lib/moondown/extensions/bubble-menu/content-functions.ts
 import { EditorView } from "@codemirror/view";
 import { EditorState, type ChangeSpec } from "@codemirror/state";
 import {

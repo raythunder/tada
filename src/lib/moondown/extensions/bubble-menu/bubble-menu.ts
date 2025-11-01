@@ -1,4 +1,4 @@
-// src/moondown/extensions/bubble-menu/bubble-menu.ts
+// src/lib/moondown/extensions/bubble-menu/bubble-menu.ts
 import { EditorView, ViewUpdate, type PluginValue } from "@codemirror/view";
 import { EditorState } from "@codemirror/state";
 import { createIcons, icons } from 'lucide';

@@ -1,4 +1,4 @@
-// src/moondown/extensions/blockquote/keymaps.ts
+// src/lib/moondown/extensions/blockquote/keymaps.ts
 import {type Extension} from "@codemirror/state";
 import {EditorView, keymap} from "@codemirror/view";
 

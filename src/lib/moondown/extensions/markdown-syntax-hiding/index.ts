@@ -1,4 +1,4 @@
-// src/moondown/extensions/markdown-syntax-hiding/index.ts
+// src/lib/moondown/extensions/markdown-syntax-hiding/index.ts
 import {markdownSyntaxHidingField, syntaxHidingState} from './markdown-syntax-hiding-field';
 import {highlightCleanupPlugin, referenceHighlightField} from "./highlight-effects";
 

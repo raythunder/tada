@@ -1,4 +1,4 @@
-// src/moondown/extensions/slash-command/keymap.ts
+// src/lib/moondown/extensions/slash-command/keymap.ts
 import {EditorView, keymap} from "@codemirror/view";
 import {slashCommandState, toggleSlashCommand, updateSelectedIndex} from "./fields.ts";
 import {slashCommandPlugin} from "./slash-command.ts";

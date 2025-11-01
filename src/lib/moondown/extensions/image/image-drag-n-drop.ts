@@ -1,4 +1,4 @@
-// src/moondown/extensions/image/image-drag-n-drop.ts
+// src/lib/moondown/extensions/image/image-drag-n-drop.ts
 import {EditorView, ViewPlugin, type PluginValue, ViewUpdate} from '@codemirror/view';
 
 class ImagePastePlugin implements PluginValue {

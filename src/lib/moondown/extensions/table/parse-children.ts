@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/parse-children.ts
+// src/lib/moondown/extensions/table/parse-children.ts
 import type {SyntaxNode} from '@lezer/common'
 import {type ASTNode, parseNode, type MDNode} from './table-ast.ts'
 import {genericTextNode} from './generic-text-node.ts'

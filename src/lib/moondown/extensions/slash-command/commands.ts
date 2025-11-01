@@ -1,4 +1,4 @@
-// src/moondown/extensions/slash-command/commands.ts
+// src/lib/moondown/extensions/slash-command/commands.ts
 import { EditorView } from "@codemirror/view";
 import { ghostWriterExecutor } from "./ghost-writer";
 import { MARKDOWN_TEMPLATES } from "../../core/constants";

@@ -1,4 +1,4 @@
-// src/components/common/CodeMirrorEditor.tsx
+// src/components/ui/Editor.tsx
 import React, {forwardRef, memo, useEffect, useImperativeHandle, useRef, useMemo, useCallback} from 'react';
 import {twMerge} from 'tailwind-merge';
 import {useAtomValue} from 'jotai';

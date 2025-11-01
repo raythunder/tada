@@ -1,4 +1,4 @@
-// src/moondown/core/utils/string-utils.ts
+// src/lib/moondown/core/utils/string-utils.ts
 
 /**
  * Utility functions for string manipulation

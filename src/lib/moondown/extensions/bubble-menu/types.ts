@@ -1,4 +1,4 @@
-// src/moondown/extensions/bubble-menu/types.ts
+// src/lib/moondown/extensions/bubble-menu/types.ts
 import * as icons from "lucide";
 import {EditorView} from "@codemirror/view";
 import {EditorState} from "@codemirror/state";

@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/calculate-col-sizes.ts
+// src/lib/moondown/extensions/table/calculate-col-sizes.ts
 
 /**
  * Column size calculator for markdown tables

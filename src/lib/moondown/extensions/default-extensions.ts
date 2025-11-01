@@ -1,4 +1,4 @@
-// src/moondown/extensions/default-extensions.ts
+// src/lib/moondown/extensions/default-extensions.ts
 import {type Extension, Compartment, StateEffect, StateField} from '@codemirror/state';
 import { EditorView, keymap, rectangularSelection } from '@codemirror/view';
 import { indentOnInput } from '@codemirror/language';

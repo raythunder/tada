@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/generic-text-node.ts
+// src/lib/moondown/extensions/table/generic-text-node.ts
 import { type TextNode } from './table-ast.ts'
 
 /**

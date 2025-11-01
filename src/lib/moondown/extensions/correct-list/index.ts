@@ -1,4 +1,4 @@
-// src/moondown/extensions/correct-list/index.ts
+// src/lib/moondown/extensions/correct-list/index.ts
 import type {Extension} from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import { listKeymap } from "./list-keymap.ts";

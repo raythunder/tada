@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/table-position.ts
+// src/lib/moondown/extensions/table/table-position.ts
 
 /**
  * Table position tracking for CodeMirror state management

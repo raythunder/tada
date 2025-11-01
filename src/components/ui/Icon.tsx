@@ -1,4 +1,4 @@
-// src/components/common/Icon.tsx
+// src/components/ui/Icon.tsx
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
 import {twMerge} from 'tailwind-merge';

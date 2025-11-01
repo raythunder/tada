@@ -1,4 +1,4 @@
-// src/moondown/extensions/bubble-menu/index.ts
+// src/lib/moondown/extensions/bubble-menu/index.ts
 import {ViewPlugin} from "@codemirror/view";
 import {bubbleMenuField} from "./fields.ts";
 import {BubbleMenu} from "./bubble-menu.ts";

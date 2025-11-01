@@ -1,4 +1,4 @@
-// src/moondown/extensions/table/build-pipe.ts
+// src/lib/moondown/extensions/table/build-pipe.ts
 
 /**
  * Pipe table builder for markdown table generation

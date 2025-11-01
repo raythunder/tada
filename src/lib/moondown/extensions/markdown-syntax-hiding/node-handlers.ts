@@ -1,4 +1,4 @@
-// src/moondown/extensions/markdown-syntax-hiding/node-handlers.ts
+// src/lib/moondown/extensions/markdown-syntax-hiding/node-handlers.ts
 import {EditorSelection, EditorState, type SelectionRange} from '@codemirror/state';
 import {Decoration, EditorView, WidgetType} from '@codemirror/view';
 import { LinkWidget } from "./link-widget";

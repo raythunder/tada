@@ -1,4 +1,4 @@
-// src/config/themes.ts
+// src/config/app.ts
 export interface ThemeColors {
     primary: string; // HSL string e.g., "3 76% 58%"
     light: string;   // HSL string e.g., "5 100% 89%"

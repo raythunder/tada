@@ -1,4 +1,4 @@
-// src/components/common/ConfirmDeleteModal.tsx
+// src/components/ui/ConfirmDeleteModal.tsx
 import React, {useCallback} from 'react';
 import Button from './Button';
 import {twMerge} from 'tailwind-merge';

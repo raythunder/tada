@@ -1,4 +1,4 @@
-// src/moondown/extensions/markdown-syntax-hiding/highlight-effects.ts
+// src/lib/moondown/extensions/markdown-syntax-hiding/highlight-effects.ts
 import { StateEffect, StateField } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 

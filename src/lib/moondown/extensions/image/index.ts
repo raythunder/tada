@@ -1,4 +1,4 @@
-// src/moondown/extensions/image/index.ts
+// src/lib/moondown/extensions/image/index.ts
 import {EditorSelection, type Extension} from "@codemirror/state";
 import {EditorView, ViewUpdate} from "@codemirror/view";
 import {imageSizeField, placeholderField} from "./fields.ts";
