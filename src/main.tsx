@@ -1,8 +1,8 @@
 // src/main.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import {BrowserRouter} from 'react-router-dom';
-import {Provider as JotaiProvider} from 'jotai';
+import { HashRouter } from 'react-router-dom';
+import { Provider as JotaiProvider } from 'jotai';
 import App from './App';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
@@ -22,10 +22,10 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
     <React.StrictMode>
         <JotaiProvider>
-            <Tooltip.Provider delayDuration={200}> {/* Adjusted delay per spec */}
-                <BrowserRouter>
-                    <App/>
-                </BrowserRouter>
+            <Tooltip.Provider delayDuration={200}>
+                <HashRouter>
+                    <App />
+                </HashRouter>
             </Tooltip.Provider>
         </JotaiProvider>
     </React.StrictMode>
