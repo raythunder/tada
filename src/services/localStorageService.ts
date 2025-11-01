@@ -178,6 +178,14 @@ export const deleteList = (listId: string): { message: string } => {
     return { message: "List deleted successfully" };
 };
 
+export const updateLists = (lists: List[]): List[] => {
+    const data = loadData();
+    data.lists = lists;
+    saveData(data);
+    return lists;
+};
+
+
 // Tasks
 export const fetchTasks = (): Task[] => {
     const data = loadData();
@@ -218,6 +226,13 @@ export const deleteTask = (taskId: string): void => {
     const data = loadData();
     data.tasks = data.tasks.filter(t => t.id !== taskId);
     saveData(data);
+};
+
+export const updateTasks = (tasks: Task[]): Task[] => {
+    const data = loadData();
+    data.tasks = tasks;
+    saveData(data);
+    return tasks;
 };
 
 // Subtasks
@@ -314,4 +329,11 @@ export const updateSummary = (summaryId: string, updates: Partial<StoredSummary>
     if (!updatedSummary) throw new Error("Summary not found");
     saveData(data);
     return updatedSummary;
+};
+
+export const updateSummaries = (summaries: StoredSummary[]): StoredSummary[] => {
+    const data = loadData();
+    data.summaries = summaries;
+    saveData(data);
+    return summaries;
 };

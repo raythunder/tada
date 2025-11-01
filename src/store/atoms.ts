@@ -92,13 +92,7 @@ export const tasksAtom: LocalDataAtom<Task[]> = atom(
 
         set(baseTasksDataAtom, nextTasksWithCategory);
 
-        const data = {
-            ...service.fetchSettings(),
-            tasks: nextTasksWithCategory,
-            lists: service.fetchLists(),
-            summaries: service.fetchSummaries()
-        };
-        localStorage.setItem('tada-app-data', JSON.stringify(data));
+        service.updateTasks(nextTasksWithCategory);
     }
 );
 tasksAtom.onMount = (setSelf) => {
@@ -119,13 +113,8 @@ export const userListsAtom: LocalDataAtom<List[]> = atom(
         }
         const nextLists = typeof update === 'function' ? (update as (prev: List[] | null) => List[])(get(baseUserListsAtom)) : update;
         set(baseUserListsAtom, nextLists);
-        const data = {
-            ...service.fetchSettings(),
-            tasks: service.fetchTasks(),
-            lists: nextLists,
-            summaries: service.fetchSummaries()
-        };
-        localStorage.setItem('tada-app-data', JSON.stringify(data));
+
+        service.updateLists(nextLists);
     }
 );
 userListsAtom.onMount = (setSelf) => {
@@ -252,13 +241,7 @@ export const storedSummariesAtom: LocalDataAtom<StoredSummary[]> = atom(
         const updatedSummaries = typeof update === 'function' ? (update as (prev: StoredSummary[] | null) => StoredSummary[])(get(baseStoredSummariesAtom) ?? []) : update;
         set(baseStoredSummariesAtom, updatedSummaries);
 
-        const data = {
-            ...service.fetchSettings(),
-            tasks: service.fetchTasks(),
-            lists: service.fetchLists(),
-            summaries: updatedSummaries
-        };
-        localStorage.setItem('tada-app-data', JSON.stringify(data));
+        service.updateSummaries(updatedSummaries);
     }
 );
 storedSummariesAtom.onMount = (setSelf) => {
