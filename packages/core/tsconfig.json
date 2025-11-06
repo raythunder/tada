@@ -11,6 +11,11 @@
     "emitDeclarationOnly": true,
     "outDir": "dist"
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.json",
+    "src/vite.env.d.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }
