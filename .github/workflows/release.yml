@@ -1,0 +1,60 @@
+name: Release Desktop App
+
+# 触发条件：当一个 v*.*.* 格式的标签被推送到仓库时
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: # 允许手动触发
+
+# 权限：需要写入权限来创建 GitHub Release 和上传构建产物
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    # 策略：为 macOS, Ubuntu, Windows 并行构建
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      # Linux 平台需要安装额外的系统依赖
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 核心步骤：使用 tauri-action 来构建和打包
+      # 它会自动处理 Rust 安装、Tauri CLI 和其他依赖
+      - name: Build Tauri App and Create Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          # GITHUB_TOKEN 是 GitHub Actions 自动提供的，用于授权操作
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # `tauri-action` 会根据标签名自动创建或更新一个 GitHub Release
+          # 并将不同平台的构建产物（.dmg, .AppImage, .msi）上传为附件
+          tagName: ${{ github.ref_name }} # 使用触发工作流程的标签名 (e.g., v1.0.0)
+          releaseName: 'Tada v${{ github.ref_name }}'
+          releaseBody: 'See the assets below for the latest version of the Tada desktop app.'
+          releaseDraft: true # 创建一个草稿 Release，你可以手动检查后再发布
+          prerelease: false

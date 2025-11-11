@@ -1,4 +1,4 @@
-# .github/workflows/deploy.yaml
+# .github/workflows/deploy.yml
 
 name: Deploy Web App to GitHub Pages
 
