@@ -539,6 +539,7 @@ const AISettings: React.FC = memo(() => {
     const currentSettings = aiSettings ?? defaultAISettingsForApi();
     const currentProvider = AI_PROVIDERS.find(p => p.id === currentSettings.provider) ?? AI_PROVIDERS[0];
     const availableModels = currentSettings.availableModels ?? currentProvider.models;
+    const isCustomProvider = currentProvider.id === 'custom';
 
     const handleProviderChange = (providerId: AIProvider['id']) => {
         const newProvider = AI_PROVIDERS.find(p => p.id === providerId);
@@ -576,7 +577,7 @@ const AISettings: React.FC = memo(() => {
     };
 
     const handleFetchModels = useCallback(async () => {
-        if (!currentProvider || isFetchingModels) return;
+        if (!currentProvider || isFetchingModels || isCustomProvider) return;
 
         if (currentProvider.requiresApiKey && !currentSettings.apiKey) {
             addNotification({ type: 'error', message: "API key is required to fetch models." });
@@ -601,7 +602,7 @@ const AISettings: React.FC = memo(() => {
         } finally {
             setIsFetchingModels(false);
         }
-    }, [currentProvider, currentSettings, isFetchingModels, setAISettings, addNotification, t]);
+    }, [currentProvider, currentSettings, isFetchingModels, isCustomProvider, setAISettings, addNotification, t]);
 
     const handleTestConnection = useCallback(async () => {
         if (!currentProvider || isTestingConnection) return;
@@ -685,7 +686,7 @@ const AISettings: React.FC = memo(() => {
                                         "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
                                     )}
                                 />
-                                {currentProvider.listModelsEndpoint && (
+                                {currentProvider.listModelsEndpoint && !isCustomProvider && (
                                     <Button
                                         variant="ghost"
                                         size="icon"
@@ -730,33 +731,55 @@ const AISettings: React.FC = memo(() => {
                     </>
                 )}
 
-                {/* Model Selection */}
+                {/* Model Selection or Input */}
                 <SettingsRow
                     label={t('settings.ai.model')}
-                    description={t('settings.ai.modelDescription')}
-                    htmlFor="modelSelect"
+                    description={isCustomProvider
+                        ? t('settings.ai.modelDescriptionCustom')
+                        : t('settings.ai.modelDescription')
+                    }
+                    htmlFor={isCustomProvider ? "modelInput" : "modelSelect"}
                 >
                     <div className="flex items-center space-x-2">
-                        {renderSelect(
-                            'modelSelect',
-                            currentSettings.model,
-                            handleModelChange,
-                            modelOptions,
-                            "Select Model",
-                            "w-[240px]",
-                            "max-h-[224px] styled-scrollbar"
-                        )}
-                        {currentProvider.listModelsEndpoint && !currentProvider.requiresApiKey && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                icon="refresh-cw"
-                                onClick={handleFetchModels}
-                                disabled={isFetchingModels}
-                                loading={isFetchingModels}
-                                className="w-7 h-7 text-grey-medium dark:text-neutral-400"
-                                aria-label="Fetch models"
+                        {isCustomProvider ? (
+                            <input
+                                id="modelInput"
+                                type="text"
+                                value={currentSettings.model}
+                                onChange={(e) => handleModelChange(e.target.value)}
+                                placeholder="Enter model name (e.g. gpt-4, claude-3-sonnet)"
+                                className={twMerge(
+                                    "w-[240px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
+                                    "bg-grey-ultra-light dark:bg-neutral-700",
+                                    "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
+                                    "text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out",
+                                    "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
+                                )}
                             />
+                        ) : (
+                            <>
+                                {renderSelect(
+                                    'modelSelect',
+                                    currentSettings.model,
+                                    handleModelChange,
+                                    modelOptions,
+                                    "Select Model",
+                                    "w-[240px]",
+                                    "max-h-[224px] styled-scrollbar"
+                                )}
+                                {currentProvider.listModelsEndpoint && !currentProvider.requiresApiKey && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        icon="refresh-cw"
+                                        onClick={handleFetchModels}
+                                        disabled={isFetchingModels}
+                                        loading={isFetchingModels}
+                                        className="w-7 h-7 text-grey-medium dark:text-neutral-400"
+                                        aria-label="Fetch models"
+                                    />
+                                )}
+                            </>
                         )}
                     </div>
                 </SettingsRow>
