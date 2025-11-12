@@ -51,7 +51,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'Tada v${{ github.ref_name }}'
+          releaseName: 'Tada ${{ github.ref_name }}'
           releaseBody: 'See the assets below for the latest version of the Tada desktop app.'
           releaseDraft: false # 可以设置为 false 直接发布，或保持 true 手动检查后再发布
           prerelease: false
