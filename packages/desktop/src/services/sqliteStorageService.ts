@@ -15,6 +15,9 @@ import {
     defaultPreferencesSettingsForApi
 } from '@tada/core/store/jotai';
 
+/**
+ * Database representation of a task record
+ */
 interface DbTask {
     id: string;
     title: string;
@@ -33,6 +36,9 @@ interface DbTask {
     group_category: string;
 }
 
+/**
+ * Database representation of a subtask record
+ */
 interface DbSubtask {
     id: string;
     parent_id: string;
@@ -45,6 +51,9 @@ interface DbSubtask {
     updated_at: number;
 }
 
+/**
+ * Database representation of a list record
+ */
 interface DbList {
     id: string;
     name: string;
@@ -55,6 +64,9 @@ interface DbList {
     updated_at: number;
 }
 
+/**
+ * Database representation of a summary record
+ */
 interface DbSummary {
     id: string;
     created_at: number;
@@ -65,19 +77,28 @@ interface DbSummary {
     summary_text: string;
 }
 
+/**
+ * Database representation of a settings record
+ */
 interface DbSetting {
     key: string;
     value: string;
     updated_at: number;
 }
 
-// 批量操作队列
+/**
+ * Represents a single batch operation to be executed
+ */
 interface BatchOperation {
     type: 'insert' | 'update' | 'delete';
     table: string;
     data: any;
 }
 
+/**
+ * SQLite storage service implementation for desktop application
+ * Provides persistent data storage with in-memory caching for performance
+ */
 export class SqliteStorageService implements IStorageService {
     private db: Database | null = null;
     private listsCache: List[] = [];
@@ -90,25 +111,24 @@ export class SqliteStorageService implements IStorageService {
     } | null = null;
     private isDataLoaded = false;
 
-    // 批量操作相关
     private batchQueue: BatchOperation[] = [];
     private batchTimeout: NodeJS.Timeout | null = null;
-    private readonly BATCH_DELAY = 100; // 100ms 批处理延迟
-    private readonly BATCH_SIZE = 50; // 每批最多50个操作
+    private readonly BATCH_DELAY = 100;
+    private readonly BATCH_SIZE = 50;
 
-    // 写入队列
     private writeQueue: Array<() => Promise<void>> = [];
     private isProcessingQueue = false;
 
+    /**
+     * Initialize database connection and verify data integrity
+     */
     async initialize(): Promise<void> {
         try {
             this.db = await Database.load('sqlite:tada.db');
             console.log('Database connected successfully');
 
-            // 验证并创建索引（如果不存在）
             await this.ensureIndexes();
 
-            // 验证 Inbox 是否存在
             const lists = await this.db.select<DbList[]>('SELECT * FROM lists');
             console.log('Lists in database:', lists);
 
@@ -126,12 +146,13 @@ export class SqliteStorageService implements IStorageService {
         }
     }
 
-    // 确保索引存在
+    /**
+     * Ensure all required database indexes exist
+     */
     private async ensureIndexes(): Promise<void> {
         const db = this.getDb();
 
         try {
-            // 这些索引应该已在迁移中创建，这里是额外保障
             await db.execute('CREATE INDEX IF NOT EXISTS idx_tasks_list_id ON tasks(list_id)');
             await db.execute('CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed)');
             await db.execute('CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date)');
@@ -143,11 +164,13 @@ export class SqliteStorageService implements IStorageService {
         }
     }
 
+    /**
+     * Preload all data from database into memory cache
+     */
     async preloadData(): Promise<void> {
         if (this.isDataLoaded) return;
 
         try {
-            // 并行加载所有数据
             const [lists, tasks, summaries, settings] = await Promise.all([
                 this.fetchListsAsync(),
                 this.fetchTasksAsync(),
@@ -173,6 +196,9 @@ export class SqliteStorageService implements IStorageService {
         }
     }
 
+    /**
+     * Get database instance or throw if not initialized
+     */
     private getDb(): Database {
         if (!this.db) {
             throw new Error('Database not initialized. Call initialize() first.');
@@ -180,7 +206,9 @@ export class SqliteStorageService implements IStorageService {
         return this.db;
     }
 
-    // 批量处理队列
+    /**
+     * Schedule batch processing of queued operations
+     */
     private scheduleBatchProcess(): void {
         if (this.batchTimeout) {
             clearTimeout(this.batchTimeout);
@@ -191,6 +219,9 @@ export class SqliteStorageService implements IStorageService {
         }, this.BATCH_DELAY);
     }
 
+    /**
+     * Process queued batch operations within a transaction
+     */
     private async processBatchQueue(): Promise<void> {
         if (this.batchQueue.length === 0) return;
 
@@ -198,7 +229,6 @@ export class SqliteStorageService implements IStorageService {
         const db = this.getDb();
 
         try {
-            // 使用事务批量执行
             await db.execute('BEGIN TRANSACTION');
 
             for (const op of operations) {
@@ -215,18 +245,19 @@ export class SqliteStorageService implements IStorageService {
             console.error('Batch processing failed:', error);
         }
 
-        // 如果还有剩余操作，继续处理
         if (this.batchQueue.length > 0) {
             this.scheduleBatchProcess();
         }
     }
 
+    /**
+     * Execute a single batch operation
+     */
     private async executeOperation(op: BatchOperation): Promise<void> {
         const db = this.getDb();
 
         switch (op.type) {
             case 'insert':
-                // 根据表名执行插入
                 if (op.table === 'tasks') {
                     await this.insertTask(op.data);
                 } else if (op.table === 'lists') {
@@ -246,7 +277,9 @@ export class SqliteStorageService implements IStorageService {
         }
     }
 
-    // 队列化写入操作
+    /**
+     * Add write operation to queue for sequential processing
+     */
     private async queueWrite(operation: () => Promise<void>): Promise<void> {
         this.writeQueue.push(operation);
 
@@ -255,6 +288,9 @@ export class SqliteStorageService implements IStorageService {
         }
     }
 
+    /**
+     * Process all queued write operations sequentially
+     */
     private async processWriteQueue(): Promise<void> {
         this.isProcessingQueue = true;
 
@@ -272,7 +308,9 @@ export class SqliteStorageService implements IStorageService {
         this.isProcessingQueue = false;
     }
 
-    // Settings
+    /**
+     * Get settings from cache or return defaults
+     */
     fetchSettings() {
         if (!this.isDataLoaded || !this.settingsCache) {
             console.warn('Settings not yet loaded, returning defaults');
@@ -285,6 +323,9 @@ export class SqliteStorageService implements IStorageService {
         return this.settingsCache;
     }
 
+    /**
+     * Load settings from database asynchronously
+     */
     async fetchSettingsAsync() {
         const db = this.getDb();
 
@@ -315,12 +356,14 @@ export class SqliteStorageService implements IStorageService {
         return result;
     }
 
+    /**
+     * Update appearance settings in cache and database
+     */
     updateAppearanceSettings(settings: AppearanceSettings): AppearanceSettings {
         if (this.settingsCache) {
             this.settingsCache.appearance = settings;
         }
 
-        // 异步写入数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             const now = Date.now();
@@ -333,6 +376,9 @@ export class SqliteStorageService implements IStorageService {
         return settings;
     }
 
+    /**
+     * Update preferences settings in cache and database
+     */
     updatePreferencesSettings(settings: PreferencesSettings): PreferencesSettings {
         if (this.settingsCache) {
             this.settingsCache.preferences = settings;
@@ -350,6 +396,9 @@ export class SqliteStorageService implements IStorageService {
         return settings;
     }
 
+    /**
+     * Update AI settings in cache and database
+     */
     updateAISettings(settings: AISettings): AISettings {
         if (this.settingsCache) {
             this.settingsCache.ai = settings;
@@ -367,7 +416,9 @@ export class SqliteStorageService implements IStorageService {
         return settings;
     }
 
-    // Lists
+    /**
+     * Get lists from cache
+     */
     fetchLists(): List[] {
         if (!this.isDataLoaded) {
             console.warn('Data not yet loaded, returning empty array');
@@ -376,6 +427,9 @@ export class SqliteStorageService implements IStorageService {
         return this.listsCache;
     }
 
+    /**
+     * Load lists from database asynchronously
+     */
     async fetchListsAsync(): Promise<List[]> {
         const db = this.getDb();
 
@@ -390,6 +444,9 @@ export class SqliteStorageService implements IStorageService {
         }
     }
 
+    /**
+     * Create a new list in cache and database
+     */
     createList(listData: { name: string; icon?: string }): List {
         const now = Date.now();
         const id = `list-${now}-${Math.random()}`;
@@ -402,10 +459,8 @@ export class SqliteStorageService implements IStorageService {
             order: now,
         };
 
-        // 立即更新缓存
         this.listsCache.push(newList);
 
-        // 异步写入数据库
         this.queueWrite(async () => {
             await this.insertList(newList);
         });
@@ -413,6 +468,9 @@ export class SqliteStorageService implements IStorageService {
         return newList;
     }
 
+    /**
+     * Insert list record into database
+     */
     private async insertList(list: List): Promise<void> {
         const db = this.getDb();
         const now = Date.now();
@@ -422,6 +480,9 @@ export class SqliteStorageService implements IStorageService {
         );
     }
 
+    /**
+     * Update list in cache and database, propagating name changes to tasks
+     */
     updateList(listId: string, updates: Partial<List>): List {
         const index = this.listsCache.findIndex(l => l.id === listId);
         if (index === -1) throw new Error("List not found");
@@ -429,11 +490,9 @@ export class SqliteStorageService implements IStorageService {
         const originalName = this.listsCache[index].name;
         this.listsCache[index] = { ...this.listsCache[index], ...updates };
 
-        // 异步更新数据库
         this.queueWrite(async () => {
             await this.updateListInDb(listId, updates);
 
-            // 如果名称变更，更新相关任务
             if (updates.name && updates.name !== originalName) {
                 const now = Date.now();
                 await this.getDb().execute(
@@ -441,7 +500,6 @@ export class SqliteStorageService implements IStorageService {
                     [updates.name, now, listId]
                 );
 
-                // 更新任务缓存
                 this.tasksCache.forEach(task => {
                     if (task.listId === listId) {
                         task.listName = updates.name!;
@@ -454,6 +512,9 @@ export class SqliteStorageService implements IStorageService {
         return this.listsCache[index];
     }
 
+    /**
+     * Update list record in database
+     */
     private async updateListInDb(listId: string, updates: Partial<List>): Promise<void> {
         const db = this.getDb();
         const now = Date.now();
@@ -489,6 +550,9 @@ export class SqliteStorageService implements IStorageService {
         );
     }
 
+    /**
+     * Delete list and move its tasks to Inbox or set to null for Trash items
+     */
     deleteList(listId: string): { message: string } {
         const listToDelete = this.listsCache.find(l => l.id === listId);
         if (!listToDelete) throw new Error("List not found");
@@ -497,10 +561,8 @@ export class SqliteStorageService implements IStorageService {
         const inbox = this.listsCache.find(l => l.name === 'Inbox');
         if (!inbox) throw new Error("Inbox not found, cannot delete list.");
 
-        // 立即更新缓存
         this.listsCache = this.listsCache.filter(l => l.id !== listId);
 
-        // 更新任务缓存
         this.tasksCache.forEach(task => {
             if (task.listId === listId) {
                 if (task.listName === 'Trash') {
@@ -513,14 +575,12 @@ export class SqliteStorageService implements IStorageService {
             }
         });
 
-        // 异步删除数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             const now = Date.now();
 
             await db.execute('BEGIN TRANSACTION');
             try {
-                // 移动任务
                 await db.execute(`
                     UPDATE tasks 
                     SET list_id = CASE 
@@ -535,7 +595,6 @@ export class SqliteStorageService implements IStorageService {
                     WHERE list_id = ?
                 `, [inbox.id, inbox.name, now, listId]);
 
-                // 删除列表
                 await db.execute('DELETE FROM lists WHERE id = ?', [listId]);
 
                 await db.execute('COMMIT');
@@ -548,11 +607,12 @@ export class SqliteStorageService implements IStorageService {
         return { message: "List deleted successfully" };
     }
 
+    /**
+     * Replace all lists with new set in cache and database
+     */
     updateLists(lists: List[]): List[] {
-        // 立即更新缓存
         this.listsCache = lists;
 
-        // 异步批量更新数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             const now = Date.now();
@@ -578,7 +638,9 @@ export class SqliteStorageService implements IStorageService {
         return lists;
     }
 
-    // Tasks
+    /**
+     * Get tasks from cache
+     */
     fetchTasks(): Task[] {
         if (!this.isDataLoaded) {
             console.warn('Data not yet loaded, returning empty array');
@@ -587,17 +649,18 @@ export class SqliteStorageService implements IStorageService {
         return this.tasksCache;
     }
 
+    /**
+     * Load tasks and subtasks from database asynchronously
+     */
     async fetchTasksAsync(): Promise<Task[]> {
         const db = this.getDb();
 
         try {
-            // 优化查询：使用索引
             const [dbTasks, dbSubtasks] = await Promise.all([
                 db.select<DbTask[]>('SELECT * FROM tasks ORDER BY "order", created_at'),
                 db.select<DbSubtask[]>('SELECT * FROM subtasks ORDER BY parent_id, "order"')
             ]);
 
-            // 分组子任务
             const subtasksByParent: Record<string, Subtask[]> = {};
             dbSubtasks.forEach(dbSubtask => {
                 const subtask = this.mapDbSubtaskToSubtask(dbSubtask);
@@ -621,6 +684,9 @@ export class SqliteStorageService implements IStorageService {
         }
     }
 
+    /**
+     * Create a new task in cache and database
+     */
     createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'groupCategory'>): Task {
         const now = Date.now();
         const id = `task-${now}-${Math.random()}`;
@@ -633,10 +699,8 @@ export class SqliteStorageService implements IStorageService {
             groupCategory: 'nodate',
         };
 
-        // 立即更新缓存
         this.tasksCache.push(newTask);
 
-        // 异步写入数据库
         this.queueWrite(async () => {
             await this.insertTask(newTask);
         });
@@ -644,6 +708,9 @@ export class SqliteStorageService implements IStorageService {
         return newTask;
     }
 
+    /**
+     * Insert task record into database
+     */
     private async insertTask(task: Task): Promise<void> {
         const db = this.getDb();
         await db.execute(`
@@ -671,6 +738,9 @@ export class SqliteStorageService implements IStorageService {
         ]);
     }
 
+    /**
+     * Update task in cache and database
+     */
     updateTask(taskId: string, updates: Partial<Task>): Task {
         const index = this.tasksCache.findIndex(t => t.id === taskId);
         if (index === -1) throw new Error("Task not found");
@@ -678,7 +748,6 @@ export class SqliteStorageService implements IStorageService {
         const now = Date.now();
         this.tasksCache[index] = { ...this.tasksCache[index], ...updates, updatedAt: now };
 
-        // 异步更新数据库
         this.queueWrite(async () => {
             await this.updateTaskInDb(taskId, updates);
         });
@@ -686,6 +755,9 @@ export class SqliteStorageService implements IStorageService {
         return this.tasksCache[index];
     }
 
+    /**
+     * Update task record in database
+     */
     private async updateTaskInDb(taskId: string, updates: Partial<Task>): Promise<void> {
         const db = this.getDb();
         const now = Date.now();
@@ -757,11 +829,12 @@ export class SqliteStorageService implements IStorageService {
         );
     }
 
+    /**
+     * Delete task and its subtasks from cache and database
+     */
     deleteTask(taskId: string): void {
-        // 立即更新缓存
         this.tasksCache = this.tasksCache.filter(t => t.id !== taskId);
 
-        // 异步删除数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             await db.execute('BEGIN TRANSACTION');
@@ -776,11 +849,12 @@ export class SqliteStorageService implements IStorageService {
         });
     }
 
+    /**
+     * Replace all tasks with new set in cache and database
+     */
     updateTasks(tasks: Task[]): Task[] {
-        // 立即更新缓存
         this.tasksCache = tasks;
 
-        // 异步批量更新数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             const now = Date.now();
@@ -847,19 +921,18 @@ export class SqliteStorageService implements IStorageService {
         return tasks;
     }
 
-    // 新增：批量更新任务（性能优化）
+    /**
+     * Batch update tasks using transaction for improved performance
+     */
     async batchUpdateTasks(tasks: Task[]): Promise<void> {
-        // 立即更新缓存
         this.tasksCache = tasks;
 
-        // 异步批量更新（使用事务）
         await this.queueWrite(async () => {
             const db = this.getDb();
             const now = Date.now();
 
             await db.execute('BEGIN TRANSACTION');
             try {
-                // 使用准备语句批量更新
                 for (const task of tasks) {
                     await db.execute(`
                         INSERT OR REPLACE INTO tasks (
@@ -885,12 +958,9 @@ export class SqliteStorageService implements IStorageService {
                         task.groupCategory
                     ]);
 
-                    // 更新子任务
                     if (task.subtasks) {
-                        // 先删除旧的子任务
                         await db.execute('DELETE FROM subtasks WHERE parent_id = ?', [task.id]);
 
-                        // 插入新的子任务
                         for (const subtask of task.subtasks) {
                             await db.execute(`
                                 INSERT INTO subtasks (
@@ -921,7 +991,9 @@ export class SqliteStorageService implements IStorageService {
         });
     }
 
-    // 新增：批量更新列表（性能优化）
+    /**
+     * Batch update lists using transaction for improved performance
+     */
     async batchUpdateLists(lists: List[]): Promise<void> {
         this.listsCache = lists;
 
@@ -956,18 +1028,20 @@ export class SqliteStorageService implements IStorageService {
         });
     }
 
-    // 新增：强制刷新所有待处理的写入
+    /**
+     * Force flush all pending write operations
+     */
     async flush(): Promise<void> {
-        // 处理批量队列
         if (this.batchQueue.length > 0) {
             await this.processBatchQueue();
         }
 
-        // 处理写入队列
         await this.processWriteQueue();
     }
 
-    // Subtasks
+    /**
+     * Create a new subtask in cache and database
+     */
     createSubtask(taskId: string, subtaskData: { title: string; order: number; dueDate: number | null }): Subtask {
         const now = Date.now();
         const id = `subtask-${now}-${Math.random()}`;
@@ -984,7 +1058,6 @@ export class SqliteStorageService implements IStorageService {
             updatedAt: now,
         };
 
-        // 立即更新缓存
         const taskIndex = this.tasksCache.findIndex(t => t.id === taskId);
         if (taskIndex !== -1) {
             if (!this.tasksCache[taskIndex].subtasks) {
@@ -993,7 +1066,6 @@ export class SqliteStorageService implements IStorageService {
             this.tasksCache[taskIndex].subtasks!.push(newSubtask);
         }
 
-        // 异步写入数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             await db.execute(`
@@ -1017,11 +1089,13 @@ export class SqliteStorageService implements IStorageService {
         return newSubtask;
     }
 
+    /**
+     * Update subtask in cache and database
+     */
     updateSubtask(subtaskId: string, updates: Partial<Subtask>): Subtask {
         const now = Date.now();
         let updatedSubtask: Subtask | undefined;
 
-        // 立即更新缓存
         for (const task of this.tasksCache) {
             if (task.subtasks) {
                 const subtaskIndex = task.subtasks.findIndex(s => s.id === subtaskId);
@@ -1035,7 +1109,6 @@ export class SqliteStorageService implements IStorageService {
 
         if (!updatedSubtask) throw new Error("Subtask not found");
 
-        // 异步更新数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             const updateFields = [];
@@ -1080,8 +1153,10 @@ export class SqliteStorageService implements IStorageService {
         return updatedSubtask;
     }
 
+    /**
+     * Delete subtask from cache and database
+     */
     deleteSubtask(subtaskId: string): void {
-        // 立即更新缓存
         for (const task of this.tasksCache) {
             if (task.subtasks) {
                 const initialLength = task.subtasks.length;
@@ -1092,14 +1167,15 @@ export class SqliteStorageService implements IStorageService {
             }
         }
 
-        // 异步删除数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             await db.execute('DELETE FROM subtasks WHERE id = ?', [subtaskId]);
         });
     }
 
-    // Summaries
+    /**
+     * Get summaries from cache
+     */
     fetchSummaries(): StoredSummary[] {
         if (!this.isDataLoaded) {
             console.warn('Data not yet loaded, returning empty array');
@@ -1108,6 +1184,9 @@ export class SqliteStorageService implements IStorageService {
         return this.summariesCache;
     }
 
+    /**
+     * Load summaries from database asynchronously
+     */
     async fetchSummariesAsync(): Promise<StoredSummary[]> {
         const db = this.getDb();
 
@@ -1122,6 +1201,9 @@ export class SqliteStorageService implements IStorageService {
         }
     }
 
+    /**
+     * Create a new summary in cache and database
+     */
     createSummary(summaryData: Omit<StoredSummary, 'id' | 'createdAt' | 'updatedAt'>): StoredSummary {
         const now = Date.now();
         const id = `summary-${now}-${Math.random()}`;
@@ -1133,10 +1215,8 @@ export class SqliteStorageService implements IStorageService {
             updatedAt: now,
         };
 
-        // 立即更新缓存
         this.summariesCache.unshift(newSummary);
 
-        // 异步写入数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             await db.execute(`
@@ -1157,6 +1237,9 @@ export class SqliteStorageService implements IStorageService {
         return newSummary;
     }
 
+    /**
+     * Update summary in cache and database
+     */
     updateSummary(summaryId: string, updates: Partial<StoredSummary>): StoredSummary {
         const now = Date.now();
         const index = this.summariesCache.findIndex(s => s.id === summaryId);
@@ -1164,7 +1247,6 @@ export class SqliteStorageService implements IStorageService {
 
         this.summariesCache[index] = { ...this.summariesCache[index], ...updates, updatedAt: now };
 
-        // 异步更新数据库
         this.queueWrite(async () => {
             const db = this.getDb();
             const updateFields = [];
@@ -1205,11 +1287,12 @@ export class SqliteStorageService implements IStorageService {
         return this.summariesCache[index];
     }
 
+    /**
+     * Replace all summaries with new set in cache and database
+     */
     updateSummaries(summaries: StoredSummary[]): StoredSummary[] {
-        // 立即更新缓存
         this.summariesCache = summaries;
 
-        // 异步批量更新数据库
         this.queueWrite(async () => {
             const db = this.getDb();
 
@@ -1243,7 +1326,9 @@ export class SqliteStorageService implements IStorageService {
         return summaries;
     }
 
-    // Helper methods to map database records to app types
+    /**
+     * Map database list record to application List type
+     */
     private mapDbListToList(dbList: DbList): List {
         return {
             id: dbList.id,
@@ -1254,6 +1339,9 @@ export class SqliteStorageService implements IStorageService {
         };
     }
 
+    /**
+     * Map database task record to application Task type
+     */
     private mapDbTaskToTask(dbTask: DbTask): Task {
         return {
             id: dbTask.id,
@@ -1271,10 +1359,13 @@ export class SqliteStorageService implements IStorageService {
             tags: dbTask.tags ? JSON.parse(dbTask.tags) : undefined,
             priority: dbTask.priority,
             groupCategory: dbTask.group_category as any,
-            subtasks: [], // Will be populated separately
+            subtasks: [],
         };
     }
 
+    /**
+     * Map database subtask record to application Subtask type
+     */
     private mapDbSubtaskToSubtask(dbSubtask: DbSubtask): Subtask {
         return {
             id: dbSubtask.id,
@@ -1289,6 +1380,9 @@ export class SqliteStorageService implements IStorageService {
         };
     }
 
+    /**
+     * Map database summary record to application StoredSummary type
+     */
     private mapDbSummaryToSummary(dbSummary: DbSummary): StoredSummary {
         return {
             id: dbSummary.id,

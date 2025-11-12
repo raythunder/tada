@@ -4,14 +4,20 @@ import { appearanceSettingsAtom, defaultAppearanceSettingsForApi, defaultPrefere
 import { APP_THEMES } from '@/config/app';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * A global, non-visual component responsible for applying user settings
+ * (like theme, dark mode, and language) to the application's DOM and i18n instance.
+ */
 const SettingsApplicator: React.FC = () => {
     const loadedAppearance = useAtomValue(appearanceSettingsAtom);
     const loadedPreferences = useAtomValue(preferencesSettingsAtom);
     const { i18n } = useTranslation();
 
+    // Use loaded settings or fall back to defaults to prevent null issues
     const appearance = loadedAppearance ?? defaultAppearanceSettingsForApi();
     const preferences = loadedPreferences ?? defaultPreferencesSettingsForApi();
 
+    // Effect for applying appearance settings (theme, dark mode)
     useEffect(() => {
         const applyDarkMode = (mode: 'light' | 'dark' | 'system') => {
             if (mode === 'system') {
@@ -47,6 +53,7 @@ const SettingsApplicator: React.FC = () => {
         };
     }, [appearance]);
 
+    // Effect for applying language preference
     useEffect(() => {
         if (document.documentElement.lang !== preferences.language) {
             document.documentElement.lang = preferences.language;
@@ -56,7 +63,7 @@ const SettingsApplicator: React.FC = () => {
         }
     }, [preferences, i18n]);
 
-    return null;
+    return null; // This component does not render anything
 };
 
 SettingsApplicator.displayName = 'SettingsApplicator';

@@ -6,63 +6,67 @@ export interface ThemeColors {
 
 export interface AppTheme {
     id: string;
-    nameKey: string; // Changed from name to nameKey for i18n
+    nameKey: string; // i18n key for the theme's display name
     colors: ThemeColors;
 }
 
+/**
+ * Defines the available themes for the application.
+ * Each theme provides HSL color values that are applied as CSS custom properties.
+ */
 export const APP_THEMES: AppTheme[] = [
     {
         id: 'default-coral',
         nameKey: 'theme.coralRed',
         colors: {
-            primary: '3 76% 58%', // #E34C45
-            light: '5 100% 89%',  // #FFCBC7
-            dark: '3 67% 47%',    // #C92E27
+            primary: '3 76% 58%',
+            light: '5 100% 89%',
+            dark: '3 67% 47%',
         },
     },
     {
         id: 'ocean-blue',
         nameKey: 'theme.oceanBlue',
         colors: {
-            primary: '207 82% 56%', // #3B82F6 (Tailwind blue-500 like)
-            light: '207 90% 88%',   // #BFDBFE (Tailwind blue-200 like)
-            dark: '207 90% 40%',    // #1D4ED8 (Tailwind blue-700 like)
+            primary: '207 82% 56%',
+            light: '207 90% 88%',
+            dark: '207 90% 40%',
         },
     },
     {
         id: 'forest-green',
         nameKey: 'theme.forestGreen',
         colors: {
-            primary: '145 63% 40%', // #2F855A (Tailwind green-600 like)
-            light: '145 63% 85%',   // #C6F6D5 (Tailwind green-200 like)
-            dark: '145 63% 28%',    // #276749 (Tailwind green-800 like)
+            primary: '145 63% 40%',
+            light: '145 63% 85%',
+            dark: '145 63% 28%',
         },
     },
     {
         id: 'sunset-orange',
         nameKey: 'theme.sunsetOrange',
         colors: {
-            primary: '24 94% 51%', // #F97316 (Tailwind orange-500 like)
-            light: '24 94% 88%',   // #FED7AA (Tailwind orange-200 like)
-            dark: '24 94% 35%',    // #C2410C (Tailwind orange-700 like)
+            primary: '24 94% 51%',
+            light: '24 94% 88%',
+            dark: '24 94% 35%',
         }
     },
     {
         id: 'royal-purple',
         nameKey: 'theme.royalPurple',
         colors: {
-            primary: '262 68% 50%', // #7C3AED (Tailwind violet-600 like)
-            light: '262 86% 88%',   // #DDD6FE (Tailwind violet-200 like)
-            dark: '262 68% 36%',    // #5B21B6 (Tailwind violet-800 like)
+            primary: '262 68% 50%',
+            light: '262 86% 88%',
+            dark: '262 68% 36%',
         }
     },
     {
         id: 'graphite-grey',
         nameKey: 'theme.graphiteGrey',
         colors: {
-            primary: '210 10% 40%', // #596373 (A neutral grey)
-            light: '210 10% 85%',   // #D0D5DB (A lighter neutral grey)
-            dark: '210 10% 25%',    // #363D47 (A darker neutral grey)
+            primary: '210 10% 40%',
+            light: '210 10% 85%',
+            dark: '210 10% 25%',
         }
     }
 ];

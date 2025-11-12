@@ -5,6 +5,11 @@ import {newTextState, scrollIntoView} from "./ghost-writer.ts";
 import {slashCommandState, toggleSlashCommand} from "./fields.ts";
 import {slashCommandPlugin} from "./slash-command.ts";
 
+/**
+ * Returns a CodeMirror extension for the slash command feature.
+ * This bundles the state management, view plugin for the menu, keymaps,
+ * and event handlers necessary for triggering and controlling the command menu.
+ */
 export function slashCommand(): Extension {
     return [
         slashCommandState,

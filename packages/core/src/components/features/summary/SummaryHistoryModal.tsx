@@ -13,6 +13,13 @@ import * as Dialog from '@radix-ui/react-dialog';
 import {VisuallyHidden} from '@radix-ui/react-visually-hidden';
 import {useTranslation} from "react-i18next";
 
+/**
+ * Generates human-readable labels for summary period and list filters.
+ * @param periodKey The key representing the time period filter.
+ * @param listKey The key representing the list filter.
+ * @param t The translation function.
+ * @returns An object containing `periodLabel` and `listLabel`.
+ */
 const getFilterLabels = (periodKey: string, listKey: string, t: (key: string, options?: any) => string): {
     periodLabel: string,
     listLabel: string
@@ -68,6 +75,9 @@ interface ReferencedTaskItemProps {
     task: Task;
 }
 
+/**
+ * Renders a single task that was referenced in a generated summary.
+ */
 const ReferencedTaskItem: React.FC<ReferencedTaskItemProps> = React.memo(({task}) => {
     const {t} = useTranslation();
     const iconName: IconName = task.completed ? "check-square" : "square";
@@ -100,6 +110,9 @@ interface SummaryHistoryModalProps {
     allTasks: Task[];
 }
 
+/**
+ * A modal component for browsing, searching, and viewing previously generated AI summaries.
+ */
 const SummaryHistoryModal: React.FC<SummaryHistoryModalProps> = ({isOpen, onClose, summaries, allTasks,}) => {
     const {t} = useTranslation();
     const searchInputRef = useRef<HTMLInputElement>(null);

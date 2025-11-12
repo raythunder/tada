@@ -4,16 +4,16 @@ import { MARKDOWN_TEMPLATES } from "../../core/constants";
 import { getCurrentLine } from "../../core/utils/editor-utils";
 
 /**
- * Slash command option interface
+ * Defines the structure for a slash command option in the menu.
  */
 export interface SlashCommandOption {
-    titleKey: string;
-    icon: string;
-    execute: (view: EditorView) => void | Promise<AbortController>;
+    titleKey: string; // i18n key for the command's title
+    icon: string;     // Lucide icon name
+    execute: (view: EditorView) => void | Promise<AbortController>; // Action to perform
 }
 
 /**
- * Inserts text at the beginning of the current line
+ * Helper function to insert text at the beginning of the current line.
  */
 function insertAtLineStart(view: EditorView, text: string, cursorOffset: number = 0): void {
     const line = getCurrentLine(view.state);
@@ -24,7 +24,7 @@ function insertAtLineStart(view: EditorView, text: string, cursorOffset: number 
 }
 
 /**
- * Inserts text at cursor position with optional selection
+ * Helper function to insert text at the current cursor position, with an optional selection.
  */
 function insertAtCursor(
     view: EditorView,
@@ -49,7 +49,7 @@ function insertAtCursor(
 }
 
 /**
- * Available slash commands
+ * A list of all available slash commands.
  */
 export const slashCommands: SlashCommandOption[] = [
     {
@@ -78,9 +78,9 @@ export const slashCommands: SlashCommandOption[] = [
         execute: (view: EditorView) => insertAtLineStart(view, "#### ", 0)
     },
     {
-        titleKey: "divider",
+        titleKey: "divider", // Special key for a visual separator in the menu
         icon: "",
-        execute: () => {} // Divider placeholder
+        execute: () => {}
     },
     {
         titleKey: "moondown.slash.insertTable",

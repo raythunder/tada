@@ -48,6 +48,9 @@ interface TagPillProps {
     disabled?: boolean;
 }
 
+/**
+ * A small pill component to display a single tag.
+ */
 const TagPill: React.FC<TagPillProps> = React.memo(({tag, onRemove, disabled}) => (
     <span
         className={twMerge(
@@ -80,6 +83,9 @@ interface RadixMenuItemProps extends DropdownMenu.DropdownMenuItemProps {
     isDanger?: boolean;
 }
 
+/**
+ * A styled wrapper around Radix UI's DropdownMenu.Item for consistent menu item appearance.
+ */
 const RadixMenuItem = React.forwardRef<
     React.ElementRef<typeof DropdownMenu.Item>,
     RadixMenuItemProps
@@ -115,6 +121,10 @@ const RadixMenuItem = React.forwardRef<
 ));
 RadixMenuItem.displayName = 'RadixMenuItem';
 
+/**
+ * A full-panel component that displays the details of a selected task.
+ * It allows for editing all task properties, managing subtasks, and performing actions like deletion or duplication.
+ */
 const TaskDetail: React.FC = () => {
     const {t} = useTranslation();
     const selectedTask = useAtomValue(selectedTaskAtom);
@@ -133,14 +143,13 @@ const TaskDetail: React.FC = () => {
         return date && isValid(date) ? date : undefined;
     });
 
-    // --- Start of Fix: Refs to mirror state for stable callbacks ---
+    // Refs to hold the latest state values for use in callbacks that might otherwise capture stale state.
     const localTitleRef = useRef(localTitle);
     const localContentRef = useRef(localContent);
     const localDueDateRef = useRef(localDueDate);
     useEffect(() => { localTitleRef.current = localTitle; }, [localTitle]);
     useEffect(() => { localContentRef.current = localContent; }, [localContent]);
     useEffect(() => { localDueDateRef.current = localDueDate; }, [localDueDate]);
-    // --- End of Fix ---
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isPermanentDeleteDialogOpen, setIsPermanentDeleteDialogOpen] = useState(false);
@@ -169,7 +178,11 @@ const TaskDetail: React.FC = () => {
     const hasUnsavedChangesRef = useRef(false);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // --- Start of Fix: Stable savePendingChanges using refs ---
+    /**
+     * Saves any pending local changes (title, content, due date) to the global state.
+     * This function uses refs to access the latest state, ensuring that debounced calls
+     * or calls from unmount effects have the most current data.
+     */
     const savePendingChanges = useCallback(() => {
         if (!selectedTask || !hasUnsavedChangesRef.current) return;
 
@@ -207,13 +220,12 @@ const TaskDetail: React.FC = () => {
 
         hasUnsavedChangesRef.current = false;
     }, [selectedTask, setTasks, t]);
-    // --- End of Fix ---
 
 
-    // --- Start of Fix: Save on unmount using stable savePendingChanges ---
+    /**
+     * Effect to ensure pending changes are saved when the component unmounts.
+     */
     useEffect(() => {
-        // This effect runs once on mount and captures the stable savePendingChanges function.
-        // The cleanup will run on unmount, correctly saving any pending changes.
         return () => {
             if (hasUnsavedChangesRef.current) {
                 savePendingChanges();
@@ -223,7 +235,6 @@ const TaskDetail: React.FC = () => {
             }
         };
     }, [savePendingChanges]);
-    // --- End of Fix ---
 
     useEffect(() => {
         if (selectedTask && selectedTask.title === '' && titleInputRef.current) {
@@ -244,6 +255,9 @@ const TaskDetail: React.FC = () => {
         }
     }, [newSubtaskDueDate, isNewSubtaskDatePickerOpen]);
 
+    /**
+     * Triggers a debounced save operation. Marks changes as pending and sets a timeout.
+     */
     const triggerSave = useCallback(() => {
         hasUnsavedChangesRef.current = true;
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -252,6 +266,9 @@ const TaskDetail: React.FC = () => {
         }, 700);
     }, [savePendingChanges]);
 
+    /**
+     * Updates a specific property of the current task and saves it immediately.
+     */
     const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'subtasks'>>) => {
         if (!selectedTask) return;
 
@@ -273,14 +290,15 @@ const TaskDetail: React.FC = () => {
     }, [selectedTask, setTasks, savePendingChanges]);
 
 
-    // --- Start of Fix: Save before closing ---
+    /**
+     * Handles closing the task detail panel, ensuring any pending changes are saved first.
+     */
     const handleClose = useCallback(() => {
         if (hasUnsavedChangesRef.current) {
             savePendingChanges();
         }
         setSelectedTaskId(null);
     }, [setSelectedTaskId, savePendingChanges]);
-    // --- End of Fix ---
 
     const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         setLocalTitle(e.target.value);

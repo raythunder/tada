@@ -1,11 +1,15 @@
 name: Release Desktop App
 
 on:
+  # Triggers the workflow on push events for tags matching v*.*.* (e.g., v1.0.0)
   push:
     tags:
       - 'v*.*.*'
+
+  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+# Set permissions of the GITHUB_TOKEN to allow creating releases
 permissions:
   contents: write
 
@@ -14,6 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Build the app for macOS, Linux, and Windows
         platform: [macos-latest, ubuntu-latest, windows-latest]
 
     runs-on: ${{ matrix.platform }}
@@ -30,7 +35,7 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      # [修正] 更新了 Ubuntu 的依赖包名，并添加了其他必要的构建工具
+      # Install dependencies required for Tauri build on Linux (Ubuntu)
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-latest'
         run: |
@@ -40,18 +45,18 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      # [新增] 在 Tauri 构建之前，必须先构建 Web 应用的前端资源
+      # The web app's frontend assets must be built before the Tauri build.
       - name: Build Web App
         run: pnpm build
 
-      # 核心步骤：使用 tauri-action 来构建和打包
+      # Core step: Use the tauri-action to build, package, and create a GitHub release
       - name: Build Tauri App and Create Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
+          tagName: ${{ github.ref_name }} # e.g., v1.0.0
           releaseName: 'Tada ${{ github.ref_name }}'
           releaseBody: 'See the assets below for the latest version of the Tada desktop app.'
-          releaseDraft: false # 可以设置为 false 直接发布，或保持 true 手动检查后再发布
+          releaseDraft: false # Set to false to publish directly, or true to create a draft for manual review
           prerelease: false

@@ -13,14 +13,14 @@ type ButtonType = "button" | "submit" | "reset";
 interface AsButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'type'> {
     as?: 'button';
     href?: never;
-    type?: ButtonType; // Use the more specific ButtonType here
+    type?: ButtonType;
 }
 
 interface AsLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
     as: 'a';
     href: string;
     disabled?: boolean;
-    type?: never; // Links don't have a 'type' attribute in the same way buttons do
+    type?: never;
 }
 
 export type ButtonProps = (AsButtonProps | AsLinkProps) & {
@@ -36,6 +36,10 @@ export type ButtonProps = (AsButtonProps | AsLinkProps) & {
     'aria-label'?: string;
 };
 
+/**
+ * A versatile button component that can be rendered as a <button> or <a> tag.
+ * It supports different variants, sizes, and can include an icon.
+ */
 const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
     ({
          as = 'button', children, variant = 'primary', size = 'md', icon, iconPosition = 'left', iconProps,
@@ -105,9 +109,6 @@ const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonPro
         const finalClassName = twMerge(baseClasses, size === 'icon' ? iconButtonSizeClasses[size] : sizeClasses[size], variantClasses[variant], className);
 
         const finalAriaLabel = ariaLabel || (size === 'icon' && !children ? undefined : (typeof children === 'string' ? children : undefined));
-        if (size === 'icon' && !finalAriaLabel && !loading && !children && process.env.NODE_ENV === 'development') {
-            // console.warn(`Icon-only button without children is missing an 'aria-label'. Icon: ${icon || 'N/A'}`);
-        }
 
         const content = (
             <>
@@ -130,7 +131,7 @@ const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonPro
         );
 
         if (as === 'a') {
-            const {type, ...linkProps} = props as AsLinkProps; // Destructure out type for anchor
+            const {type, ...linkProps} = props as AsLinkProps;
             return (
                 <a
                     ref={ref as React.Ref<HTMLAnchorElement>}
@@ -145,11 +146,11 @@ const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonPro
             );
         }
 
-        const {type = 'button', ...buttonProps} = props as AsButtonProps; // Default type to 'button'
+        const {type = 'button', ...buttonProps} = props as AsButtonProps;
         return (
             <button
                 ref={ref as React.Ref<HTMLButtonElement>}
-                type={type} // Use the destructured type with default
+                type={type}
                 className={finalClassName}
                 disabled={isDisabled}
                 aria-label={finalAriaLabel}

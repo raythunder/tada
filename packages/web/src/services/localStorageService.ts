@@ -14,7 +14,9 @@ import {
     defaultPreferencesSettingsForApi
 } from '@tada/core/store/jotai';
 
-// --- Constants for LocalStorage Keys ---
+/**
+ * LocalStorage keys for data persistence
+ */
 const KEYS = {
     TASKS: 'tada-tasks',
     LISTS: 'tada-lists',
@@ -24,7 +26,9 @@ const KEYS = {
     AI_SETTINGS: 'tada-aiSettings',
 };
 
-// --- 内存缓存 ---
+/**
+ * In-memory cache with dirty flag tracking
+ */
 class MemoryCache<T> {
     private cache: T | null = null;
     private isDirty = false;
@@ -56,9 +60,10 @@ class MemoryCache<T> {
     }
 }
 
-// --- Helper Functions with caching ---
+/**
+ * Retrieve item from localStorage with caching support
+ */
 function getItem<T>(key: string, defaultValue: T, cache?: MemoryCache<T>): T {
-    // 先检查缓存
     if (cache) {
         const cached = cache.get();
         if (cached !== null) {
@@ -71,7 +76,7 @@ function getItem<T>(key: string, defaultValue: T, cache?: MemoryCache<T>): T {
         if (rawData) {
             const parsed = JSON.parse(rawData) as T;
             if (cache) {
-                cache.set(parsed, false); // 从存储加载，不标记为脏
+                cache.set(parsed, false);
             }
             return parsed;
         }
@@ -85,25 +90,28 @@ function getItem<T>(key: string, defaultValue: T, cache?: MemoryCache<T>): T {
     return defaultValue;
 }
 
+/**
+ * Store item to localStorage with deferred write
+ */
 function setItem<T>(key: string, value: T, cache?: MemoryCache<T>): void {
-    // 先更新缓存
     if (cache) {
         cache.set(value, true);
     }
 
-    // 使用 requestIdleCallback 延迟写入
     if ('requestIdleCallback' in window) {
         requestIdleCallback(() => {
             persistToStorage(key, value, cache);
         }, { timeout: 2000 });
     } else {
-        // 降级：使用 setTimeout
         setTimeout(() => {
             persistToStorage(key, value, cache);
         }, 100);
     }
 }
 
+/**
+ * Persist data to localStorage immediately
+ */
 function persistToStorage<T>(key: string, value: T, cache?: MemoryCache<T>): void {
     try {
         const stringifiedData = JSON.stringify(value);
@@ -116,7 +124,9 @@ function persistToStorage<T>(key: string, value: T, cache?: MemoryCache<T>): voi
     }
 }
 
-// --- Default Data Initialization ---
+/**
+ * Initialize default data if not present in localStorage
+ */
 function initializeDefaultData() {
     if (!localStorage.getItem(KEYS.LISTS)) {
         const inboxId = `list-${Date.now()}`;
@@ -132,7 +142,10 @@ function initializeDefaultData() {
 
 initializeDefaultData();
 
-// --- Service Implementation with Performance Optimizations ---
+/**
+ * LocalStorage-based storage service implementation for web application
+ * Provides persistent data storage with in-memory caching and deferred writes
+ */
 export class LocalStorageService implements IStorageService {
     private tasksCache = new MemoryCache<Task[]>();
     private listsCache = new MemoryCache<List[]>();
@@ -145,12 +158,10 @@ export class LocalStorageService implements IStorageService {
     private flushTimeout: NodeJS.Timeout | null = null;
 
     constructor() {
-        // 页面卸载时强制刷新
         window.addEventListener('beforeunload', () => {
             this.flushSync();
         });
 
-        // 页面隐藏时刷新
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 this.flush();
@@ -158,7 +169,9 @@ export class LocalStorageService implements IStorageService {
         });
     }
 
-    // Settings
+    /**
+     * Retrieve all settings from cache or localStorage
+     */
     fetchSettings() {
         return {
             appearance: getItem(KEYS.APPEARANCE_SETTINGS, defaultAppearanceSettingsForApi(), this.appearanceCache),
@@ -167,26 +180,40 @@ export class LocalStorageService implements IStorageService {
         };
     }
 
+    /**
+     * Update appearance settings in cache and localStorage
+     */
     updateAppearanceSettings(settings: AppearanceSettings) {
         setItem(KEYS.APPEARANCE_SETTINGS, settings, this.appearanceCache);
         return settings;
     }
 
+    /**
+     * Update preferences settings in cache and localStorage
+     */
     updatePreferencesSettings(settings: PreferencesSettings) {
         setItem(KEYS.PREFERENCES_SETTINGS, settings, this.preferencesCache);
         return settings;
     }
 
+    /**
+     * Update AI settings in cache and localStorage
+     */
     updateAISettings(settings: AISettings) {
         setItem(KEYS.AI_SETTINGS, settings, this.aiCache);
         return settings;
     }
 
-    // Lists
+    /**
+     * Retrieve all lists from cache or localStorage
+     */
     fetchLists() {
         return getItem<List[]>(KEYS.LISTS, [], this.listsCache);
     }
 
+    /**
+     * Create a new list in cache and localStorage
+     */
     createList(listData: { name: string; icon?: string }) {
         const lists = this.fetchLists();
         const newList: List = {
@@ -200,6 +227,9 @@ export class LocalStorageService implements IStorageService {
         return newList;
     }
 
+    /**
+     * Update list in cache and localStorage, propagating name changes to tasks
+     */
     updateList(listId: string, updates: Partial<List>) {
         const lists = this.fetchLists();
         let originalName: string | undefined;
@@ -229,6 +259,9 @@ export class LocalStorageService implements IStorageService {
         return updatedList;
     }
 
+    /**
+     * Delete list and move its tasks to Inbox or set to null for Trash items
+     */
     deleteList(listId: string) {
         const lists = this.fetchLists();
         const listToDelete = lists.find(l => l.id === listId);
@@ -254,16 +287,24 @@ export class LocalStorageService implements IStorageService {
         return { message: "List deleted successfully" };
     }
 
+    /**
+     * Replace all lists with new set in cache and localStorage
+     */
     updateLists(lists: List[]) {
         setItem(KEYS.LISTS, lists, this.listsCache);
         return lists;
     }
 
-    // Tasks
+    /**
+     * Retrieve all tasks from cache or localStorage
+     */
     fetchTasks() {
         return getItem<Task[]>(KEYS.TASKS, [], this.tasksCache);
     }
 
+    /**
+     * Create a new task in cache and localStorage
+     */
     createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'groupCategory'>) {
         const tasks = this.fetchTasks();
         const now = Date.now();
@@ -279,6 +320,9 @@ export class LocalStorageService implements IStorageService {
         return newTask;
     }
 
+    /**
+     * Update task in cache and localStorage
+     */
     updateTask(taskId: string, updates: Partial<Task>) {
         const tasks = this.fetchTasks();
         let updatedTask: Task | undefined;
@@ -294,37 +338,44 @@ export class LocalStorageService implements IStorageService {
         return updatedTask;
     }
 
+    /**
+     * Delete task from cache and localStorage
+     */
     deleteTask(taskId: string) {
         const tasks = this.fetchTasks();
         const newTasks = tasks.filter(t => t.id !== taskId);
         setItem(KEYS.TASKS, newTasks, this.tasksCache);
     }
 
+    /**
+     * Replace all tasks with new set in cache and localStorage
+     */
     updateTasks(tasks: Task[]) {
         setItem(KEYS.TASKS, tasks, this.tasksCache);
         return tasks;
     }
 
-    // 新增：批量更新任务（异步）
+    /**
+     * Batch update tasks with deferred write for improved performance
+     */
     async batchUpdateTasks(tasks: Task[]): Promise<void> {
-        // 先更新缓存（同步）
         this.tasksCache.set(tasks, true);
-
-        // 标记有待处理的写入
         this.pendingWrites.add(KEYS.TASKS);
-
-        // 调度批量刷新
         this.scheduleBatchFlush();
     }
 
-    // 新增：批量更新列表（异步）
+    /**
+     * Batch update lists with deferred write for improved performance
+     */
     async batchUpdateLists(lists: List[]): Promise<void> {
         this.listsCache.set(lists, true);
         this.pendingWrites.add(KEYS.LISTS);
         this.scheduleBatchFlush();
     }
 
-    // 调度批量刷新
+    /**
+     * Schedule batch flush of pending writes
+     */
     private scheduleBatchFlush(): void {
         if (this.flushTimeout) {
             clearTimeout(this.flushTimeout);
@@ -332,10 +383,12 @@ export class LocalStorageService implements IStorageService {
 
         this.flushTimeout = setTimeout(() => {
             this.flush();
-        }, 100); // 100ms 内的所有更新合并为一次写入
+        }, 100);
     }
 
-    // 异步刷新
+    /**
+     * Flush all pending writes to localStorage asynchronously
+     */
     async flush(): Promise<void> {
         if (this.pendingWrites.size === 0) return;
 
@@ -370,7 +423,9 @@ export class LocalStorageService implements IStorageService {
         );
     }
 
-    // 同步刷新（用于页面卸载）
+    /**
+     * Flush all pending writes to localStorage synchronously for page unload
+     */
     private flushSync(): void {
         const caches = [
             { key: KEYS.TASKS, cache: this.tasksCache },
@@ -396,7 +451,9 @@ export class LocalStorageService implements IStorageService {
         });
     }
 
-    // Subtasks
+    /**
+     * Create a new subtask in cache and localStorage
+     */
     createSubtask(taskId: string, subtaskData: { title: string, order: number, dueDate: number | null }) {
         const tasks = this.fetchTasks();
         const now = Date.now();
@@ -424,6 +481,9 @@ export class LocalStorageService implements IStorageService {
         return newSubtask;
     }
 
+    /**
+     * Update subtask in cache and localStorage
+     */
     updateSubtask(subtaskId: string, updates: Partial<Subtask>) {
         const tasks = this.fetchTasks();
         let updatedSubtask: Subtask | undefined;
@@ -443,6 +503,9 @@ export class LocalStorageService implements IStorageService {
         return updatedSubtask;
     }
 
+    /**
+     * Delete subtask from cache and localStorage
+     */
     deleteSubtask(subtaskId: string) {
         const tasks = this.fetchTasks();
         for (const task of tasks) {
@@ -457,11 +520,16 @@ export class LocalStorageService implements IStorageService {
         setItem(KEYS.TASKS, tasks, this.tasksCache);
     }
 
-    // Summaries
+    /**
+     * Retrieve all summaries from cache or localStorage
+     */
     fetchSummaries() {
         return getItem<StoredSummary[]>(KEYS.SUMMARIES, [], this.summariesCache);
     }
 
+    /**
+     * Create a new summary in cache and localStorage
+     */
     createSummary(summaryData: Omit<StoredSummary, 'id' | 'createdAt' | 'updatedAt'>) {
         const summaries = this.fetchSummaries();
         const now = Date.now();
@@ -476,6 +544,9 @@ export class LocalStorageService implements IStorageService {
         return newSummary;
     }
 
+    /**
+     * Update summary in cache and localStorage
+     */
     updateSummary(summaryId: string, updates: Partial<StoredSummary>) {
         const summaries = this.fetchSummaries();
         let updatedSummary: StoredSummary | undefined;
@@ -491,6 +562,9 @@ export class LocalStorageService implements IStorageService {
         return updatedSummary;
     }
 
+    /**
+     * Replace all summaries with new set in cache and localStorage
+     */
     updateSummaries(summaries: StoredSummary[]) {
         setItem(KEYS.SUMMARIES, summaries, this.summariesCache);
         return summaries;

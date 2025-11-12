@@ -1,5 +1,9 @@
 import {EditorView, ViewPlugin, type PluginValue, ViewUpdate} from '@codemirror/view';
 
+/**
+ * A ViewPlugin that handles pasting and dragging-and-dropping images into the editor.
+ * It reads the image file, converts it to a Base64 data URL, and inserts it as markdown.
+ */
 class ImagePastePlugin implements PluginValue {
     private view: EditorView;
 
@@ -15,7 +19,7 @@ class ImagePastePlugin implements PluginValue {
     }
 
     update(_update: ViewUpdate) {
-        // This method is required but we don't need to do anything here
+        // No action needed on editor updates for this plugin.
     }
 
     destroy() {
@@ -57,6 +61,11 @@ class ImagePastePlugin implements PluginValue {
         }
     };
 
+    /**
+     * Reads an image file, converts it to Base64, and inserts it into the editor at the given position.
+     * @param file The image file to process.
+     * @param pos The position in the document to insert the image markdown.
+     */
     private processImage(file: File, pos: number | null) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -73,6 +82,11 @@ class ImagePastePlugin implements PluginValue {
         reader.readAsDataURL(file);
     }
 
+    /**
+     * Extracts the file name from a full file path, without the extension.
+     * @param fileName The full name of the file (e.g., "my-image.png").
+     * @returns The file name without the extension (e.g., "my-image").
+     */
     private getFileNameWithoutExtension(fileName: string): string {
         return fileName.replace(/\.[^/.]+$/, "");
     }

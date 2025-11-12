@@ -1,10 +1,13 @@
 import React from 'react';
 import SummaryView from "@/components/features/summary/SummaryView.tsx";
 
-// Simple wrapper component for the Summary View
+/**
+ * A simple wrapper component that renders the `SummaryView`.
+ * This acts as the route component for the `/summary` path.
+ */
 const SummaryPage: React.FC = () => {
-    // SummaryView handles its own state and logic (now using Radix components)
     return <SummaryView/>;
 };
+
 SummaryPage.displayName = 'SummaryPage';
 export default SummaryPage;

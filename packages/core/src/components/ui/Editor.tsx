@@ -17,7 +17,7 @@ interface CodeMirrorEditorProps {
     readOnly?: boolean;
     onBlur?: () => void;
     onFocus?: () => void;
-    taskTitle?: string; // New prop for context
+    taskTitle?: string;
 }
 
 export interface CodeMirrorEditorRef {
@@ -25,6 +25,10 @@ export interface CodeMirrorEditorRef {
     getView: () => EditorView | null;
 }
 
+/**
+ * A React wrapper for the custom Moondown editor, which is based on CodeMirror 6.
+ * This component handles initialization, updates, and cleanup of the editor instance.
+ */
 const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
     ({value, onChange, className, placeholder, readOnly = false, onBlur, onFocus, taskTitle = ''}, ref) => {
         const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -62,7 +66,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
             userPrompt: string,
             signal: AbortSignal
         ): Promise<ReadableStream<string>> => {
-            if (!aiSettings || !aiSettings.provider || !aiSettings.apiKey || !aiSettings.model) {
+            if (!aiSettings || !aiSettings.provider || (AI_PROVIDERS.find(p => p.id === aiSettings.provider)?.requiresApiKey && !aiSettings.apiKey) || !aiSettings.model) {
                 throw new Error("AI is not configured. Please check your AI settings.");
             }
             const contextualizedUserPrompt = `Task Title: ${taskTitle}\n\n${userPrompt}`;
@@ -98,8 +102,10 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
                 instance?.destroy();
                 moondownInstanceRef.current = null;
             };
+            // The empty dependency array is intentional. We want to initialize the editor only once.
+            // All subsequent updates are handled by specific useEffect hooks below.
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, []); // Empty dependency array ensures this runs only once on mount
+        }, []);
 
         useEffect(() => {
             moondownInstanceRef.current?.setTheme(theme);

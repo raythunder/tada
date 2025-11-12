@@ -5,8 +5,9 @@ import { getListInfo, generateListItem } from "./list-functions";
 import { LIST_INDENT, LIST_UPDATE_DELAY } from "./constants";
 
 /**
- * Keymap for list editing functionality
- * Handles Tab, Shift-Tab, Enter, and Backspace/Delete keys
+ * Keymap for list editing functionality.
+ * Handles Tab, Shift-Tab, Enter, Backspace, and Delete keys to provide
+ * intuitive list management.
  */
 export const listKeymap: KeyBinding[] = [
     {
@@ -18,10 +19,10 @@ export const listKeymap: KeyBinding[] = [
             const listInfo = getListInfo(state, pos);
 
             if (listInfo) {
-                // Indent list item
+                // Indent the list item
                 indentMore(view);
 
-                // Defer list number update to ensure indent operation completes
+                // Defer list number update to ensure the indent operation completes
                 setTimeout(() => {
                     view.dispatch({
                         effects: updateListEffect.of({ from: 0, to: state.doc.length }),
@@ -69,9 +70,9 @@ export const listKeymap: KeyBinding[] = [
                 const line = state.doc.lineAt(pos);
 
                 if (listInfo.content.trim() === '') {
-                    // Current list item is empty
+                    // If the current list item is empty, de-indent or exit the list
                     if (listInfo.indent === LIST_INDENT.MIN) {
-                        // Already at top level, exit list
+                        // At the top level, so exit the list
                         const transaction = state.update({
                             changes: {
                                 from: line.from,
@@ -82,7 +83,7 @@ export const listKeymap: KeyBinding[] = [
                         });
                         view.dispatch(transaction);
                     } else {
-                        // Go back one indentation level
+                        // De-indent to the previous level
                         const newIndent = Math.max(LIST_INDENT.MIN, listInfo.indent - LIST_INDENT.SIZE);
                         const newListItem = generateListItem(listInfo.type, newIndent);
 
@@ -96,7 +97,6 @@ export const listKeymap: KeyBinding[] = [
                         });
                         view.dispatch(transaction);
 
-                        // Update list numbering
                         setTimeout(() => {
                             view.dispatch({
                                 effects: updateListEffect.of({ from: 0, to: state.doc.length }),
@@ -104,7 +104,7 @@ export const listKeymap: KeyBinding[] = [
                         }, LIST_UPDATE_DELAY);
                     }
                 } else {
-                    // Create new list item
+                    // Create a new list item at the same level
                     const newListItem = generateListItem(listInfo.type, listInfo.indent);
                     const insertText = `\n${newListItem}`;
 
@@ -118,7 +118,6 @@ export const listKeymap: KeyBinding[] = [
                     });
                     view.dispatch(transaction);
 
-                    // Update list numbering
                     setTimeout(() => {
                         view.dispatch({
                             effects: updateListEffect.of({ from: 0, to: state.doc.length }),
@@ -138,24 +137,19 @@ export const listKeymap: KeyBinding[] = [
             const { state } = view;
             const { selection } = state;
             const pos = selection.main.head;
-
-            // Check if current position is in a list or delete operation may affect list
             const currentLine = state.doc.lineAt(pos);
             const currentListInfo = getListInfo(state, pos);
 
-            // Check if previous line is a list item (for handling newline deletion)
             let previousLineListInfo = null;
             if (currentLine.number > 1) {
                 const previousLine = state.doc.line(currentLine.number - 1);
                 previousLineListInfo = getListInfo(state, previousLine.from);
             }
 
-            // If current or previous line is a list item, update list numbers after deletion
+            // If the deletion might affect list numbering, run default action and then trigger an update.
             if (currentListInfo || previousLineListInfo) {
-                // Execute default delete operation
                 const result = deleteCharBackward(view);
 
-                // Defer list number update to ensure delete operation completes
                 setTimeout(() => {
                     view.dispatch({
                         effects: updateListEffect.of({ from: 0, to: view.state.doc.length }),
@@ -174,24 +168,18 @@ export const listKeymap: KeyBinding[] = [
             const { state } = view;
             const { selection } = state;
             const pos = selection.main.head;
-
-            // Check if current position is in a list or delete operation may affect list
             const currentLine = state.doc.lineAt(pos);
             const currentListInfo = getListInfo(state, pos);
 
-            // Check if next line is a list item (for handling newline deletion)
             let nextLineListInfo = null;
             if (currentLine.number < state.doc.lines) {
                 const nextLine = state.doc.line(currentLine.number + 1);
                 nextLineListInfo = getListInfo(state, nextLine.from);
             }
 
-            // If current or next line is a list item, update list numbers after deletion
             if (currentListInfo || nextLineListInfo) {
-                // Execute default delete operation
                 const result = deleteCharForward(view);
 
-                // Defer list number update to ensure delete operation completes
                 setTimeout(() => {
                     view.dispatch({
                         effects: updateListEffect.of({ from: 0, to: view.state.doc.length }),

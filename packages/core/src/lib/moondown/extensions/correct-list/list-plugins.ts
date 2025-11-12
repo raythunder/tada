@@ -7,15 +7,16 @@ import { BulletWidget } from "./bullet-widget";
 import { LIST_INDENT, LIST_PATTERNS } from "./constants";
 
 /**
- * Maximum number of bullet styles to cycle through
+ * Maximum number of unique bullet styles to cycle through before repeating.
  */
 const BULLET_STYLE_COUNT = 6;
 
 /**
- * Plugin to handle automatic list number updates
+ * A ViewPlugin that listens for document changes or specific effects to trigger
+ * automatic list number and structure updates.
  */
 export const updateListPlugin = EditorView.updateListener.of((update) => {
-    // Check if there's a manual update trigger
+    // Check for a manual update trigger via `updateListEffect`.
     let hasManualUpdate = false;
     for (const tr of update.transactions) {
         for (const e of tr.effects) {
@@ -27,6 +28,7 @@ export const updateListPlugin = EditorView.updateListener.of((update) => {
         }
     }
 
+    // If no manual trigger, check if document changes warrant an update.
     if (!hasManualUpdate && update.docChanged) {
         let needsUpdate = false;
 
@@ -40,6 +42,7 @@ export const updateListPlugin = EditorView.updateListener.of((update) => {
                         new RegExp('\n' + LIST_PATTERNS.ANY.source.slice(1)).test(text);
                 };
 
+                // A quick check to see if list markers were inserted or deleted.
                 if (hasListMarker(deletedText) || hasListMarker(insertedText)) {
                     needsUpdate = true;
                     return;
@@ -72,7 +75,8 @@ export const updateListPlugin = EditorView.updateListener.of((update) => {
 });
 
 /**
- * Plugin to replace bullet markers with styled decorations
+ * A ViewPlugin that replaces standard unordered list markers (e.g., `-`, `*`)
+ * with custom, styled bullet points using a Decoration Widget.
  */
 export const bulletListPlugin = ViewPlugin.fromClass(class {
     decorations: DecorationSet;
@@ -87,7 +91,7 @@ export const bulletListPlugin = ViewPlugin.fromClass(class {
         }
     }
 
-    buildDecorations(view: EditorView) {
+    buildDecorations(view: EditorView): DecorationSet {
         const builder = new RangeSetBuilder<Decoration>();
 
         for (const { from, to } of view.visibleRanges) {
@@ -97,10 +101,8 @@ export const bulletListPlugin = ViewPlugin.fromClass(class {
                 enter: (node) => {
                     if (node.name === 'ListItem' || node.name.includes('ListItem')) {
                         const line = view.state.doc.lineAt(node.from);
-
                         const blockquoteMatch = line.text.match(/^((?:>\s*)*)/);
                         const blockquotePrefix = blockquoteMatch ? blockquoteMatch[1] : '';
-
                         const remainingText = line.text.slice(blockquotePrefix.length);
                         const unorderedMatch = remainingText.match(/^(\s*)([-*+])(\s+)/);
 

@@ -7,6 +7,9 @@ import { createElement, createIconElement, debounce, scrollIntoView as scrollEle
 import {translationsState} from "../default-extensions";
 import {MoondownTranslations} from "../../core";
 
+/**
+ * A CodeMirror ViewPlugin that manages the rendering and interaction of the slash command menu.
+ */
 export const slashCommandPlugin = ViewPlugin.fromClass(class {
     menu: HTMLElement;
     debounceTimer: number | null;

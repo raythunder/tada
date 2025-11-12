@@ -1,26 +1,18 @@
-
 /**
- * Strikethrough markdown parser extension
- *
- * This extension adds support for strikethrough text formatting using double tilde syntax (~~text~~).
- * It integrates with the Lezer markdown parser to recognize and parse strikrough markers.
+ * A Lezer markdown parser extension for `~~strikethrough~~` syntax.
+ * This is a common extension supported by GFM and other markdown flavors.
  */
-
 import {InlineContext, type MarkdownExtension} from "@lezer/markdown";
 
 /**
- * Delimiter configuration for strikethrough parsing
- * Defines how the parser should handle strikethrough markers
+ * Delimiter configuration for strikethrough parsing.
+ * Defines how the parser should handle `~~` markers.
  */
 export const StrikethroughDelim = { resolve: "Strikethrough", mark: "StrikethroughMarker" };
 
 /**
- * Markdown extension for strikethrough text formatting
- *
- * Adds support for ~~text~~ syntax by:
- * - Defining AST nodes for strikethrough elements and their markers
- * - Parsing inline text for double tilde (~~) patterns
- * - Creating proper delimiter pairs for text styling
+ * The MarkdownExtension object for strikethrough formatting.
+ * It defines the new AST nodes and the inline parsing logic.
  */
 export const StrikethroughExtension: MarkdownExtension = {
     defineNodes: ["Strikethrough", "StrikethroughMarker"],
@@ -28,12 +20,10 @@ export const StrikethroughExtension: MarkdownExtension = {
         {
             name: "Strikethrough",
             parse(cx: InlineContext, next: number, pos: number) {
-                // Check for double tilde (~~) at current position
-                // 126 is the ASCII code for '~'
-                if (next != 126 /* '~' */ || cx.char(pos + 1) != 126) return -1;
+                // 126 is the ASCII code for '~'. Check for `~~`.
+                if (next != 126 || cx.char(pos + 1) != 126) return -1;
 
-                // Add delimiter pair for strikethrough formatting
-                // The delimiter spans 2 characters (~~) starting at pos
+                // Register a delimiter pair for strikethrough formatting.
                 return cx.addDelimiter(StrikethroughDelim, pos, pos + 2, true, true);
             },
         },

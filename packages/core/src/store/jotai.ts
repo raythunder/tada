@@ -18,19 +18,30 @@ import {
 } from '@/utils/dateUtils';
 import storageManager from "@/services/storageManager.ts";
 
+/**
+ * This file defines the global state of the application using Jotai atoms.
+ * It includes atoms for tasks, lists, settings, UI state, and derived data.
+ * Atoms are designed for optimistic updates and debounced persistence to storage.
+ */
+
 export interface Notification {
     id: number;
     type: 'success' | 'error' | 'loading';
     message: string;
 }
 
+// A generic type for writable atoms that load data from a storage service.
 type LocalDataAtom<TData, TUpdate = TData | ((prev: TData | null) => TData) | typeof RESET> = WritableAtom<
-TData | null,
+    TData | null,
     [TUpdate],
-void
+    void
 >;
 
-// 防抖辅助函数
+/**
+ * A utility function to debounce function calls.
+ * @param func The function to debounce.
+ * @param wait The debounce delay in milliseconds.
+ */
 function debounce<T extends (...args: any[]) => any>(
     func: T,
     wait: number
@@ -46,6 +57,11 @@ function debounce<T extends (...args: any[]) => any>(
     };
 }
 
+/**
+ * Determines the group category for a task based on its due date and status.
+ * @param task The task to categorize.
+ * @returns The `TaskGroupCategory` for the task.
+ */
 export const getTaskGroupCategory = (task: Omit<Task, 'groupCategory'> | Task): TaskGroupCategory => {
     if (task.completed || task.listName === 'Trash') {
         return 'nodate';
@@ -81,7 +97,7 @@ export const defaultAISettingsForApi = (): AISettings => ({
     availableModels: [],
 });
 
-// --- 性能优化：防抖持久化 ---
+// --- Debounced Persistence Functions ---
 const debouncedPersistTasks = debounce((tasks: Task[]) => {
     const service = storageManager.get();
     if (service.batchUpdateTasks) {
@@ -91,7 +107,7 @@ const debouncedPersistTasks = debounce((tasks: Task[]) => {
     } else {
         service.updateTasks(tasks);
     }
-}, 500); // 500ms 防抖
+}, 500);
 
 const debouncedPersistLists = debounce((lists: List[]) => {
     const service = storageManager.get();
@@ -104,11 +120,15 @@ const debouncedPersistLists = debounce((lists: List[]) => {
     }
 }, 500);
 
-// --- Task Atoms with optimized persistence ---
+// --- Task Atoms ---
 const baseTasksDataAtom = atom<Task[] | null>(null);
 export const tasksLoadingAtom = atom<boolean>(false);
 export const tasksErrorAtom = atom<string | null>(null);
 
+/**
+ * The main atom for managing the list of all tasks.
+ * It handles loading from storage, optimistic UI updates, and debounced persistence.
+ */
 export const tasksAtom: LocalDataAtom<Task[]> = atom(
     (get) => get(baseTasksDataAtom),
     (get, set, update) => {
@@ -131,18 +151,12 @@ export const tasksAtom: LocalDataAtom<Task[]> = atom(
             groupCategory: getTaskGroupCategory(task),
         }));
 
-        // 乐观更新：立即更新 UI
         set(baseTasksDataAtom, nextTasksWithCategory);
-
-        // 延迟持久化到存储
         debouncedPersistTasks(nextTasksWithCategory);
     }
 );
-
 tasksAtom.onMount = (setSelf) => {
     setSelf(RESET);
-
-    // 组件卸载时刷新未完成的写入
     return () => {
         storageManager.flush().catch(err => {
             console.error('Failed to flush tasks on unmount:', err);
@@ -150,36 +164,32 @@ tasksAtom.onMount = (setSelf) => {
     };
 };
 
-// --- List Atoms with optimized persistence ---
+// --- List Atoms ---
 const baseUserListsAtom = atom<List[] | null>(null);
 export const userListsLoadingAtom = atom<boolean>(false);
 export const userListsErrorAtom = atom<string | null>(null);
 
+/**
+ * The main atom for managing user-created lists.
+ */
 export const userListsAtom: LocalDataAtom<List[]> = atom(
     (get) => get(baseUserListsAtom),
     (get, set, update) => {
         const service = storageManager.get();
-
         if (update === RESET) {
             set(baseUserListsAtom, service.fetchLists());
             return;
         }
-
         const nextLists = typeof update === 'function'
             ? (update as (prev: List[] | null) => List[])(get(baseUserListsAtom))
             : update;
 
-        // 乐观更新
         set(baseUserListsAtom, nextLists);
-
-        // 延迟持久化
         debouncedPersistLists(nextLists);
     }
 );
-
 userListsAtom.onMount = (setSelf) => {
     setSelf(RESET);
-
     return () => {
         storageManager.flush().catch(err => {
             console.error('Failed to flush lists on unmount:', err);
@@ -187,16 +197,18 @@ userListsAtom.onMount = (setSelf) => {
     };
 };
 
-// --- UI State Atoms (unchanged) ---
+// --- UI State Atoms ---
 export const selectedTaskIdAtom = atom<string | null>(null);
 export const isSettingsOpenAtom = atom<boolean>(false);
 export const settingsSelectedTabAtom = atom<SettingsTab>('appearance');
 export const isAddListModalOpenAtom = atom<boolean>(false);
 export const currentFilterAtom = atom<TaskFilter>('all');
 export const searchTermAtom = atom<string>('');
-
 export const notificationsAtom = atom<Notification[]>([]);
 
+/**
+ * A write-only atom to add a new notification to the global display.
+ */
 export const addNotificationAtom = atom(
     null,
     (get, set, newNotification: Omit<Notification, 'id'>) => {
@@ -210,7 +222,6 @@ export const addNotificationAtom = atom(
 
 // --- Settings Atoms ---
 export type DarkModeOption = 'light' | 'dark' | 'system';
-
 const baseAppearanceSettingsAtom = atom<AppearanceSettings | null>(null);
 export const appearanceSettingsLoadingAtom = atom<boolean>(false);
 export const appearanceSettingsErrorAtom = atom<string | null>(null);
@@ -288,14 +299,13 @@ aiSettingsAtom.onMount = (setSelf) => {
     setSelf(RESET);
 };
 
-// --- Summary Atoms ---
+// --- Summary Feature Atoms ---
 export type SummaryPeriodKey = 'today' | 'yesterday' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth';
 export type SummaryPeriodOption = SummaryPeriodKey | { start: number; end: number };
 export const summaryPeriodFilterAtom = atom<SummaryPeriodOption>('thisWeek');
 export const summaryListFilterAtom = atom<string>('all');
 export const summarySelectedTaskIdsAtom = atom<Set<string>>(new Set<string>());
 export const summarySelectedFutureTaskIdsAtom = atom<Set<string>>(new Set<string>());
-
 const baseStoredSummariesAtom = atom<StoredSummary[] | null>(null);
 export const storedSummariesLoadingAtom = atom<boolean>(false);
 export const storedSummariesErrorAtom = atom<string | null>(null);
@@ -318,10 +328,11 @@ storedSummariesAtom.onMount = (setSelf) => {
     setSelf(RESET);
 };
 
+// --- Derived Atoms ---
 export const currentSummaryIndexAtom = atom<number>(0);
 export const isGeneratingSummaryAtom = atom<boolean>(false);
 
-// --- Derived Atoms (unchanged) ---
+/** A derived atom that gets the currently selected task object. */
 export const selectedTaskAtom = atom((get) => {
     const tasks = get(tasksAtom);
     const selectedId = get(selectedTaskIdAtom);
@@ -329,6 +340,7 @@ export const selectedTaskAtom = atom((get) => {
     return selectedId ? tasks.find(task => task.id === selectedId) ?? null : null;
 });
 
+/** A derived atom that gets an array of all user list names. */
 export const userListNamesAtom = atom<string[]>((get) => {
     const lists = get(userListsAtom) ?? [];
     return lists.map(l => l.name).sort((a, b) => {
@@ -338,6 +350,7 @@ export const userListNamesAtom = atom<string[]>((get) => {
     });
 });
 
+/** A derived atom that gets a unique, sorted list of all tags from active tasks. */
 export const userTagNamesAtom = atom((get) => {
     const tasks = get(tasksAtom) ?? [];
     const activeTasks = tasks.filter(task => !task.completed && task.listName !== 'Trash');
@@ -346,6 +359,7 @@ export const userTagNamesAtom = atom((get) => {
     return Array.from(tags).sort((a, b) => a.localeCompare(b));
 });
 
+/** A derived atom that calculates counts for various task filters. */
 export const taskCountsAtom = atom((get) => {
     const tasks = get(tasksAtom) ?? [];
     const allUserListNames = get(userListNamesAtom);
@@ -381,6 +395,7 @@ export const taskCountsAtom = atom((get) => {
     return counts;
 });
 
+/** A derived atom that groups all active tasks by their date category. */
 export const groupedAllTasksAtom = atom((get): Record<TaskGroupCategory, Task[]> => {
     const tasksToGroup = (get(tasksAtom) ?? []).filter(t => t.listName !== 'Trash' && !t.completed)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt ?? 0) - (b.createdAt ?? 0));
@@ -396,6 +411,7 @@ export const groupedAllTasksAtom = atom((get): Record<TaskGroupCategory, Task[]>
     return groups;
 });
 
+/** A derived atom that filters tasks based on the current search term. */
 export const rawSearchResultsAtom = atom<Task[]>((get) => {
     const search = get(searchTermAtom).trim().toLowerCase();
     if (!search) return [];
@@ -435,6 +451,7 @@ const getPeriodDates = (period: SummaryPeriodOption) => {
     }
 }
 
+/** A derived atom for the AI Summary feature, filtering tasks relevant to the selected period. */
 export const filteredTasksForSummaryAtom = atom<Task[]>((get) => {
     const allTasks = get(tasksAtom) ?? [];
     const period = get(summaryPeriodFilterAtom);
@@ -460,7 +477,6 @@ export const futureTasksForSummaryAtom = atom<Task[]>((get) => {
     const allTasks = get(tasksAtom) ?? [];
     const period = get(summaryPeriodFilterAtom);
     const listFilter = get(summaryListFilterAtom);
-
     const { endDate } = getPeriodDates(period);
     if (!endDate) return [];
 
@@ -474,6 +490,7 @@ export const futureTasksForSummaryAtom = atom<Task[]>((get) => {
     }).sort((a, b) => (a.dueDate ?? Infinity) - (b.dueDate ?? Infinity));
 });
 
+/** Creates a unique key based on the current summary filters. */
 export const currentSummaryFilterKeyAtom = atom<string>((get) => {
     const period = get(summaryPeriodFilterAtom);
     const list = get(summaryListFilterAtom);
@@ -489,6 +506,7 @@ export const currentSummaryFilterKeyAtom = atom<string>((get) => {
     return `${periodStr}__${listStr}`;
 });
 
+/** Filters stored summaries to find those matching the current filter key. */
 export const relevantStoredSummariesAtom = atom<StoredSummary[]>((get) => {
     const allSummaries = get(storedSummariesAtom) ?? [];
     const filterKeyVal = get(currentSummaryFilterKeyAtom);
@@ -497,6 +515,7 @@ export const relevantStoredSummariesAtom = atom<StoredSummary[]>((get) => {
     return allSummaries.filter(s => s.periodKey === periodKey && s.listKey === listKey).sort((a, b) => b.createdAt - a.createdAt);
 });
 
+/** Gets the summary currently being displayed based on the index and filters. */
 export const currentDisplayedSummaryAtom = atom<StoredSummary | null>((get) => {
     const summaries = get(relevantStoredSummariesAtom);
     const index = get(currentSummaryIndexAtom);
@@ -504,6 +523,7 @@ export const currentDisplayedSummaryAtom = atom<StoredSummary | null>((get) => {
     return summaries[index] ?? null;
 });
 
+/** Gets the original tasks that were used to generate the currently displayed summary. */
 export const referencedTasksForSummaryAtom = atom<Task[]>((get) => {
     const summary = get(currentDisplayedSummaryAtom);
     if (!summary) return [];

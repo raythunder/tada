@@ -2,7 +2,9 @@ import { EditorView, WidgetType } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 
 /**
- * Base class for inline style widgets with click-to-select behavior
+ * An abstract base class for inline style widgets (like code, strikethrough, etc.).
+ * It provides common functionality for rendering styled content and handling clicks
+ * to reveal the underlying markdown syntax by selecting it.
  */
 abstract class SelectableInlineWidget extends WidgetType {
     constructor(
@@ -19,6 +21,7 @@ abstract class SelectableInlineWidget extends WidgetType {
         span.className = this.className;
         span.textContent = this.content;
 
+        // When the widget is clicked, select the full markdown text.
         span.addEventListener('mousedown', (event) => {
             event.preventDefault();
             const end = this.start + this.fullText.length;
@@ -40,12 +43,13 @@ abstract class SelectableInlineWidget extends WidgetType {
     }
 
     ignoreEvent(event: Event): boolean {
+        // Intercept mousedown events to handle the custom selection behavior.
         return event.type === 'mousedown';
     }
 }
 
 /**
- * Widget for inline code
+ * Widget for rendering inline code (`code`).
  */
 export class InlineCodeWidget extends SelectableInlineWidget {
     constructor(content: string, fullText: string, start: number) {
@@ -54,7 +58,7 @@ export class InlineCodeWidget extends SelectableInlineWidget {
 }
 
 /**
- * Widget for strikethrough text
+ * Widget for rendering strikethrough text (~~text~~).
  */
 export class StrikethroughWidget extends SelectableInlineWidget {
     constructor(content: string, fullText: string, start: number) {
@@ -63,7 +67,7 @@ export class StrikethroughWidget extends SelectableInlineWidget {
 }
 
 /**
- * Widget for highlighted text
+ * Widget for rendering highlighted text (==text==).
  */
 export class HighlightWidget extends SelectableInlineWidget {
     constructor(content: string, fullText: string, start: number) {
@@ -72,7 +76,7 @@ export class HighlightWidget extends SelectableInlineWidget {
 }
 
 /**
- * Widget for underlined text
+ * Widget for rendering underlined text (~text~).
  */
 export class UnderlineWidget extends SelectableInlineWidget {
     constructor(content: string, fullText: string, start: number) {

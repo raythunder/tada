@@ -11,6 +11,12 @@ export interface AiTaskAnalysis {
     dueDate: string | null;
 }
 
+/**
+ * Constructs the full API endpoint URL based on AI settings.
+ * @param settings The current AI settings.
+ * @param type The type of endpoint to construct ('chat' or 'models').
+ * @returns The complete API URL.
+ */
 const getApiEndpoint = (settings: AISettings, type: 'chat' | 'models'): string => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
     if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
@@ -20,7 +26,7 @@ const getApiEndpoint = (settings: AISettings, type: 'chat' | 'models'): string =
 
     if (provider.requiresBaseUrl && settings.baseUrl) {
         const baseUrl = settings.baseUrl.endsWith('/') ? settings.baseUrl.slice(0, -1) : settings.baseUrl;
-        if (provider.id === 'ollama' && type === 'models') { // Special case for ollama model list
+        if (provider.id === 'ollama' && type === 'models') {
             return `${baseUrl}${endpoint}`;
         }
         return `${baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
@@ -36,6 +42,11 @@ const getApiEndpoint = (settings: AISettings, type: 'chat' | 'models'): string =
     return endpoint;
 };
 
+/**
+ * Generates the appropriate HTTP headers for an API request based on the provider.
+ * @param settings The current AI settings.
+ * @returns A record of HTTP headers.
+ */
 const getApiHeaders = (settings: AISettings): Record<string, string> => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
     if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
@@ -46,6 +57,11 @@ const getApiHeaders = (settings: AISettings): Record<string, string> => {
     return baseHeaders;
 };
 
+/**
+ * Fetches the list of available models from the configured AI provider's API.
+ * @param settings The current AI settings.
+ * @returns A promise that resolves to an array of AIModels.
+ */
 export const fetchProviderModels = async (settings: AISettings): Promise<AIModel[]> => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
     if (!provider || !provider.listModelsEndpoint || !provider.parseModels) {
@@ -56,7 +72,6 @@ export const fetchProviderModels = async (settings: AISettings): Promise<AIModel
     }
 
     const endpoint = getApiEndpoint(settings, 'models');
-    // For Gemini model listing, headers might be different or not needed if key is in URL
     const headers = (provider.id === 'gemini') ? { 'Content-Type': 'application/json' } : provider.getHeaders(settings.apiKey);
 
     try {
@@ -81,6 +96,11 @@ export const fetchProviderModels = async (settings: AISettings): Promise<AIModel
     }
 };
 
+/**
+ * Tests the connection to the configured AI provider to verify settings.
+ * @param settings The current AI settings.
+ * @returns A promise that resolves to `true` if the connection is successful, `false` otherwise.
+ */
 export const testConnection = async (settings: AISettings): Promise<boolean> => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
     if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
@@ -90,7 +110,6 @@ export const testConnection = async (settings: AISettings): Promise<boolean> => 
     }
 
     try {
-        // For providers that support model listing, use that as a test
         if (provider.listModelsEndpoint) {
             await fetchProviderModels(settings);
             return true;
@@ -142,24 +161,29 @@ const extractContentFromResponse = (data: any, providerId: AISettings['provider'
             return data.output?.text ?? '';
         case 'ollama':
             return data.message?.content ?? '';
-        case 'gemini': // Now uses OpenAI compatibility, should be same as default
+        case 'gemini':
         case 'openai':
         default:
             return data.choices?.[0]?.message?.content ?? '';
     }
 }
 
+/**
+ * Sends a natural language prompt to the AI to get a structured task object.
+ * @param prompt The user's natural language input for creating a task.
+ * @param settings The current AI settings.
+ * @param systemPrompt The system prompt guiding the AI's JSON output format.
+ * @returns A promise that resolves to an `AiTaskAnalysis` object.
+ */
 export const analyzeTaskInputWithAI = async (prompt: string, settings: AISettings, systemPrompt: string): Promise<AiTaskAnalysis> => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
     if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
-
     if (provider.requiresApiKey && !settings.apiKey) {
         throw new Error("API key is not set for the selected provider.");
     }
 
     const useJsonFormat = ['openai', 'openrouter', 'deepseek', 'custom'].includes(provider.id);
     let payload: any = createOpenAICompatiblePayload(settings.model, systemPrompt, prompt, useJsonFormat, false);
-
     if (provider.requestBodyTransformer) {
         payload = provider.requestBodyTransformer(payload);
     }
@@ -172,7 +196,6 @@ export const analyzeTaskInputWithAI = async (prompt: string, settings: AISetting
             headers: getApiHeaders(settings),
             body: JSON.stringify(payload),
         });
-
         if (!response.ok) {
             const errorBody = await response.text();
             throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
@@ -180,11 +203,8 @@ export const analyzeTaskInputWithAI = async (prompt: string, settings: AISetting
 
         const data = await response.json();
         const content = extractContentFromResponse(data, provider.id);
-
         const cleanedContent = content.replace(/^```json\s*|```\s*$/g, '').trim();
-
-        const analysis = JSON.parse(cleanedContent) as AiTaskAnalysis;
-        return analysis;
+        return JSON.parse(cleanedContent) as AiTaskAnalysis;
     } catch (error) {
         console.error("AI Task analysis failed:", error);
         throw error;
@@ -200,20 +220,9 @@ const extractDeltaFromStream = (data: any, providerId: AISettings['provider']): 
             return null;
         case 'qwen':
             return data.output?.text ?? null;
-        case 'ollama': // For streaming, Ollama has a different structure
+        case 'ollama':
             return data.done ? null : data.message?.content ?? null;
-        case 'gemini': // Now uses OpenAI compatibility, should be same as default
-        case 'openai':
-        case 'openrouter':
-        case 'moonshot':
-        case 'deepseek':
-        case 'zhipu':
-        case 'xai':
-        case '302':
-        case 'siliconflow':
-        case 'groq':
-        case 'custom':
-        default:
+        default: // OpenAI-compatible providers
             return data.choices?.[0]?.delta?.content ?? null;
     }
 };
@@ -228,8 +237,7 @@ async function* streamResponse(reader: ReadableStreamDefaultReader<Uint8Array>, 
         }
         buffer += decoder.decode(value, { stream: true });
 
-        // Ollama sends one JSON object per line
-        if (providerId === 'ollama') {
+        if (providerId === 'ollama') { // Ollama sends one JSON object per line
             const lines = buffer.split('\n');
             buffer = lines.pop() ?? ''; // Keep incomplete line in buffer
             for (const line of lines) {
@@ -248,11 +256,12 @@ async function* streamResponse(reader: ReadableStreamDefaultReader<Uint8Array>, 
     }
 }
 
+/**
+ * Performs a streaming chat completion, suitable for the editor's AI text continuation feature.
+ * @returns A promise that resolves to a ReadableStream of string chunks.
+ */
 export const streamChatCompletionForEditor = async (
-    settings: AISettings,
-    systemPrompt: string,
-    userPrompt: string,
-    signal: AbortSignal
+    settings: AISettings, systemPrompt: string, userPrompt: string, signal: AbortSignal
 ): Promise<ReadableStream<string>> => {
     const provider = AI_PROVIDERS.find(p => p.id === settings.provider);
     if (!provider) throw new Error(`Provider ${settings.provider} not found.`);
@@ -313,15 +322,20 @@ export const streamChatCompletionForEditor = async (
     });
 };
 
-
+/**
+ * Generates an AI summary based on selected tasks and streams the result back.
+ * @param taskIds
+ * @param futureTaskIds
+ * @param periodKey
+ * @param listKey
+ * @param settings
+ * @param systemPrompt
+ * @param onDelta Callback function to handle incoming stream chunks.
+ * @returns A promise that resolves to the final, completed summary object.
+ */
 export const generateAiSummary = async (
-    taskIds: string[],
-    futureTaskIds: string[],
-    periodKey: string,
-    listKey: string,
-    settings: AISettings,
-    systemPrompt: string,
-    onDelta: (chunk: string) => void,
+    taskIds: string[], futureTaskIds: string[], periodKey: string, listKey: string,
+    settings: AISettings, systemPrompt: string, onDelta: (chunk: string) => void
 ): Promise<StoredSummary> => {
     const service = storageManager.get();
     const allTasks = service.fetchTasks();

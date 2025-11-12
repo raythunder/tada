@@ -3,6 +3,10 @@ import { EditorSelection } from "@codemirror/state";
 import { addHighlightEffect } from "./highlight-effects";
 import { escapeRegExp } from "../../core";
 
+/**
+ * A CodeMirror Widget that renders a styled, clickable link in place of
+ * the full markdown syntax `[text](url)` or `[text][ref]`.
+ */
 export class LinkWidget extends WidgetType {
     constructor(
         private displayText: string,
@@ -21,19 +25,19 @@ export class LinkWidget extends WidgetType {
         span.addEventListener('mousedown', (event) => {
             event.preventDefault();
 
-            // If it's a reference link with a refId, find and jump to its definition
+            // If it's a reference link, find and jump to its definition.
             if (this.refId) {
                 const docText = view.state.doc.toString();
-                // The pattern for a definition is `[refId]: url`, must be at the start of a line.
+                // A definition must be at the start of a line.
                 const defPattern = new RegExp(`^\\[${escapeRegExp(this.refId)}\\]:`, 'm');
                 const match = defPattern.exec(docText);
 
                 if (match) {
                     const defPos = match.index;
-                    // Find the line containing the definition
                     const line = view.state.doc.lineAt(defPos);
-                    const targetEnd = line.to; // We want to jump to the end of the line
+                    const targetEnd = line.to;
 
+                    // Move cursor, scroll, and temporarily highlight the definition.
                     view.dispatch({
                         selection: EditorSelection.cursor(targetEnd),
                         effects: [
@@ -42,14 +46,14 @@ export class LinkWidget extends WidgetType {
                         ]
                     });
                 } else {
-                    // Fallback: if definition not found, just select the link usage
+                    // Fallback: if definition is not found, just select the link usage.
                     const end = this.start + this.fullLink.length;
                     view.dispatch({
                         selection: EditorSelection.single(this.start, end)
                     });
                 }
             } else {
-                // For regular inline links, just select the link
+                // For regular inline links, select the markdown text.
                 const end = this.start + this.fullLink.length;
                 view.dispatch({
                     selection: EditorSelection.single(this.start, end)
@@ -68,6 +72,7 @@ export class LinkWidget extends WidgetType {
     }
 
     ignoreEvent(event: Event): boolean {
+        // Intercept mousedown to handle selection and jumping.
         return event.type === 'mousedown';
     }
 }

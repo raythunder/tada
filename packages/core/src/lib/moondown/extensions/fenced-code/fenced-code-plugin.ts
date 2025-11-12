@@ -3,7 +3,10 @@ import {StateField, RangeSetBuilder, EditorState} from "@codemirror/state"
 import {syntaxTree} from "@codemirror/language"
 import {fencedCodeDecoration} from "./decorations.ts";
 
-// Define plugin to handle code block backgrounds and styles
+/**
+ * A StateField that applies line decorations to fenced code blocks,
+ * giving them a distinct background and styling.
+ */
 export const fencedCodeBackgroundPlugin = StateField.define({
     create(_state: EditorState) {
         return Decoration.none;
@@ -48,7 +51,10 @@ export const fencedCodeBackgroundPlugin = StateField.define({
     provide: (f) => EditorView.decorations.from(f),
 })
 
-// Create input handler, when user types ```, automatically add closing ```
+/**
+ * An input handler that automatically creates a complete code block
+ * when the user types three backticks (```).
+ */
 export const codeBlockInputHandler = EditorView.inputHandler.of((view, _from, _to, text) => {
     if (text === "`") {
         const state = view.state

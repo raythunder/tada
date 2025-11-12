@@ -14,6 +14,11 @@ interface MainPageProps {
     filter: TaskFilter;
 }
 
+/**
+ * The main page component for displaying task lists and task details.
+ * It uses a two-column layout on larger screens and a drawer-style detail
+ * view on smaller screens for a responsive user experience.
+ */
 const MainPage: React.FC<MainPageProps> = ({title, filter}) => {
     const selectedTaskId = useAtomValue(selectedTaskIdAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
@@ -25,17 +30,18 @@ const MainPage: React.FC<MainPageProps> = ({title, filter}) => {
                 className={twMerge(
                     "h-full",
                     isLg ? "w-1/3 flex-shrink-0" : "w-full flex-shrink-0",
-                    "bg-transparent", // Changed to transparent
+                    "bg-transparent",
                     "border-r border-grey-light/50 dark:border-neutral-700/50"
                 )}
             >
                 <TaskList title={title}/>
             </div>
 
+            {/* Desktop Layout: TaskDetail is a permanent second column */}
             {isLg ? (
                 <div className={twMerge(
                     "h-full flex-1 flex-shrink-0 relative overflow-hidden",
-                    "bg-transparent" // Changed to transparent
+                    "bg-transparent"
                 )}>
                     {!selectedTaskId && <TaskDetailPlaceholder/>}
                     <AnimatePresence initial={false}>
@@ -54,6 +60,7 @@ const MainPage: React.FC<MainPageProps> = ({title, filter}) => {
                     </AnimatePresence>
                 </div>
             ) : (
+                /* Mobile Layout: TaskDetail is an overlay drawer */
                 <AnimatePresence>
                     {selectedTaskId && (
                         <>

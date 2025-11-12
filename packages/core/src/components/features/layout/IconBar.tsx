@@ -9,6 +9,11 @@ import * as SortTooltip from '@radix-ui/react-tooltip';
 import {useTranslation} from "react-i18next";
 import {IconName} from "@/components/ui/IconMap.ts";
 
+/**
+ * A vertical icon bar for primary navigation within the application.
+ * It provides links to main sections like All Tasks, Calendar, and AI Summary,
+ * and an entry point to the settings modal.
+ */
 const IconBar: React.FC = memo(() => {
     const {t} = useTranslation();
     const [, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
@@ -26,6 +31,10 @@ const IconBar: React.FC = memo(() => {
         setIsSettingsOpen(true);
     }, [setIsSettingsOpen, setSettingsTab]);
 
+    /**
+     * Determines the CSS classes for a navigation link based on the current route.
+     * The '/all' route is considered active for any path that isn't '/calendar' or '/summary'.
+     */
     const getNavLinkClass = useCallback((itemPath: string): string => {
         let isSectionActive = false;
         const currentPath = location.pathname;

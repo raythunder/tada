@@ -18,6 +18,11 @@ export interface AIProvider {
     requestBodyTransformer?: (body: any) => any;
 }
 
+/**
+ * A configuration array defining supported AI providers.
+ * Each object contains metadata and configuration for a specific provider,
+ * including API endpoints, authentication requirements, and model parsing logic.
+ */
 export const AI_PROVIDERS: AIProvider[] = [
     // International Providers
     {

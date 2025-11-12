@@ -6,8 +6,8 @@ import { CSS_CLASSES, TIMING } from "../../core/constants";
 import { createElement } from "../../core/utils/dom-utils";
 
 /**
- * Image widget for rendering and managing images in the editor
- * Supports drag-and-drop repositioning and error handling
+ * A CodeMirror Widget for rendering and managing images within the editor.
+ * It handles image loading, error states, and drag-and-drop functionality for repositioning.
  */
 export class ImageWidget extends WidgetType {
     private loaded = false;
@@ -48,24 +48,27 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Creates the main wrapper element
+     * Creates the main wrapper element for the image widget.
+     * @returns The main HTMLElement for the widget.
      */
     private createWrapper(): HTMLElement {
-        const className = this.isError 
+        const className = this.isError
             ? `${CSS_CLASSES.IMAGE_WIDGET} ${CSS_CLASSES.IMAGE_ERROR}`
             : CSS_CLASSES.IMAGE_WIDGET;
         return createElement("div", className);
     }
 
     /**
-     * Creates the image wrapper container
+     * Creates the container for the `<img>` tag.
+     * @returns The image container HTMLElement.
      */
     private createImageWrapper(): HTMLElement {
         return createElement("div", "cm-image-wrapper");
     }
 
     /**
-     * Creates the image element
+     * Creates the `<img>` element itself.
+     * @returns The HTMLImageElement.
      */
     private createImage(): HTMLImageElement {
         const img = document.createElement("img");
@@ -76,7 +79,8 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Creates the alt text element
+     * Creates the element to display the image's alt text.
+     * @returns The alt text HTMLElement.
      */
     private createAltText(): HTMLElement {
         const altText = createElement("div", "cm-image-alt");
@@ -85,7 +89,10 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Attaches event listeners to wrapper and image
+     * Attaches event listeners to the widget's elements.
+     * @param wrapper The main wrapper element.
+     * @param img The `<img>` element.
+     * @param altText The alt text element.
      */
     private attachEventListeners(
         wrapper: HTMLElement,
@@ -103,20 +110,26 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Handles image load event
+     * Handles the successful loading of the image. Dispatches an effect to inform
+     * the editor of the image's height in lines, allowing the layout to adjust.
+     * @param wrapper The main widget wrapper element.
      */
     private handleImageLoad(wrapper: HTMLElement): void {
         this.loaded = true;
         const lineHeight = this.view.defaultLineHeight;
         const lines = Math.ceil(wrapper.offsetHeight / lineHeight);
-        
+
         this.view.dispatch({
             effects: imageLoadedEffect.of({ from: this.from, to: this.to, lines })
         });
     }
 
     /**
-     * Handles image error event
+     * Handles image loading errors by replacing the src with a fallback image
+     * and applying an error style.
+     * @param wrapper The main widget wrapper element.
+     * @param img The `<img>` element.
+     * @param altText The alt text element.
      */
     private handleImageError(
         wrapper: HTMLElement,
@@ -131,7 +144,8 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Handles mouse down event - initiates drag or selection
+     * Handles the mouse down event on the widget.
+     * It initiates a timer to distinguish between a click (for selection) and a drag.
      */
     private handleMouseDown = (event: MouseEvent): void => {
         event.preventDefault();
@@ -140,7 +154,6 @@ export class ImageWidget extends WidgetType {
         this.dragStartY = event.clientY;
         this.currentDraggingImg = event.target as HTMLImageElement;
 
-        // Start drag after timeout to distinguish from click
         this.clickTimeout = setTimeout(() => {
             this.isDragging = true;
             document.body.style.cursor = 'move';
@@ -148,7 +161,7 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Handles mouse move event - updates drag position
+     * Handles the mouse move event during a drag operation.
      */
     private handleMouseMove = (event: MouseEvent): void => {
         if (!this.isDragging) return;
@@ -158,7 +171,8 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Updates placeholder position during drag
+     * Updates the position of the drop placeholder decoration in the editor.
+     * @param event The MouseEvent.
      */
     private updatePlaceholder(event: MouseEvent): void {
         const pos = this.view.posAtCoords({ x: event.clientX, y: event.clientY });
@@ -172,7 +186,8 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Updates visual feedback during drag
+     * Updates the visual style of the image element being dragged.
+     * @param event The MouseEvent.
      */
     private updateDragVisuals(event: MouseEvent): void {
         if (!this.currentDraggingImg) return;
@@ -184,7 +199,7 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Handles mouse up event - completes drag or selection
+     * Handles the mouse up event, completing either a selection or a drag operation.
      */
     private handleMouseUp = (event: MouseEvent): void => {
         this.clearClickTimeout();
@@ -199,7 +214,7 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Clears the click timeout
+     * Clears the timeout used to detect a drag gesture.
      */
     private clearClickTimeout(): void {
         if (this.clickTimeout) {
@@ -209,7 +224,7 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Selects the image in the editor
+     * Selects the underlying markdown text for the image.
      */
     private selectImage(): void {
         this.view.dispatch({
@@ -219,7 +234,8 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Completes the drag operation
+     * Finalizes the drag operation by moving the image markdown to the new position.
+     * @param event The MouseEvent.
      */
     private completeDrag(event: MouseEvent): void {
         this.isDragging = false;
@@ -238,7 +254,7 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Resets drag visual feedback
+     * Resets the visual styles of the dragged image element.
      */
     private resetDragVisuals(): void {
         if (this.currentDraggingImg) {
@@ -249,7 +265,8 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Moves image to a new position
+     * Dispatches a transaction to move the image's markdown text to a new position.
+     * @param pos The target position in the document.
      */
     private moveTo(pos: number): void {
         const doc = this.view.state.doc;
@@ -271,23 +288,18 @@ export class ImageWidget extends WidgetType {
     }
 
     /**
-     * Updates the position of the image
+     * Updates the widget's internal `from` and `to` positions.
+     * This is called by the renderer when the document changes.
      */
     updatePosition(from: number, to: number): void {
         this.from = from;
         this.to = to;
     }
 
-    /**
-     * Determines if events should be ignored
-     */
     ignoreEvent(): boolean {
         return false;
     }
 
-    /**
-     * Checks equality with another ImageWidget
-     */
     eq(other: ImageWidget): boolean {
         return (
             other.alt === this.alt &&
@@ -297,9 +309,6 @@ export class ImageWidget extends WidgetType {
         );
     }
 
-    /**
-     * Cleans up event listeners
-     */
     destroy(): void {
         document.removeEventListener('mousemove', this.handleMouseMove);
         document.removeEventListener('mouseup', this.handleMouseUp);

@@ -2,7 +2,10 @@ import {StateField} from "@codemirror/state";
 import {Decoration, type DecorationSet, EditorView, WidgetType} from "@codemirror/view";
 import {imageLoadedEffect, type ImageSizes, updateImagePlaceholder} from "./types.ts";
 
-// Image size state field
+/**
+ * A StateField to store the calculated line heights of rendered images.
+ * This helps the editor layout account for the vertical space taken by images.
+ */
 export const imageSizeField = StateField.define<ImageSizes>({
     create: () => ({}),
     update(sizes, tr) {
@@ -16,7 +19,9 @@ export const imageSizeField = StateField.define<ImageSizes>({
     }
 })
 
-// Placeholder state field
+/**
+ * A StateField to manage the placeholder decoration shown during image drag-and-drop.
+ */
 export const placeholderField = StateField.define<DecorationSet>({
     create: () => Decoration.none,
     update(decorations, tr) {

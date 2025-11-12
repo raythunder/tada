@@ -27,6 +27,12 @@ import {useTranslation} from "react-i18next";
 import AddListModal from "@/components/features/layout/AddListModal.tsx";
 import ConfirmDeleteModalRadix from "@/components/ui/ConfirmDeleteModal.tsx";
 
+/**
+ * A custom hook to debounce a value.
+ * @param value The value to debounce.
+ * @param delay The debounce delay in milliseconds.
+ * @returns The debounced value.
+ */
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
     useEffect(() => {
@@ -36,6 +42,13 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
+/**
+ * Generates a short content snippet from a string, highlighting the search term.
+ * @param content The full content string.
+ * @param term The search term.
+ * @param length The desired approximate length of the snippet.
+ * @returns A formatted snippet string.
+ */
 function generateContentSnippet(content: string, term: string, length: number = 35): string {
     if (!content || !term) return '';
     const lowerContent = content.toLowerCase();
@@ -61,6 +74,9 @@ function generateContentSnippet(content: string, term: string, length: number = 
     return snippet;
 }
 
+/**
+ * A navigation item in the sidebar, representing a task filter or a user list.
+ */
 const SidebarItem: React.FC<{
     to: string; filter: TaskFilter; icon: IconName; label: string;
     count?: number; isUserList?: boolean;
@@ -103,6 +119,9 @@ const SidebarItem: React.FC<{
 });
 SidebarItem.displayName = 'SidebarItem';
 
+/**
+ * A collapsible section for organizing sidebar items (e.g., My Lists, Tags).
+ */
 const CollapsibleSection: React.FC<{
     title: string; children: React.ReactNode;
     initiallyOpen?: boolean; action?: React.ReactNode;
@@ -146,6 +165,9 @@ const CollapsibleSection: React.FC<{
 });
 CollapsibleSection.displayName = 'CollapsibleSection';
 
+/**
+ * The main sidebar component, providing navigation, search, and list management.
+ */
 const Sidebar: React.FC = () => {
     const {t} = useTranslation();
     const counts = useAtomValue(taskCountsAtom);

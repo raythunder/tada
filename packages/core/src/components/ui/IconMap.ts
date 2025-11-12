@@ -1,5 +1,9 @@
 import * as LucideIcons from "lucide-react";
 
+/**
+ * A mapping of string names to Lucide icon components.
+ * This allows for dynamically rendering icons by name throughout the application.
+ */
 export const iconMap = {
     'check-square': LucideIcons.CheckSquare,
     'square': LucideIcons.Square,
@@ -33,7 +37,7 @@ export const iconMap = {
     'git-fork': LucideIcons.GitFork,
     'check': LucideIcons.Check,
     'x': LucideIcons.X,
-    'wifi': LucideIcons.WifiIcon,
+    'wifi': LucideIcons.Wifi,
     'arrow-left': LucideIcons.ArrowLeft,
     'arrow-right': LucideIcons.ArrowRight,
     'star': LucideIcons.Star,
@@ -78,12 +82,12 @@ export const iconMap = {
     'copy-plus': LucideIcons.CopyPlus,
     'plus-circle': LucideIcons.PlusCircle,
     'check-circle': LucideIcons.CheckCircle,
-    'circle': LucideIcons.Circle,                // For 0% / Not Started
-    'circle-dot': LucideIcons.CircleDot,          // For 20%
-    'circle-dot-dashed': LucideIcons.CircleDotDashed, // For 50%
-    'circle-slash': LucideIcons.CircleSlash,       // For 80%
-    'circle-check': LucideIcons.CircleCheckBig,    // For 100%, check-circle is already used
-    'circle-gauge': LucideIcons.GaugeCircle,        // For MetaRow label in TaskDetail
+    'circle': LucideIcons.Circle,
+    'circle-dot': LucideIcons.CircleDot,
+    'circle-dot-dashed': LucideIcons.CircleDotDashed,
+    'circle-slash': LucideIcons.CircleSlash,
+    'circle-check': LucideIcons.CircleCheckBig,
+    'circle-gauge': LucideIcons.GaugeCircle,
 };
 
 export type IconName = keyof typeof iconMap;

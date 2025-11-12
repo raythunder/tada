@@ -12,6 +12,10 @@ import {imageSizeField} from "./fields.ts";
 import {imageWidgetCache} from "./types.ts";
 import {ImageWidget} from "./image-widgets.ts";
 
+/**
+ * A ViewPlugin that replaces image markdown syntax with a rendered ImageWidget.
+ * It uses a cache to avoid re-creating widgets unnecessarily.
+ */
 export const imageWidgetPlugin = ViewPlugin.fromClass(
     class {
         decorations: DecorationSet
@@ -26,12 +30,10 @@ export const imageWidgetPlugin = ViewPlugin.fromClass(
             }
         }
 
-        buildDecorations(view: EditorView) {
+        buildDecorations(view: EditorView): DecorationSet {
             const builder = new RangeSetBuilder<Decoration>();
             const imageSizes = view.state.field(imageSizeField);
-
-            // Collect all decorations that need to be added
-            const decorationsToAdd: {from: number, to: number, decoration: Decoration}[] = [];
+            const decorationsToAdd: { from: number, to: number, decoration: Decoration }[] = [];
 
             for (const {from, to} of view.visibleRanges) {
                 syntaxTree(view.state).iterate({
@@ -63,6 +65,7 @@ export const imageWidgetPlugin = ViewPlugin.fromClass(
                                     })
                                 });
 
+                                // Add an empty widget if size info is available, to preserve layout spacing.
                                 if (imageSizes[node.from]) {
                                     decorationsToAdd.push({
                                         from: node.to,
@@ -85,15 +88,13 @@ export const imageWidgetPlugin = ViewPlugin.fromClass(
                 });
             }
 
-            // Sort by from position
             decorationsToAdd.sort((a, b) => a.from - b.from);
 
-            // Add decorations in order
             for (const {from, to, decoration} of decorationsToAdd) {
                 builder.add(from, to, decoration);
             }
 
-            // Clean up unused cache
+            // Clean up cache for widgets that are no longer in the document.
             for (const [key, widget] of imageWidgetCache) {
                 if (!view.state.doc.sliceString(widget.from, widget.to).includes(widget.src)) {
                     imageWidgetCache.delete(key);

@@ -42,7 +42,17 @@ import {
 import {enUS, zhCN} from 'date-fns/locale';
 import {TFunction} from "i18next";
 
-// Helper to get date-fns locale object from language string
+/**
+ * A collection of utility functions for date and time manipulation,
+ * built as a wrapper around the `date-fns` library to provide safe parsing
+ * and consistent formatting.
+ */
+
+/**
+ * Gets the date-fns locale object from a language string.
+ * @param lang The language code ('en' or 'zh-CN').
+ * @returns The corresponding date-fns Locale object.
+ */
 export const getLocale = (lang: 'en' | 'zh-CN' = 'en') => {
     switch (lang) {
         case 'zh-CN':
@@ -106,7 +116,7 @@ export const formatDate = (
 }
 
 /**
- * Formats a date and time. If time is midnight, it's considered "All day".
+ * Formats a date and time. If time is midnight, it's considered "All day" and the time is omitted.
  */
 export const formatDateTime = (dateInput: Date | number | null | undefined, lang: 'en' | 'zh-CN' = 'en'): string => {
     const date = safeParseDate(dateInput);
@@ -118,8 +128,8 @@ export const formatDateTime = (dateInput: Date | number | null | undefined, lang
 };
 
 /**
- * Formats a date relative to today. Optionally includes time.
- * If includeTimeIfSet is true and time is midnight, no time will be shown.
+ * Formats a date relative to today (e.g., "Today", "Tomorrow").
+ * Optionally includes the time if it's not midnight.
  */
 export const formatRelativeDate = (
     dateInput: Date | number | null | undefined,
@@ -143,13 +153,12 @@ export const formatRelativeDate = (
 
     if (diffDays === 0) return `${t('common.today')}${timeString}`;
     if (diffDays === 1) return `${t('common.tomorrow')}${timeString}`;
-    if (diffDays === -1) return `Yesterday${timeString}`; // i18next can handle this via key "Yesterday"
+    if (diffDays === -1) return `Yesterday${timeString}`;
 
-    if (diffDays > 1 && diffDays <= 6) { // Within the current week (e.g. "Next Tuesday")
+    if (diffDays > 1 && diffDays <= 6) {
         return `${formatFns(date, 'EEEE', {locale})}${timeString}`;
     }
 
-    // For dates further out or in different years
     const currentYear = today.getFullYear();
     const inputYear = inputDayStart.getFullYear();
     const yearFormat = (inputYear !== currentYear) ? ', yyyy' : '';
@@ -175,9 +184,8 @@ export const isWithinNext7Days = (dateInput: Date | number | null | undefined): 
 };
 
 /**
- * Checks if a date (timestamp) is overdue.
- * Considers time: if a task has a specific time set for today and that time has passed, it's overdue.
- * If no time is set (implies midnight), it's overdue if the day is before today.
+ * Checks if a date is overdue. Considers the time of day: if a time is set for today
+ * and has passed, it's overdue. If no time is set, it's overdue if the day is before today.
  */
 export const isOverdue = (dateInput: Date | number | null | undefined): boolean => {
     const date = safeParseDate(dateInput);
@@ -196,7 +204,7 @@ export const setTime = (date: Date, hours: number, minutes: number): Date => {
     return setSeconds(setMinutes(setHours(date, hours), minutes), 0);
 };
 
-// Re-export necessary date-fns functions
+// Re-export commonly used date-fns functions for consistency across the app.
 export {
     formatFns as format,
     startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
@@ -204,7 +212,7 @@ export {
     startOfDay, endOfDay, isBefore, isAfter, addDays, subDays, addWeeks, subWeeks,
     differenceInCalendarDays,
     getMonth, getYear, setMonth, setYear, isWithinInterval,
-    isTodayFns as isTodayFns,
+    isTodayFns,
     parseISO,
     getHours, getMinutes, setHours, setMinutes, startOfHour, startOfMinute, addHours, addMinutes,
     isSameHour, isSameMinute

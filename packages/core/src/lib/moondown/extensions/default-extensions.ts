@@ -8,7 +8,7 @@ import { languages } from "@codemirror/language-data";
 import { GFM } from "@lezer/markdown";
 import type {AIStreamHandler, MoondownTranslations} from "../core";
 
-// Import extensions
+// Import custom extensions
 import { correctList } from "./correct-list";
 import { markdownSyntaxHiding } from "./markdown-syntax-hiding";
 import { Mark } from "./mark-parser";
@@ -21,31 +21,23 @@ import { imageExtension } from "./image";
 import { fencedCode } from "./fenced-code";
 import { blockquote } from "./blockquote";
 import { bubbleMenu } from "./bubble-menu";
-
-// Import theme
 import { lightTheme } from "../theme/base-theme";
 
-/**
- * Theme compartment for dynamic theme switching
- */
+/** A Compartment allows an extension to be dynamically replaced. */
+
+/** Compartment for dynamically switching the editor theme (light/dark). */
 export const themeCompartment = new Compartment();
 
-/**
- * Compartment for WYSIWYG extensions that can be toggled
- */
+/** Compartment for toggling WYSIWYG features like table and image rendering. */
 export const wysiwygCompartment = new Compartment();
 
-/**
- * Compartment for dynamically toggling read-only state
- */
+/** Compartment for dynamically toggling the editor's read-only state. */
 export const readOnlyCompartment = new Compartment();
 
-/**
- * Compartment for dynamically setting placeholder text
- */
+/** Compartment for dynamically setting the editor's placeholder text. */
 export const placeholderCompartment = new Compartment();
 
-/** State field to hold the AI stream handler */
+/** State field to hold the AI stream handler function. */
 export const onAIStreamState = StateField.define<AIStreamHandler | null>({
     create: () => null,
     update: (value, tr) => {
@@ -53,9 +45,10 @@ export const onAIStreamState = StateField.define<AIStreamHandler | null>({
         return value;
     }
 });
+/** StateEffect to update the AI stream handler. */
 export const setOnAIStream = StateEffect.define<AIStreamHandler | null>();
 
-/** State field to hold translations */
+/** State field to hold UI translation strings. */
 export const translationsState = StateField.define<MoondownTranslations>({
     create: () => ({}),
     update: (value, tr) => {
@@ -63,12 +56,13 @@ export const translationsState = StateField.define<MoondownTranslations>({
         return value;
     }
 });
+/** StateEffect to update the UI translations. */
 export const setTranslations = StateEffect.define<MoondownTranslations>();
 
 
 /**
- * Extensions that provide the WYSIWYG experience
- * These will be toggled on/off by the "Hide Syntax" switch.
+ * Extensions that provide the WYSIWYG experience.
+ * These are placed in a compartment to be toggled on/off.
  */
 export const wysiwygExtensions: Extension[] = [
     tableExtension(),
@@ -77,26 +71,23 @@ export const wysiwygExtensions: Extension[] = [
 ];
 
 /**
- * Default editor extensions
- * Includes all core functionality: markdown parsing, syntax highlighting,
- * bubble menu, slash commands, table editing, image support, etc.
+ * The default set of extensions for the Moondown editor.
+ * This includes all core functionality: markdown parsing, syntax highlighting,
+ * keymaps, and custom features like the bubble menu and slash commands.
  */
 export const defaultExtensions: Extension[] = [
-    // History and undo/redo
     history(),
-
-    // Selection and editing
     rectangularSelection(),
     indentOnInput(),
 
-    // Core functionality extensions
+    // Custom feature extensions
     slashCommand(),
     correctList(),
     fencedCode(),
     blockquote(),
     bubbleMenu(),
 
-    // State Fields for dynamic settings
+    // State Fields for dynamic configuration
     onAIStreamState,
     translationsState,
 
@@ -109,22 +100,21 @@ export const defaultExtensions: Extension[] = [
         ...closeBracketsKeymap
     ]),
 
-    // Editor behavior
     EditorView.lineWrapping,
 
     // WYSIWYG extensions, loaded into a compartment to be toggled
     wysiwygCompartment.of(wysiwygExtensions),
 
-    // Markdown language support
+    // Markdown language support with GFM and custom syntax
     markdown({
         codeLanguages: languages,
         extensions: [GFM, Mark, Underline, Strikethrough],
         addKeymap: false,
     }),
 
-    // Final newline
+    // Ensures the document always ends with a newline
     finalNewLine,
 
-    // Default theme (light)
+    // Default theme (light) loaded into a compartment
     themeCompartment.of(lightTheme)
 ];

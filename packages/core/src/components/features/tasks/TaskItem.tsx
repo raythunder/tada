@@ -28,6 +28,10 @@ import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
 import AddTagsPopoverContent from "@/components/ui/TagInput.tsx";
 import ConfirmDeleteModalRadix from "@/components/ui/ConfirmDeleteModal.tsx";
 
+/**
+ * A circular progress indicator that also functions as a completion checkbox.
+ * Displays progress as a circular bar and a checkmark when complete.
+ */
 export const ProgressIndicator: React.FC<{
     percentage: number | null; isTrash: boolean; size?: number; className?: string;
     onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -90,6 +94,13 @@ export const ProgressIndicator: React.FC<{
 });
 ProgressIndicator.displayName = 'ProgressIndicator';
 
+/**
+ * Generates a short content snippet from a string, highlighting the search term.
+ * @param content The full content string.
+ * @param term The search term.
+ * @param length The desired approximate length of the snippet.
+ * @returns A formatted snippet string.
+ */
 function generateContentSnippet(content: string, term: string, length: number = 35): string {
     if (!content || !term) return '';
     const lowerContent = content.toLowerCase();
@@ -151,6 +162,9 @@ interface TaskItemRadixMenuItemProps extends DropdownMenu.DropdownMenuItemProps 
     isDanger?: boolean;
 }
 
+/**
+ * A styled wrapper around Radix UI's DropdownMenu.Item for task item menus.
+ */
 const TaskItemRadixMenuItem = React.forwardRef<
     React.ElementRef<typeof DropdownMenu.Item>,
     TaskItemRadixMenuItemProps
@@ -178,6 +192,10 @@ interface TaskItemProps {
     scrollContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
+/**
+ * Renders a single task item in the task list.
+ * It's draggable, selectable, and includes quick actions via a hover menu.
+ */
 const TaskItem: React.FC<TaskItemProps> = memo(({
                                                     task,
                                                     groupCategory,
@@ -478,7 +496,7 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
     }, [setNodeRef]);
 
     const baseClasses = useMemo(() => twMerge(
-        'task-item h-[48px] mb-1.5', // 核心修复：移除 flex 和 items-center，它们将在内部 wrapper 上
+        'task-item h-[48px] mb-1.5',
         'group relative rounded-base backdrop-blur-sm',
         isOverlay
             ? 'bg-white/90 dark:bg-neutral-750/90 shadow-xl border border-grey-light/50 dark:border-neutral-600/50'
@@ -586,7 +604,6 @@ const TaskItem: React.FC<TaskItemProps> = memo(({
                      }
                  }}
                  aria-selected={isSelected} aria-labelledby={`task-title-${task.id}`}>
-                {/* 核心修复：添加一个内部 wrapper 来处理内边距和 flex 布局 */}
                 <div className={twMerge("flex items-center w-full h-full", isOverlay ? "px-4" : "px-4 pr-3")}>
                     <div className="flex-shrink-0 mr-3">
                         <ProgressIndicator percentage={task.completePercentage} isTrash={isTrashItem}

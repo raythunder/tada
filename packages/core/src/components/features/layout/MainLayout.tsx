@@ -6,6 +6,9 @@ import SettingsModal from '../settings/SettingsModal';
 import Icon from "@/components/ui/Icon.tsx";
 import {twMerge} from 'tailwind-merge';
 
+/**
+ * A loading spinner component displayed as a fallback for suspended content.
+ */
 const LoadingSpinner: React.FC = () => (
     <div
         className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-grey-deep/70 z-50 backdrop-blur-sm">
@@ -14,9 +17,15 @@ const LoadingSpinner: React.FC = () => (
 );
 LoadingSpinner.displayName = 'LoadingSpinner';
 
+/**
+ * The main layout structure for the application.
+ * It includes the primary navigation `IconBar`, the secondary `Sidebar`,
+ * and the main content area which renders child routes via `<Outlet />`.
+ */
 const MainLayout: React.FC = () => {
     const location = useLocation();
 
+    // Determine if the sidebar should be hidden based on the current route.
     const hideSidebar = useMemo(() => {
         return ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
     }, [location.pathname]);

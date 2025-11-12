@@ -27,6 +27,10 @@ interface CustomDateRangePickerContentProps {
     closePopover: () => void;
 }
 
+/**
+ * A date range picker component used within popovers.
+ * Allows users to select a start and end date for filtering tasks or summaries.
+ */
 export const CustomDateRangePickerContent: React.FC<CustomDateRangePickerContentProps> = React.memo(({
                                                                                                          initialStartDate,
                                                                                                          initialEndDate,

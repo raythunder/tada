@@ -15,9 +15,14 @@ import GlobalStatusDisplay from '@/components/global/GlobalStatusDisplay';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import storageManager from '@/services/storageManager';
 
+/**
+ * The root component of the application.
+ * It initializes global state from storage, sets up global components,
+ * and renders the main application router.
+ */
 const App: React.FC = () => {
     // These calls ensure the atoms are initialized and start loading data
-    // from localStorage on app load. Their values are used by other components.
+    // from the storage service on app load. Their values are used by other components.
     useAtomValue(tasksAtom);
     useAtomValue(userListsAtom);
     useAtomValue(appearanceSettingsAtom);
@@ -25,7 +30,7 @@ const App: React.FC = () => {
     useAtomValue(aiSettingsAtom);
     useAtomValue(storedSummariesAtom);
 
-    // 确保应用卸载时刷新所有待处理的写入
+    // Ensure all pending writes are flushed when the app unmounts.
     useEffect(() => {
         return () => {
             storageManager.flush().catch(err => {

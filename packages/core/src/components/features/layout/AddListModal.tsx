@@ -11,6 +11,9 @@ interface AddListModalProps {
     onAddSuccess: () => void;
 }
 
+/**
+ * A modal dialog component for adding a new custom list.
+ */
 const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
     const {t} = useTranslation();
     const [isOpen, setIsOpen] = useAtom(isAddListModalOpenAtom);
@@ -22,7 +25,7 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
 
     useEffect(() => {
         if (isOpen) {
-            // Focus input when modal opens
+            // Focus input when modal opens with a slight delay to ensure it's rendered.
             const timer = setTimeout(() => inputRef.current?.focus(), 100);
             return () => clearTimeout(timer);
         }
@@ -38,6 +41,10 @@ const AddListModal: React.FC<AddListModalProps> = ({onAddSuccess}) => {
         }
     }, [setIsOpen]);
 
+    /**
+     * Handles the form submission to create a new list.
+     * Validates the list name for emptiness, duplication, and reserved names.
+     */
     const handleSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         const trimmedName = listName.trim();

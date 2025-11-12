@@ -50,6 +50,9 @@ interface DraggableTaskProps {
     isOverlay?: boolean;
 }
 
+/**
+ * A draggable task item displayed within a calendar day cell.
+ */
 const DraggableCalendarTask: React.FC<DraggableTaskProps> = React.memo(({task, onClick, isOverlay = false}) => {
     const {attributes, listeners, setNodeRef, transform, isDragging} = useDraggable({
         id: `caltask-${task.id}`,
@@ -112,6 +115,9 @@ interface MonthYearSelectorProps {
     locale: Locale;
 }
 
+/**
+ * A dropdown content component for selecting a month and year.
+ */
 const MonthYearSelectorContent: React.FC<MonthYearSelectorProps> = React.memo(({currentDate, onChange, locale}) => {
     const currentYear = getYear(currentDate);
     const currentMonth = getMonth(currentDate);
@@ -161,6 +167,9 @@ interface DroppableDayCellContentProps {
     isOver: boolean;
 }
 
+/**
+ * The content wrapper for a calendar day cell, showing a visual state when a task is dragged over it.
+ */
 const DroppableDayCellContent: React.FC<DroppableDayCellContentProps> = React.memo(({children, className, isOver}) => {
     const cellClasses = useMemo(() => twMerge(
         'h-full w-full transition-colors duration-150 ease-out flex flex-col relative',
@@ -171,6 +180,9 @@ const DroppableDayCellContent: React.FC<DroppableDayCellContentProps> = React.me
 });
 DroppableDayCellContent.displayName = 'DroppableDayCellContent';
 
+/**
+ * A droppable calendar day cell that can accept tasks via drag-and-drop.
+ */
 const DroppableDayCell: React.FC<{ day: Date; children: React.ReactNode; className?: string }> = React.memo(({
                                                                                                                  day,
                                                                                                                  children,
@@ -187,6 +199,10 @@ const DroppableDayCell: React.FC<{ day: Date; children: React.ReactNode; classNa
 DroppableDayCell.displayName = 'DroppableDayCell';
 
 
+/**
+ * Renders a full-page calendar view for visualizing and managing tasks with due dates.
+ * Supports drag-and-drop for rescheduling tasks.
+ */
 const CalendarView: React.FC = () => {
     const {t, i18n} = useTranslation();
     const preferences = useAtomValue(preferencesSettingsAtom);

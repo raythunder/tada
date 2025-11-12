@@ -10,15 +10,15 @@
         --font-primary-medium-weight: 500;
         --font-primary-semibold-weight: 600;
 
-        /* Default Theme Colors (Coral Red) - HSL values will be dynamically set by JS */
-        --color-primary-hsl: 3 76% 58%; /* Fallback, will be overridden */
-        --color-primary-light-hsl: 5 100% 89%; /* Fallback, will be overridden */
-        --color-primary-dark-hsl: 3 67% 47%; /* Fallback, will be overridden */
+        /* Default Theme Colors (Coral Red) */
+        --color-primary-hsl: 3 76% 58%;
+        --color-primary-light-hsl: 5 100% 89%;
+        --color-primary-dark-hsl: 3 67% 47%;
 
-        /* Neutral Colors (Monochromatic) */
+        /* Neutral Colors */
         --color-white: 0 0% 100%;
         --color-almost-white: 0 0% 99.5%;
-        --color-grey-ultra-light: 220 20% 98%; /* #F7F8FA - Adjusted for less saturation */
+        --color-grey-ultra-light: 220 20% 98%; /* #F7F8FA */
         --color-grey-light: 220 16% 91%; /* #E3E4EA */
         --color-grey-medium: 210 13% 60%; /* #8C96A3 */
         --color-grey-dark: 210 19% 23%; /* #2D3748 */
@@ -36,7 +36,7 @@
         --border-radius-large: 10px;
         --border-radius-full: 9999px;
 
-        /* Shadows (Softer) */
+        /* Shadows */
         --shadow-interactive: 0 2px 5px 0 hsl(var(--color-grey-dark) / 0.04);
         --shadow-popover: 0 5px 15px 0 hsl(var(--color-grey-dark) / 0.05);
         --shadow-modal: 0 10px 30px 0 hsl(var(--color-grey-dark) / 0.07);
@@ -45,20 +45,20 @@
 
         --timing-app-ease-out: cubic-bezier(0, 0, 0.2, 1);
 
-        /* AI Glow Gradients (Updated for richer palettes) */
+        /* AI Glow Gradients */
         --ai-glow-gradient-red: linear-gradient(90deg, #F25EA6, #E34C45, #F76F33, #F2881C, #F25EA6);
         --ai-glow-gradient-yellow: linear-gradient(90deg, #F78C33, #F6AD55, #FFDB1A, #A3CC33, #F78C33);
         --ai-glow-gradient-blue: linear-gradient(90deg, #4ADCF2, #63B3ED, #738AF2, #9C6BF7, #4ADCF2);
         --ai-glow-gradient-neutral: linear-gradient(90deg, #ADC9F5, #CDE5EF, #D2BDEF, #F7D9E0, #ADC9F5);
     }
 
-    .dark { /* Dark mode neutral overrides */
-        --color-almost-white: 210 20% 10%; /* Dark equivalent for panel backgrounds */
-        --color-grey-ultra-light: 210 20% 12%; /* #171E26 - Slightly darker than deep */
-        --color-grey-light: 210 15% 20%; /* #29303D - For borders */
-        --color-grey-medium: 210 10% 55%; /* #7E8A9C - For secondary text */
-        --color-grey-dark: 210 10% 88%; /* #DCE1E7 - For primary text */
-        --color-grey-deep: 210 20% 8%; /* #0F131A - Base background if needed for extreme contrast */
+    .dark {
+        --color-almost-white: 210 20% 10%;
+        --color-grey-ultra-light: 210 20% 12%;
+        --color-grey-light: 210 15% 20%;
+        --color-grey-medium: 210 10% 55%;
+        --color-grey-dark: 210 10% 88%;
+        --color-grey-deep: 210 20% 8%;
     }
 
     body {
@@ -87,7 +87,6 @@
 
     *:focus-visible, [data-radix-focus-visible]:focus-visible {
         outline: none !important;
-        /* Default focus ring handled by Tailwind components or custom component styles */
     }
 
     .styled-scrollbar::-webkit-scrollbar, .styled-scrollbar-thin::-webkit-scrollbar {
@@ -121,7 +120,7 @@
     }
 
     .dark .cm-editor {
-        color: hsl(var(--color-grey-dark)) !important; /* CodeMirror text color in dark mode */
+        color: hsl(var(--color-grey-dark)) !important;
     }
 
     .cm-gutters {
@@ -130,8 +129,8 @@
     }
 
     .dark .cm-gutters {
-        background-color: hsl(var(--color-grey-ultra-light)) !important; /* CM gutter bg dark */
-        border-right-color: hsl(var(--color-grey-light)) !important; /* CM gutter border dark */
+        background-color: hsl(var(--color-grey-ultra-light)) !important;
+        border-right-color: hsl(var(--color-grey-light)) !important;
     }
 
     .cm-content {
@@ -212,27 +211,24 @@
         background-image: var(--ai-glow-gradient-neutral);
     }
 
-    /* Utility for range slider thumb styling */
     .range-slider-thumb {
         @apply h-3.5 w-3.5 bg-primary rounded-full shadow cursor-pointer appearance-none transition-colors duration-150 ease-in-out;
         @apply focus:outline-none focus:ring-2 focus:ring-primary-light focus:ring-offset-1 focus:ring-offset-white dark:focus:ring-offset-grey-deep;
         @apply dark:bg-primary-light;
     }
 
-    .range-slider-thumb::-webkit-slider-thumb { /* Webkit specific */
+    .range-slider-thumb::-webkit-slider-thumb {
         @apply appearance-none;
     }
 
-    .range-slider-thumb::-moz-range-thumb { /* Firefox specific */
+    .range-slider-thumb::-moz-range-thumb {
         @apply border-none;
     }
 
-    /* Basic track styling for range inputs (can be enhanced) */
     .range-slider-track {
         @apply w-full h-1 bg-grey-light rounded-full cursor-pointer dark:bg-grey-medium/30;
     }
 
-    /* Custom Switch Component Base Styles */
     .custom-switch-track {
         @apply relative inline-flex h-[20px] w-[36px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out;
         @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep;

@@ -5,10 +5,10 @@ import { Provider as JotaiProvider } from 'jotai';
 import App from './App';
 import * as Tooltip from '@radix-ui/react-tooltip';
 
-// Import i18n configuration to initialize it
+// Import and initialize i18n configuration.
 import '@/locales';
 
-// Import base styles LAST to ensure Tailwind utilities override defaults
+// Import base styles LAST to ensure Tailwind utilities can override them.
 import './styles/index.css';
 
 const rootElement = document.getElementById('root');

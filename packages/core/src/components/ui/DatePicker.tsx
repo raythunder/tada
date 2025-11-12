@@ -31,6 +31,11 @@ interface CustomDatePickerContentProps {
     closePopover: () => void;
 }
 
+/**
+ * A comprehensive date and time picker component used within popovers.
+ * It includes a calendar view, quick-select options (Today, Tomorrow, etc.),
+ * and a time selector.
+ */
 const CustomDatePickerContent: React.FC<CustomDatePickerContentProps> = React.memo(({
                                                                                         initialDate,
                                                                                         onSelect,
@@ -144,14 +149,14 @@ const CustomDatePickerContent: React.FC<CustomDatePickerContentProps> = React.me
     const timeDropdownAnimationClasses = "data-[state=open]:animate-dropdownShow data-[state=closed]:animate-dropdownHide";
     const dropdownContentClasses = twMerge(
         "min-w-[100px] max-h-60 styled-scrollbar-thin overflow-y-auto z-[75] bg-white rounded-base shadow-modal p-1",
-        "dark:bg-neutral-750 dark:border dark:border-neutral-600", // Dark mode for dropdown content
+        "dark:bg-neutral-750 dark:border dark:border-neutral-600",
         timeDropdownAnimationClasses
     );
     const tooltipContentClass = "text-[11px] bg-grey-dark text-white px-2 py-1 rounded-base shadow-md select-none z-[80] data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut dark:bg-neutral-900 dark:text-neutral-100";
 
     return (
         <div ref={contentRef}
-             className="date-picker-content p-4 w-[300px] bg-white dark:bg-neutral-800 rounded-base" // Dark mode for main popover
+             className="date-picker-content p-4 w-[300px] bg-white dark:bg-neutral-800 rounded-base"
              onClick={e => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
              onTouchStart={(e) => e.stopPropagation()}>
             <div className="flex justify-between mb-4 px-2">

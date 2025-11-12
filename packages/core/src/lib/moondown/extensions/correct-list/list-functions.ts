@@ -7,6 +7,12 @@ interface ListLevel {
     type: 'ordered' | 'unordered';
 }
 
+/**
+ * Updates the numbering of multi-level ordered lists throughout the document.
+ * This function iterates through all lines, maintains a stack of list levels,
+ * and corrects the numbers as needed.
+ * @param view - The CodeMirror EditorView instance.
+ */
 export function updateLists(view: EditorView) {
     const { state } = view;
     const doc = state.doc;
@@ -28,7 +34,7 @@ export function updateLists(view: EditorView) {
             const isOrdered = !!orderedMatch;
             const currentType = isOrdered ? 'ordered' : 'unordered';
 
-            // 1. Pop levels from stack that are deeper than current indent
+            // Pop levels from stack that are deeper than the current indent
             while (listStack.length > 0 && listStack[listStack.length - 1].indent > currentIndent) {
                 listStack.pop();
             }
@@ -36,12 +42,12 @@ export function updateLists(view: EditorView) {
             const topLevel = listStack.length > 0 ? listStack[listStack.length - 1] : null;
 
             if (topLevel && topLevel.indent === currentIndent && topLevel.type === currentType) {
-                // 2. Same level and same type: increment number
+                // Same level and type: increment the number
                 topLevel.number++;
             } else {
-                // 3. New level (deeper indent) or type switch at same indent
+                // New level (deeper indent) or type switch at the same indent
                 if (topLevel && topLevel.indent === currentIndent) {
-                    // Type switch, replace the top level
+                    // Type switch, replace the top level of the stack
                     listStack.pop();
                 }
                 listStack.push({
@@ -52,7 +58,7 @@ export function updateLists(view: EditorView) {
             }
 
             if (isOrdered) {
-                // 4. Construct the new multi-level number string
+                // Construct the new multi-level number string (e.g., "1.2.3")
                 const newNumber = listStack
                     .filter(level => level.type === 'ordered')
                     .map(level => level.number)
@@ -70,7 +76,7 @@ export function updateLists(view: EditorView) {
                 }
             }
         } else if (line.trim().length > 0) {
-            // Non-list content line, reset the stack
+            // Non-list content line resets the stack
             listStack = [];
         }
         // Empty lines do not reset the stack, allowing for space between list items.
@@ -81,11 +87,16 @@ export function updateLists(view: EditorView) {
     }
 }
 
+/**
+ * Gets information about the list item at a given position.
+ * @param state - The editor state.
+ * @param pos - The position in the document.
+ * @returns An object with list info, or null if it's not a list item.
+ */
 export function getListInfo(state: EditorState, pos: number) {
     const line = state.doc.lineAt(pos);
     const lineText = line.text;
 
-    // Check for ordered list
     const orderedMatch = lineText.match(/^(\s*)(\d+(?:\.\d+)*)\.\s/);
     if (orderedMatch) {
         return {
@@ -97,7 +108,6 @@ export function getListInfo(state: EditorState, pos: number) {
         };
     }
 
-    // Check for unordered list
     const unorderedMatch = lineText.match(/^(\s*)([-*+])\s/);
     if (unorderedMatch) {
         return {
@@ -112,6 +122,13 @@ export function getListInfo(state: EditorState, pos: number) {
     return null;
 }
 
+/**
+ * Generates the text for a new list item.
+ * @param type - 'ordered' or 'unordered'.
+ * @param indent - The indentation level in spaces.
+ * @param number - The number for an ordered list item.
+ * @returns The full list item marker string.
+ */
 export function generateListItem(type: 'ordered' | 'unordered', indent: number, number?: string): string {
     const indentation = ' '.repeat(indent);
     if (type === 'ordered') {

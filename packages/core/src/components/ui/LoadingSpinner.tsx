@@ -1,6 +1,10 @@
 import React from 'react';
 import Icon from '@/components/ui/Icon';
 
+/**
+ * A full-screen loading spinner component, typically used as a fallback
+ * for React.Suspense or during initial application load.
+ */
 const LoadingSpinner: React.FC = () => (
     <div
         className="fixed inset-0 flex items-center justify-center bg-white/80 dark:bg-grey-deep/80 z-[20000] backdrop-blur-sm">

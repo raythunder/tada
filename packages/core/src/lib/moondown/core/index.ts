@@ -1,7 +1,7 @@
-
 /**
- * Core module exports
- * Provides centralized access to constants, types, and utilities
+ * Core module exports.
+ * This file serves as a central point for exporting core constants, types,
+ * and utility functions used throughout the Moondown editor library.
  */
 
 // Constants

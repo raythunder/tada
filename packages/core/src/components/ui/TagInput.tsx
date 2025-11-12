@@ -13,6 +13,9 @@ interface AddTagsPopoverContentProps {
     closePopover: () => void;
 }
 
+/**
+ * A popover content component for adding, removing, and creating tags for a task.
+ */
 const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
                                                                          taskId,
                                                                          initialTags,
@@ -40,6 +43,7 @@ const AddTagsPopoverContent: React.FC<AddTagsPopoverContentProps> = ({
     }, [initialTags, taskId]);
 
     useEffect(() => {
+        // Prevent applying changes on initial render or when the task changes.
         if (isInitialMountOrTaskChangeRef.current) {
             isInitialMountOrTaskChangeRef.current = false;
             return;

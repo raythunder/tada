@@ -1,15 +1,22 @@
 import React, {createContext, useContext, useMemo, useState} from 'react';
 
-// Define the shape of the context data
+/**
+ * Defines the shape of the context data for managing open menus on task items.
+ */
 interface TaskItemMenuContextType {
     openItemId: string | null; // ID of the task whose menu/picker is open
     setOpenItemId: (id: string | null) => void; // Function to set the open item ID
 }
 
-// Create the context with a default value (or undefined and check in consumer)
+/**
+ * React context to manage the state of which task item's menu/popover is currently open.
+ * This ensures that only one menu is open at a time across the entire task list.
+ */
 const TaskItemMenuContext = createContext<TaskItemMenuContextType | undefined>(undefined);
 
-// Create a provider component
+/**
+ * Provider component for the TaskItemMenuContext.
+ */
 export const TaskItemMenuProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
     const [openItemId, setOpenItemId] = useState<string | null>(null);
 
@@ -17,7 +24,7 @@ export const TaskItemMenuProvider: React.FC<{ children: React.ReactNode }> = ({c
     const contextValue = useMemo(() => ({
         openItemId,
         setOpenItemId,
-    }), [openItemId]); // Only depends on openItemId
+    }), [openItemId]);
 
     return (
         <TaskItemMenuContext.Provider value={contextValue}>
@@ -28,7 +35,10 @@ export const TaskItemMenuProvider: React.FC<{ children: React.ReactNode }> = ({c
 TaskItemMenuProvider.displayName = 'TaskItemMenuProvider';
 
 
-// Custom hook to consume the context, ensures it's used within a provider
+/**
+ * Custom hook to consume the TaskItemMenuContext.
+ * Throws an error if used outside of a TaskItemMenuProvider.
+ */
 export const useTaskItemMenu = (): TaskItemMenuContextType => {
     const context = useContext(TaskItemMenuContext);
     if (context === undefined) {

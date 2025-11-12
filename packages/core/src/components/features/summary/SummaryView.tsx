@@ -49,7 +49,13 @@ import storageManager from '@/services/storageManager.ts';
 import CodeMirrorEditor, {CodeMirrorEditorRef} from "@/components/ui/Editor.tsx";
 import SelectionCheckboxRadix from "@/components/ui/SelectionCheckbox.tsx";
 import {CustomDateRangePickerContent} from "@/components/ui/DateRangePicker.tsx";
+import {AI_PROVIDERS} from "@/config/aiProviders.ts";
 
+/**
+ * Returns the appropriate CSS classes for a Radix DropdownMenu radio item.
+ * @param checked Whether the item is currently checked.
+ * @returns A string of Tailwind CSS classes.
+ */
 const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
     "relative flex cursor-pointer select-none items-center rounded-base px-2.5 py-1.5 text-[12px] font-normal outline-none transition-colors data-[disabled]:pointer-events-none h-7",
     "focus:bg-grey-ultra-light data-[highlighted]:bg-grey-ultra-light",
@@ -60,6 +66,10 @@ const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
     "data-[disabled]:opacity-50"
 );
 
+/**
+ * The main view for the AI Summary feature. Allows users to select tasks,
+ * generate summaries, view past summaries, and edit generated content.
+ */
 const SummaryView: React.FC = () => {
     const {t} = useTranslation();
     const [period, setPeriod] = useAtom(summaryPeriodFilterAtom);
@@ -86,7 +96,7 @@ const SummaryView: React.FC = () => {
     const aiSettings = useAtomValue(aiSettingsAtom);
 
     const isAiEnabled = useMemo(() => {
-        return !!(aiSettings && aiSettings.provider && aiSettings.apiKey);
+        return !!(aiSettings && aiSettings.provider && (aiSettings.apiKey || !AI_PROVIDERS.find(p => p.id === aiSettings.provider)?.requiresApiKey));
     }, [aiSettings]);
 
     const [summaryDisplayContent, setSummaryDisplayContent] = useState('');

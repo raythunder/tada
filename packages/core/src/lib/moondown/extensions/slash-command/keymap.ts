@@ -4,10 +4,18 @@ import {slashCommandPlugin} from "./slash-command.ts";
 import {slashCommands} from "./commands.ts";
 import {translationsState} from "../default-extensions.ts";
 
+/**
+ * Handles keydown events when the slash command menu is active.
+ * @param view The CodeMirror EditorView instance.
+ * @param event The keyboard event.
+ * @returns `true` if the event was handled, `false` otherwise.
+ */
 export function handleKeyDown(view: EditorView, event: KeyboardEvent): boolean {
-    const state = view.state.field(slashCommandState)
+    const state = view.state.field(slashCommandState);
     const translations = view.state.field(translationsState);
-    const plugin = view.plugin(slashCommandPlugin)
+    const plugin = view.plugin(slashCommandPlugin);
+
+    // Globally handle Escape to close menu or abort AI
     if (event.key === "Escape") {
         if (state.active) {
             view.dispatch({
@@ -20,35 +28,34 @@ export function handleKeyDown(view: EditorView, event: KeyboardEvent): boolean {
         return true
     }
 
-    if (!state.active) return false
+    if (!state.active) return false;
 
     const filteredCommands = slashCommands.filter(cmd => {
-            const title = translations[cmd.titleKey] || cmd.titleKey;
-            return title.toLowerCase().includes(state.filterText.toLowerCase())
-        }
-    );
+        const title = translations[cmd.titleKey] || cmd.titleKey;
+        return title.toLowerCase().includes(state.filterText.toLowerCase());
+    });
 
     switch (event.key) {
-        case "ArrowDown":
-            // Skip divider commands and select the next available command
-        { let nextIndex = (state.selectedIndex + 1) % filteredCommands.length
+        case "ArrowDown": {
+            let nextIndex = (state.selectedIndex + 1) % filteredCommands.length
             while (filteredCommands[nextIndex].titleKey === "divider") {
                 nextIndex = (nextIndex + 1) % filteredCommands.length
             }
             view.dispatch({
                 effects: updateSelectedIndex.of(nextIndex)
             })
-            return true }
-        case "ArrowUp":
-            // Skip divider commands and select the previous available command
-        { let prevIndex = (state.selectedIndex - 1 + filteredCommands.length) % filteredCommands.length
+            return true;
+        }
+        case "ArrowUp":{
+            let prevIndex = (state.selectedIndex - 1 + filteredCommands.length) % filteredCommands.length
             while (filteredCommands[prevIndex].titleKey === "divider") {
                 prevIndex = (prevIndex - 1 + filteredCommands.length) % filteredCommands.length
             }
             view.dispatch({
                 effects: updateSelectedIndex.of(prevIndex)
             })
-            return true }
+            return true;
+        }
         case "Enter":
             if (filteredCommands.length > 0) {
                 const selectedCommand = filteredCommands[state.selectedIndex]
@@ -59,43 +66,40 @@ export function handleKeyDown(view: EditorView, event: KeyboardEvent): boolean {
                 selectedCommand.execute(view)
                 view.focus()
             }
-            return true
+            return true;
         case "Escape":
             view.dispatch({
                 effects: toggleSlashCommand.of(false)
             })
-            return true
+            return true;
     }
 
-    return false
+    return false;
 }
+
+/**
+ * The keymap for navigating and selecting items in the slash command menu.
+ * It takes precedence for arrow keys, Enter, and Escape when the menu is active.
+ */
 export const slashCommandKeymap = keymap.of([
     {
         key: "ArrowDown",
-        run: (view) => {
-            return handleKeyDown(view, {key: "ArrowDown"} as KeyboardEvent)
-        },
+        run: (view) => handleKeyDown(view, {key: "ArrowDown"} as KeyboardEvent),
         preventDefault: true
     },
     {
         key: "ArrowUp",
-        run: (view) => {
-            return handleKeyDown(view, {key: "ArrowUp"} as KeyboardEvent)
-        },
+        run: (view) => handleKeyDown(view, {key: "ArrowUp"} as KeyboardEvent),
         preventDefault: true
     },
     {
         key: "Enter",
-        run: (view) => {
-            return handleKeyDown(view, {key: "Enter"} as KeyboardEvent)
-        },
+        run: (view) => handleKeyDown(view, {key: "Enter"} as KeyboardEvent),
         preventDefault: true
     },
     {
         key: "Escape",
-        run: (view) => {
-            return handleKeyDown(view, {key: "Escape"} as KeyboardEvent)
-        },
+        run: (view) => handleKeyDown(view, {key: "Escape"} as KeyboardEvent),
         preventDefault: true
     }
-])
+]);

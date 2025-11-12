@@ -5,6 +5,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
 import Icon from '@/components/ui/Icon';
 
+/**
+ * A global component that displays toast-style notifications (e.g., for errors or successes)
+ * in the bottom-right corner of the screen.
+ */
 const GlobalStatusDisplay: React.FC = () => {
     const [notifications, setNotifications] = useAtom(notificationsAtom);
 

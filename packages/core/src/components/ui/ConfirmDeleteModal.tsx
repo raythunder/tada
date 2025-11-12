@@ -15,6 +15,10 @@ interface ConfirmDeleteModalProps {
     confirmVariant?: 'danger' | 'primary' | 'secondary';
 }
 
+/**
+ * A reusable confirmation modal dialog, typically used for destructive actions like deletion.
+ * Built on top of Radix UI's Dialog component for accessibility.
+ */
 const ConfirmDeleteModalRadix: React.FC<ConfirmDeleteModalProps> = ({
                                                                         isOpen, onClose, onConfirm, itemTitle,
                                                                         title,

@@ -7,18 +7,22 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import storageManager from '@tada/core/services/storageManager';
 import { SqliteStorageService } from './services/sqliteStorageService';
 
-// Import i18n configuration from core to initialize it
+// Import and initialize i18n configuration from the core package.
 import '@tada/core/locales';
 
-// Import base styles from core
+// Import base styles from the core package.
 import '@tada/core/styles/index.css';
 
-// Initialize SQLite storage service
+/**
+ * Initializes and renders the React application for the desktop environment.
+ * It sets up the SQLite storage service before mounting the root App component.
+ */
 const initializeApp = async () => {
     const storageService = new SqliteStorageService();
     await storageService.initialize();
     storageManager.register(storageService);
 
+    // Preload all data from the database into memory caches for faster initial render.
     await storageService.preloadData();
 
     const rootElement = document.getElementById('root');
@@ -41,20 +45,19 @@ const initializeApp = async () => {
     );
 };
 
+// Execute the app initialization and catch any critical errors.
 initializeApp().catch(error => {
-    // 1. 在开发者工具的控制台打印完整的错误对象，这是最重要的
-    console.error('Failed to initialize app (full error object):', error);
-
-    // 2. 在界面上显示更详细的信息
+    console.error('Failed to initialize app:', error);
     const errorMessage = String(error);
-    const errorDetails = JSON.stringify(error, null, 2);
+    const errorDetails = error instanceof Error ? error.stack : JSON.stringify(error, null, 2);
 
+    // Display a detailed error message in the UI if initialization fails.
     document.body.innerHTML = `
-        <div style="padding: 20px; color: red; white-space: pre-wrap; font-family: monospace; word-break: break-all;">
-            <h1>Application failed to start</h1>
+        <div style="padding: 20px; color: #d9534f; background: #f2dede; border: 1px solid #ebccd1; white-space: pre-wrap; font-family: monospace;">
+            <h1>Application Failed to Start</h1>
             <p>${errorMessage}</p>
             <hr />
-            <h2>Full Error Details (JSON):</h2>
+            <h2>Error Details:</h2>
             <pre>${errorDetails}</pre>
         </div>
     `;

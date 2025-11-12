@@ -22,6 +22,10 @@ interface SubtaskItemDetailProps {
     isDraggingOverlay?: boolean;
 }
 
+/**
+ * Renders a single subtask item within the TaskDetail view.
+ * Supports inline title editing, completion toggle, due date setting, deletion, and drag-and-drop reordering.
+ */
 const SubtaskItemDetail: React.FC<SubtaskItemDetailProps> = memo(({
                                                                       subtask,
                                                                       onUpdate,

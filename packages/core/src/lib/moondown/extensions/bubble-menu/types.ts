@@ -2,6 +2,9 @@ import * as icons from "lucide";
 import {EditorView} from "@codemirror/view";
 import {EditorState} from "@codemirror/state";
 
+/**
+ * Defines the structure for a top-level item in the bubble menu.
+ */
 export interface BubbleMenuItem {
     name: string;
     icon: keyof typeof icons;
@@ -11,6 +14,9 @@ export interface BubbleMenuItem {
     type?: 'dropdown' | 'button';
 }
 
+/**
+ * Defines the structure for an item within a dropdown in the bubble menu.
+ */
 export interface BubbleMenuSubItem {
     name: string;
     icon?: keyof typeof icons;

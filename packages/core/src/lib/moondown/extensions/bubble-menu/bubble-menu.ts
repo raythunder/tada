@@ -1,9 +1,9 @@
-import { EditorView, ViewUpdate, type PluginValue } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
-import { createIcons, icons } from 'lucide';
-import { createPopper, type Instance as PopperInstance, type VirtualElement } from '@popperjs/core';
-import type { BubbleMenuItem } from "./types";
-import { bubbleMenuField, showBubbleMenu } from "./fields";
+import {EditorView, ViewUpdate, type PluginValue} from "@codemirror/view";
+import {EditorState} from "@codemirror/state";
+import {createIcons, icons} from 'lucide';
+import {createPopper, type Instance as PopperInstance, type VirtualElement} from '@popperjs/core';
+import type {BubbleMenuItem} from "./types";
+import {bubbleMenuField, showBubbleMenu} from "./fields";
 import {
     isHeaderActive,
     isInlineStyleActive,
@@ -12,15 +12,14 @@ import {
     toggleInlineStyle,
     toggleList
 } from "./content-functions";
-import { CSS_CLASSES, ICON_SIZES, POPPER_CONFIG, MARKDOWN_MARKERS } from "../../core";
-import { createElement, createIconElement } from "../../core";
-import { isMarkdownImage } from "../../core";
+import {CSS_CLASSES, ICON_SIZES, POPPER_CONFIG, MARKDOWN_MARKERS} from "../../core";
+import {createElement, createIconElement} from "../../core";
+import {isMarkdownImage} from "../../core";
 
 /**
- * BubbleMenu - A floating toolbar that appears on text selection
- * Provides quick access to formatting options like bold, italic, headings, etc.
+ * BubbleMenu - A floating toolbar that appears on text selection.
+ * It provides quick access to formatting options like bold, italic, headings, etc.
  */
-
 export class BubbleMenu implements PluginValue {
     private dom: HTMLElement;
     private items: BubbleMenuItem[];
@@ -46,7 +45,7 @@ export class BubbleMenu implements PluginValue {
             return;
         }
 
-        const { from, to } = update.state.selection.main;
+        const {from, to} = update.state.selection.main;
         if (from === to || this.isImageSelection(update.state, from, to)) {
             this.hide();
             return;
@@ -62,7 +61,7 @@ export class BubbleMenu implements PluginValue {
     }
 
     /**
-     * Checks if the current selection is an image markdown
+     * Checks if the current selection is an image markdown string.
      */
     private isImageSelection(state: EditorState, from: number, to: number): boolean {
         const selectedText = state.sliceDoc(from, to);
@@ -70,7 +69,7 @@ export class BubbleMenu implements PluginValue {
     }
 
     /**
-     * Hides the bubble menu
+     * Hides the bubble menu.
      */
     private hide(): void {
         this.dom.style.display = 'none';
@@ -78,7 +77,7 @@ export class BubbleMenu implements PluginValue {
     }
 
     /**
-     * Destroys the Popper instance
+     * Destroys the Popper instance if it exists.
      */
     private destroyPopper(): void {
         if (this.popper) {
@@ -88,7 +87,7 @@ export class BubbleMenu implements PluginValue {
     }
 
     /**
-     * Shows the bubble menu at the selection position
+     * Shows and positions the bubble menu above the current text selection.
      */
     private show(from: number, to: number): void {
         requestAnimationFrame(() => {
@@ -99,6 +98,7 @@ export class BubbleMenu implements PluginValue {
 
             if (!startPos || !endPos) return;
 
+            // Create a virtual element for Popper.js to position the menu relative to the selection.
             const virtualElement: VirtualElement = {
                 getBoundingClientRect: (): DOMRect => {
                     return {
@@ -110,7 +110,7 @@ export class BubbleMenu implements PluginValue {
                         left: startPos.left,
                         x: startPos.left,
                         y: startPos.top,
-                        toJSON: () => {
+                        toJSON: () => { // Required for some Popper.js internals
                             return {
                                 width: endPos.left - startPos.left,
                                 height: startPos.bottom - startPos.top,
@@ -140,20 +140,16 @@ export class BubbleMenu implements PluginValue {
                 ],
             });
 
-            // Update active states for menu items
             this.updateActiveStates();
-
-            // Force update Popper position
             this.popper.update();
         });
     }
 
     /**
-     * Updates the active state of all menu items
+     * Updates the active state (highlighting) of all menu items based on the current selection.
      */
     private updateActiveStates(): void {
         this.items.forEach(item => {
-            // Update main menu item state
             if (item.isActive) {
                 const button = this.dom.querySelector(
                     `[data-name="${item.name}"]`
@@ -166,14 +162,12 @@ export class BubbleMenu implements PluginValue {
                 }
             }
 
-            // Update submenu item states
             if (item.subItems) {
                 item.subItems.forEach(subItem => {
                     if (subItem.isActive) {
                         const subButton = this.dom.querySelector(
                             `[data-name="${subItem.name}"][data-parent="${item.name}"]`
                         ) as HTMLButtonElement;
-
                         if (subButton) {
                             const isActive = subItem.isActive(this.view.state);
                             subButton.classList.toggle(
@@ -188,7 +182,7 @@ export class BubbleMenu implements PluginValue {
     }
 
     /**
-     * Handles mouse up event to show/hide the menu
+     * Handles the global mouse up event to determine whether to show or hide the menu.
      */
     private handleMouseUp(_event: MouseEvent): void {
         const { state } = this.view;
@@ -204,10 +198,9 @@ export class BubbleMenu implements PluginValue {
     }
 
     /**
-     * Clears selection and refocuses editor
+     * Clears the text selection and refocuses the editor, typically after a menu action.
      */
     private clearSelectionAndFocus(): void {
-        // Use requestAnimationFrame to ensure DOM updates are complete
         requestAnimationFrame(() => {
             const currentPos = this.view.state.selection.main.head;
             this.view.dispatch({
@@ -218,7 +211,7 @@ export class BubbleMenu implements PluginValue {
     }
 
     /**
-     * Creates the menu item configuration
+     * Defines the structure and actions of the bubble menu items.
      */
     private createItems(): BubbleMenuItem[] {
         return [
@@ -254,8 +247,7 @@ export class BubbleMenu implements PluginValue {
                 subItems: [
                     {
                         name: 'Ordered List',
-                        // @ts-expect-error - lucide icon name
-                        icon: 'list-ordered',
+                        icon: 'ListOrdered',
                         action: view => toggleList(view, true),
                         isActive: state => isListActive(state, true),
                     },
@@ -316,7 +308,7 @@ export class BubbleMenu implements PluginValue {
     }
 
     /**
-     * Builds the DOM structure for the menu
+     * Builds the DOM structure for the menu based on the item configuration.
      */
     private buildMenu(): void {
         this.dom.innerHTML = '';

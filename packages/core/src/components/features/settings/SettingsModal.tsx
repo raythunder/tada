@@ -47,6 +47,10 @@ const settingsSections: SettingsItem[] = [
     {id: 'about', labelKey: 'settings.about.title', icon: 'info'},
 ];
 
+/**
+ * A generic row component for settings pages, providing a consistent layout
+ * for a label, description, and an action/control area.
+ */
 const SettingsRow: React.FC<{
     label: string,
     value?: React.ReactNode,
@@ -73,6 +77,9 @@ const SettingsRow: React.FC<{
 ));
 SettingsRow.displayName = 'SettingsRow';
 
+/**
+ * A radio group component for selecting the dark mode preference (Light, Dark, System).
+ */
 const DarkModeSelector: React.FC<{ value: DarkModeOption; onChange: (value: DarkModeOption) => void; }> = memo(({
                                                                                                                     value,
                                                                                                                     onChange
@@ -112,6 +119,9 @@ const DarkModeSelector: React.FC<{ value: DarkModeOption; onChange: (value: Dark
 });
 DarkModeSelector.displayName = 'DarkModeSelector';
 
+/**
+ * A circular color swatch button for theme selection.
+ */
 const ColorSwitch: React.FC<{
     colorValue: string;
     selected: boolean;
@@ -135,6 +145,9 @@ ColorSwitch.displayName = 'ColorSwitch';
 
 const defaultAppearanceSettingsFromAtoms = defaultAppearanceSettingsForApi();
 
+/**
+ * Settings panel for managing application appearance, including dark mode and theme color.
+ */
 const AppearanceSettings: React.FC = memo(() => {
     const {t} = useTranslation();
     const [appearance, setAppearance] = useAtom(appearanceSettingsAtom);
@@ -182,6 +195,9 @@ AppearanceSettings.displayName = 'AppearanceSettings';
 
 const defaultPreferencesFromAtoms = defaultPreferencesSettingsForApi();
 
+/**
+ * A reusable helper function to render a Radix Select component.
+ */
 const renderSelect = (id: string, value: string | null, onChange: (value: string) => void, options: {
     value: string,
     label: string
@@ -224,6 +240,9 @@ const renderSelect = (id: string, value: string | null, onChange: (value: string
     </Select.Root>
 );
 
+/**
+ * Settings panel for managing user preferences like language and default task properties.
+ */
 const PreferencesSettings: React.FC = memo(() => {
     const {t} = useTranslation();
     const [preferences, setPreferences] = useAtom(preferencesSettingsAtom);
@@ -324,6 +343,9 @@ const PreferencesSettings: React.FC = memo(() => {
 });
 PreferencesSettings.displayName = 'PreferencesSettings';
 
+/**
+ * A selectable card representing an AI provider.
+ */
 const ProviderCard: React.FC<{
     provider: AIProvider;
     isSelected: boolean;
@@ -372,7 +394,10 @@ const ProviderCard: React.FC<{
 });
 ProviderCard.displayName = 'ProviderCard';
 
-// About Settings Component
+/**
+ * Settings panel displaying information about the application, such as version,
+ * changelog, privacy policy, and links for feedback.
+ */
 const AboutSettings: React.FC = memo(() => {
     const { t } = useTranslation();
     const [showChangelog, setShowChangelog] = useState(false);
@@ -497,7 +522,9 @@ const AboutSettings: React.FC = memo(() => {
 });
 AboutSettings.displayName = 'AboutSettings';
 
-// New simplified AI Settings component
+/**
+ * Settings panel for configuring the AI provider, API key, model, and other related parameters.
+ */
 const AISettings: React.FC = memo(() => {
     const { t } = useTranslation();
     const [aiSettings, setAISettings] = useAtom(aiSettingsAtom);
@@ -777,6 +804,10 @@ const AISettings: React.FC = memo(() => {
 });
 AISettings.displayName = 'AISettings';
 
+/**
+ * The main modal component for application settings, containing tabs for
+ * Appearance, Preferences, AI, and About sections.
+ */
 const SettingsModal: React.FC = () => {
     const {t} = useTranslation();
     const [isOpen, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);

@@ -13,15 +13,16 @@ import {
 } from "../../core";
 
 /**
- * Functions for manipulating markdown content in the editor
- * These functions handle inline styles, headings, and lists
+ * Functions for manipulating markdown content in the editor.
+ * These handle actions triggered by the bubble menu, such as applying
+ * inline styles, headings, and lists.
  */
 
 /**
- * Sets or toggles heading level for selected lines
- * @param view - Editor view
- * @param level - Heading level (1-6)
- * @returns True if operation succeeded
+ * Sets or toggles the heading level for the selected lines.
+ * @param view - The CodeMirror EditorView instance.
+ * @param level - The heading level (1-6).
+ * @returns `true` to indicate the action was handled.
  */
 export function setHeader(view: EditorView, level: number): boolean {
     const { state } = view;
@@ -58,10 +59,10 @@ export function setHeader(view: EditorView, level: number): boolean {
 }
 
 /**
- * Toggles ordered or unordered list formatting for selected lines
- * @param view - Editor view
- * @param ordered - True for ordered list, false for unordered
- * @returns True if operation succeeded
+ * Toggles ordered or unordered list formatting for the selected lines.
+ * @param view - The CodeMirror EditorView instance.
+ * @param ordered - `true` for an ordered list, `false` for an unordered list.
+ * @returns `true` to indicate the action was handled.
  */
 export function toggleList(view: EditorView, ordered: boolean): boolean {
     const { state } = view;
@@ -112,16 +113,16 @@ export function toggleList(view: EditorView, ordered: boolean): boolean {
 }
 
 /**
- * Toggles inline markdown style (bold, italic, etc.) for selection
- * @param view - Editor view
- * @param mark - Markdown marker to toggle
- * @returns True if operation succeeded
+ * Toggles an inline markdown style (e.g., bold, italic) around the current selection.
+ * @param view - The CodeMirror EditorView instance.
+ * @param mark - The markdown marker to toggle (e.g., "**", "*").
+ * @returns `true` to indicate the action was handled.
  */
 export function toggleInlineStyle(view: EditorView, mark: string): boolean {
     const { state } = view;
     const { from, to } = state.selection.main;
 
-    // Get text with context around selection
+    // Get text with some context around the selection to find surrounding markers.
     const contextLength = mark.length * SELECTION.MARKER_CONTEXT_LENGTH;
     const { text: textToCheck, start } = getTextWithContext(
         state,
@@ -134,8 +135,7 @@ export function toggleInlineStyle(view: EditorView, mark: string): boolean {
     const regex = new RegExp(`(${escapedMark}+)([\\s\\S]*?)\\1`, 'g');
 
     const markerLength = mark.length;
-
-    const changes = [];
+    const changes: ChangeSpec[] = [];
     let match;
     let found = false;
 
@@ -190,6 +190,7 @@ export function toggleInlineStyle(view: EditorView, mark: string): boolean {
         }
     }
 
+    // If no existing style was found to remove, add the new style.
     if (!found) {
         // Check for combined styles
         const combinedRegex = /(\*{1,3}|_{1,3}|~~|==)([^*_~=]+)\1/g;
@@ -232,10 +233,10 @@ export function toggleInlineStyle(view: EditorView, mark: string): boolean {
 }
 
 /**
- * Checks if a specific heading level is active at cursor position
- * @param state - Editor state
- * @param level - Heading level to check
- * @returns True if the heading level is active
+ * Checks if a specific heading level is active at the cursor's current line.
+ * @param state - The editor state.
+ * @param level - The heading level to check (1-6).
+ * @returns `true` if the heading level is active.
  */
 export function isHeaderActive(state: EditorState, level: number): boolean {
     const { from } = state.selection.main;
@@ -245,15 +246,14 @@ export function isHeaderActive(state: EditorState, level: number): boolean {
 }
 
 /**
- * Checks if an inline style marker is active at selection
- * @param state - Editor state
- * @param marker - Markdown marker to check
- * @returns True if the style is active
+ * Checks if an inline style is active within the current selection.
+ * @param state - The editor state.
+ * @param marker - The markdown marker to check for.
+ * @returns `true` if the style is active.
  */
 export function isInlineStyleActive(state: EditorState, marker: string): boolean {
     const { from, to } = state.selection.main;
 
-    // Get text with context
     const contextLength = marker.length * SELECTION.MARKER_CONTEXT_LENGTH;
     const { text: textToCheck, start } = getTextWithContext(
         state,
@@ -263,8 +263,7 @@ export function isInlineStyleActive(state: EditorState, marker: string): boolean
     );
 
     const escapedMarker = escapeRegExp(marker);
-
-    // Use more precise regex pattern to match markers
+    // Regex to find a valid markdown style block.
     const regex = new RegExp(`(?<!\\${marker[0]})${escapedMarker}([^${escapedMarker}]+)${escapedMarker}(?!\\${marker[0]})`, 'g');
 
     let match;
@@ -277,7 +276,7 @@ export function isInlineStyleActive(state: EditorState, marker: string): boolean
         }
     }
 
-    // Handle bold-italic cases
+    // Special handling for combined bold/italic styles
     if (marker === '**' || marker === '*') {
         const boldItalicRegex = /\*{3}([^*]+)\*{3}/g;
         while ((match = boldItalicRegex.exec(textToCheck)) !== null) {
@@ -295,10 +294,10 @@ export function isInlineStyleActive(state: EditorState, marker: string): boolean
 
 
 /**
- * Checks if a list style is active at cursor position
- * @param state - Editor state
- * @param ordered - True to check for ordered list, false for unordered
- * @returns True if the list style is active
+ * Checks if a list style is active at the cursor's current line.
+ * @param state - The editor state.
+ * @param ordered - `true` to check for an ordered list, `false` for unordered.
+ * @returns `true` if the specified list style is active.
  */
 export function isListActive(state: EditorState, ordered: boolean): boolean {
     const { from } = state.selection.main;

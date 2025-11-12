@@ -1,27 +1,18 @@
-
 /**
- * Underline markdown parser extension
- *
- * This extension adds support for underlined text formatting using single tilde syntax (~text~).
- * It integrates with the Lezer markdown parser to recognize and parse underline markers.
- * Note: This uses single tilde to distinguish from strikethrough which uses double tilde.
+ * A Lezer markdown parser extension for `~underline~` syntax.
+ * This is a non-standard markdown feature but is included for enhanced formatting.
  */
-
 import {InlineContext, type MarkdownExtension} from "@lezer/markdown";
 
 /**
- * Delimiter configuration for underline parsing
- * Defines how the parser should handle underline markers
+ * Delimiter configuration for underline parsing.
+ * Defines how the parser should handle `~` markers.
  */
 export const UnderlineDelim = {resolve: "Underline", mark: "UnderlineMarker"};
 
 /**
- * Markdown extension for underline text formatting
- *
- * Adds support for ~text~ syntax by:
- * - Defining AST nodes for underline elements and their markers
- * - Parsing inline text for single tilde (~) patterns
- * - Creating proper delimiter pairs for text styling
+ * The MarkdownExtension object for underline formatting.
+ * It defines the new AST nodes and the inline parsing logic.
  */
 export const UnderlineExtension: MarkdownExtension = {
     defineNodes: ["Underline", "UnderlineMarker"],
@@ -29,12 +20,12 @@ export const UnderlineExtension: MarkdownExtension = {
         {
             name: "Underline",
             parse(cx: InlineContext, next: number, pos: number) {
-                // Check for single tilde (~) at current position
-                // 126 is the ASCII code for '~'
-                if (next != 126 /* '~' */) return -1;
+                // 126 is the ASCII code for '~'. Check for a single tilde.
+                if (next != 126) return -1;
+                // Ensure it's not part of a double tilde (strikethrough).
+                if (cx.char(pos + 1) === 126) return -1;
 
-                // Add delimiter pair for underline formatting
-                // The delimiter spans 1 character (~) starting at pos
+                // Register a delimiter pair for underline formatting.
                 return cx.addDelimiter(UnderlineDelim, pos, pos + 1, true, true);
             },
         },

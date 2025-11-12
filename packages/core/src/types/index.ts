@@ -1,6 +1,9 @@
 import {DarkModeOption, DefaultNewTaskDueDate} from "@/store/jotai.ts";
 import {AIProvider, AIModel} from "@/config/aiProviders.ts";
 
+/**
+ * Represents a user-created list for organizing tasks.
+ */
 export interface List {
     id: string;
     name: string;
@@ -9,6 +12,9 @@ export interface List {
     order?: number | null;
 }
 
+/**
+ * Represents a subtask associated with a parent task.
+ */
 export interface Subtask {
     id: string;
     parentId: string;
@@ -21,6 +27,9 @@ export interface Subtask {
     updatedAt: number;
 }
 
+/**
+ * Represents a single task item.
+ */
 export interface Task {
     id:string;
     title: string;
@@ -40,6 +49,9 @@ export interface Task {
     subtasks?: Subtask[];
 }
 
+/**
+ * Defines the possible filter types for the task list.
+ */
 export type TaskFilter =
     | 'all'
     | 'today'
@@ -49,12 +61,18 @@ export type TaskFilter =
     | `list-${string}`
     | `tag-${string}`;
 
+/**
+ * Defines the available tabs in the settings modal.
+ */
 export type SettingsTab =
     | 'appearance'
     | 'preferences'
     | 'ai'
     | 'about';
 
+/**
+ * Defines the categories for grouping tasks in the "All Tasks" view.
+ */
 export type TaskGroupCategory =
     | 'overdue'
     | 'today'
@@ -62,6 +80,9 @@ export type TaskGroupCategory =
     | 'later'
     | 'nodate';
 
+/**
+ * Represents a stored AI-generated summary.
+ */
 export interface StoredSummary {
     id: string;
     createdAt: number;
@@ -72,12 +93,18 @@ export interface StoredSummary {
     summaryText: string;
 }
 
+/**
+ * Defines the structure for appearance-related settings.
+ */
 export interface AppearanceSettings {
     themeId: string;
     darkMode: DarkModeOption;
     interfaceDensity: 'compact' | 'default' | 'comfortable';
 }
 
+/**
+ * Defines the structure for user preference settings.
+ */
 export interface PreferencesSettings {
     language: 'en' | 'zh-CN';
     defaultNewTaskDueDate: DefaultNewTaskDueDate;
@@ -86,7 +113,9 @@ export interface PreferencesSettings {
     confirmDeletions: boolean;
 }
 
-// Simplified AI Settings - single provider, single model
+/**
+ * Defines the structure for AI-related settings.
+ */
 export interface AISettings {
     provider: AIProvider['id'];
     apiKey: string;

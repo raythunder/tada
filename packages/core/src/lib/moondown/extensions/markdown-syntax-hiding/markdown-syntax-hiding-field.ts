@@ -21,15 +21,15 @@ import {
 } from "./node-handlers";
 
 /**
- * Effect to toggle the syntax hiding feature
+ * StateEffect to toggle the syntax hiding feature.
  */
 export const toggleSyntaxHidingEffect = StateEffect.define<boolean>();
 
 /**
- * StateField to hold the current state of the syntax hiding feature
+ * StateField to hold the current enabled/disabled state of syntax hiding.
  */
 export const syntaxHidingState = StateField.define<boolean>({
-    create: () => true,
+    create: () => true, // Enabled by default
     update(value, tr) {
         for (const e of tr.effects) {
             if (e.is(toggleSyntaxHidingEffect)) {
@@ -41,10 +41,9 @@ export const syntaxHidingState = StateField.define<boolean>({
 });
 
 /**
- * Node type handler mapping
+ * Mapping of Lezer syntax node names to their corresponding decoration handlers.
  */
 type NodeHandler = (ctx: HandlerContext, node?: any) => DecorationItem[];
-
 const NODE_HANDLERS: Record<string, NodeHandler> = {
     'FencedCode': handleFencedCode,
     'Blockquote': handleBlockquote,
@@ -62,7 +61,7 @@ const NODE_HANDLERS: Record<string, NodeHandler> = {
 };
 
 /**
- * Handles ATX heading nodes (ATXHeading1-6)
+ * Special handler for ATX heading nodes (e.g., ATXHeading1, ATXHeading2).
  */
 function handleATXHeading(ctx: HandlerContext, nodeName: string): DecorationItem[] {
     const headerLevel = parseInt(nodeName.slice(-1));
@@ -70,7 +69,7 @@ function handleATXHeading(ctx: HandlerContext, nodeName: string): DecorationItem
 }
 
 /**
- * Main state field for markdown syntax hiding
+ * The main StateField that computes and provides the decorations for hiding markdown syntax.
  */
 export const markdownSyntaxHidingField = StateField.define<DecorationSet>({
     create(_: EditorState) {
@@ -83,14 +82,12 @@ export const markdownSyntaxHidingField = StateField.define<DecorationSet>({
         const selection = state.selection.main;
         const isHidingEnabled = state.field(syntaxHidingState);
 
-        // Track processed blockquote ranges to avoid duplicates
         const processedBlockquotes = new Set<string>();
-
-        // Track processed lines for footnote and link definitions
         const processedDefinitionLines = new Set<number>();
 
-        // First pass: Process all footnote and link definitions by scanning all lines
-        // This ensures we catch all definitions regardless of syntax tree structure
+        // First pass: Process all footnote and link definitions by scanning all lines.
+        // This ensures definitions are handled correctly even if they are not directly
+        // visited by the syntax tree iteration in complex documents.
         for (let lineNum = 1; lineNum <= state.doc.lines; lineNum++) {
             const line = state.doc.line(lineNum);
             const lineText = line.text;
@@ -123,35 +120,25 @@ export const markdownSyntaxHidingField = StateField.define<DecorationSet>({
             }
         }
 
-        // Second pass: Process syntax tree nodes (excluding already processed definition lines)
+        // Second pass: Process syntax tree nodes, skipping lines already handled.
         syntaxTree(state).iterate({
             enter: (node) => {
                 const start = node.from;
                 const end = node.to;
                 const isSelected = selection.from <= end && selection.to >= start;
 
-                // Skip if this is a line we already processed as a definition
                 const startLine = state.doc.lineAt(start);
                 if (processedDefinitionLines.has(startLine.number)) {
                     return false; // Skip this node and its children
                 }
 
-                const ctx: HandlerContext = {
-                    state,
-                    selection,
-                    isHidingEnabled,
-                    isSelected,
-                    start,
-                    end
-                };
+                const ctx: HandlerContext = { state, selection, isHidingEnabled, isSelected, start, end };
 
-                // Handle ATX headings
                 if (node.type.name.startsWith('ATXHeading')) {
                     decorations.push(...handleATXHeading(ctx, node.type.name));
                     return;
                 }
 
-                // Special handling for Blockquote to avoid duplicates
                 if (node.type.name === 'Blockquote') {
                     const key = `${start}-${end}`;
                     if (!processedBlockquotes.has(key)) {
@@ -161,7 +148,6 @@ export const markdownSyntaxHidingField = StateField.define<DecorationSet>({
                     return;
                 }
 
-                // Handle other node types
                 const handler = NODE_HANDLERS[node.type.name];
                 if (handler) {
                     decorations.push(...handler(ctx, node));
@@ -169,7 +155,6 @@ export const markdownSyntaxHidingField = StateField.define<DecorationSet>({
             },
         });
 
-        // Sort with comprehensive comparison
         decorations.sort((a, b) => {
             if (a.from !== b.from) return a.from - b.from;
             if (a.to !== b.to) return a.to - b.to;

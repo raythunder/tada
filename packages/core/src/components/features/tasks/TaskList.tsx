@@ -53,7 +53,11 @@ import {IconName} from '@/components/ui/IconMap.ts';
 import {analyzeTaskInputWithAI} from '@/services/aiService';
 import {useTranslation} from "react-i18next";
 import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
+import {AI_PROVIDERS} from "@/config/aiProviders.ts";
 
+/**
+ * A header component for a group of tasks (e.g., "Overdue", "Today").
+ */
 const TaskGroupHeader: React.FC<{
     title: string;
     groupKey: TaskGroupCategory;
@@ -112,6 +116,10 @@ const getAiGlowThemeClass = (priority: number | null): string => {
 };
 
 
+/**
+ * The main component for displaying and managing a list of tasks.
+ * It handles task filtering, grouping, drag-and-drop reordering, and task creation.
+ */
 const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
     const {t} = useTranslation();
     const allTasksData = useAtomValue(tasksAtom);
@@ -131,7 +139,7 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
     const addNotification = useSetAtom(addNotificationAtom);
 
     const isAiEnabled = useMemo(() => {
-        return !!(aiSettings && aiSettings.provider && aiSettings.apiKey);
+        return !!(aiSettings && aiSettings.provider && (aiSettings.apiKey || !AI_PROVIDERS.find(p => p.id === aiSettings.provider)?.requiresApiKey));
     }, [aiSettings]);
 
     const groupTitles: Record<TaskGroupCategory, string> = useMemo(() => ({

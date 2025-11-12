@@ -6,13 +6,16 @@ import { currentFilterAtom, selectedTaskIdAtom } from '@/store/jotai';
 import { TaskFilter } from '@/types';
 import MainLayout from '@/components/features/layout/MainLayout';
 
-// Lazy load pages
+// Lazy load pages for better initial load performance.
 const MainPage = lazy(() => import('@/pages/MainPage'));
 const SummaryPage = lazy(() => import('@/pages/SummaryPage'));
 const CalendarPage = lazy(() => import('@/pages/CalendarPage'));
 
-// --- Route-specific Logic Components ---
-
+/**
+ * A component that listens for route changes and updates global state accordingly.
+ * It synchronizes the `currentFilterAtom` with the URL and resets the `selectedTaskIdAtom`
+ * when the main filter changes.
+ */
 const RouteChangeHandler: React.FC = () => {
     const [currentFilterInternal, setCurrentFilter] = useAtom(currentFilterAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
@@ -35,13 +38,17 @@ const RouteChangeHandler: React.FC = () => {
 
         if (currentFilterInternal !== newFilter) {
             setCurrentFilter(newFilter);
-            setSelectedTaskId(null);
+            setSelectedTaskId(null); // Deselect task when filter changes
         }
     }, [location.pathname, params.listName, params.tagName, currentFilterInternal, setCurrentFilter, setSelectedTaskId]);
 
     return <Outlet />;
 };
 
+/**
+ * A wrapper component to render the MainPage for list-based routes (e.g., /list/Inbox).
+ * It extracts the list name from the URL parameters to set the title and filter.
+ */
 const ListPageWrapper: React.FC = () => {
     const { t } = useTranslation();
     const { listName } = useParams<{ listName: string }>();
@@ -55,6 +62,10 @@ const ListPageWrapper: React.FC = () => {
     return <MainPage title={title} filter={filter} />;
 };
 
+/**
+ * A wrapper component to render the MainPage for tag-based routes (e.g., /tag/urgent).
+ * It extracts the tag name from the URL parameters to set the title and filter.
+ */
 const TagPageWrapper: React.FC = () => {
     const { tagName } = useParams<{ tagName: string }>();
     const decodedTagName = tagName ? decodeURIComponent(tagName) : '';
@@ -65,8 +76,10 @@ const TagPageWrapper: React.FC = () => {
     return <MainPage title={`#${decodedTagName}`} filter={filter} />;
 };
 
-// --- Main Router Component ---
-
+/**
+ * The main application router component.
+ * It defines all available routes and wraps them in the `MainLayout`.
+ */
 const AppRouter: React.FC = () => {
     const { t } = useTranslation();
 

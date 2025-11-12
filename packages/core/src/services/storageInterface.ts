@@ -8,8 +8,13 @@ import {
     Subtask
 } from '@/types';
 
+/**
+ * Defines the contract for a storage service.
+ * This interface allows for different storage implementations (e.g., localStorage, SQLite)
+ * to be used interchangeably across the web and desktop applications.
+ */
 export interface IStorageService {
-    // Settings - 同步方法保留用于初始化
+    // Settings
     fetchSettings(): {
         appearance: AppearanceSettings;
         preferences: PreferencesSettings;
@@ -19,14 +24,14 @@ export interface IStorageService {
     updatePreferencesSettings(settings: PreferencesSettings): PreferencesSettings;
     updateAISettings(settings: AISettings): AISettings;
 
-    // Lists - 同步方法保留
+    // Lists
     fetchLists(): List[];
     createList(listData: { name: string; icon?: string }): List;
     updateList(listId: string, updates: Partial<List>): List;
     deleteList(listId: string): { message: string };
     updateLists(lists: List[]): List[];
 
-    // Tasks - 同步方法保留
+    // Tasks
     fetchTasks(): Task[];
     createTask(taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'groupCategory'>): Task;
     updateTask(taskId: string, updates: Partial<Task>): Task;
@@ -44,16 +49,15 @@ export interface IStorageService {
     updateSummary(summaryId: string, updates: Partial<StoredSummary>): StoredSummary;
     updateSummaries(summaries: StoredSummary[]): StoredSummary[];
 
-    // 新增：批量操作方法
+    // Optional batch operations for performance optimization
     batchUpdateTasks?(tasks: Task[]): Promise<void>;
     batchUpdateLists?(lists: List[]): Promise<void>;
 
-    // 新增：持久化控制
-    flush?(): Promise<void>; // 强制刷新所有待处理的写入
-    enableAutoPersist?(enabled: boolean): void; // 控制自动持久化
+    // Optional persistence control to ensure data is saved
+    flush?(): Promise<void>;
+    enableAutoPersist?(enabled: boolean): void;
 }
 
-// 新增：存储事件监听器
 export interface StorageEventListener {
     onTasksChanged?(tasks: Task[]): void;
     onListsChanged?(lists: List[]): void;

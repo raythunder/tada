@@ -85,8 +85,6 @@ const dark = {
     codeAttribute: "#22D3EE",    // Cyan - Attributes
     codeType: "#FCD34D",         // Yellow - Types
 
-    // Blockquote Colors (No longer used, now dynamic)
-
     // --- Styles aligned with table formatting ---
     inlineCodeBg: "#0f172a",
     inlineCodeColor: "#fb7185",
@@ -108,8 +106,8 @@ const codeFont = "'Fira Code', 'Roboto Mono', monospace";
 const createEditorTheme = (colors: typeof light | typeof dark, isDark: boolean) => {
     const animationName = isDark ? 'colorChangeDark' : 'colorChangeLight';
     const visibleMarkdownColor = isDark
-        ? 'hsl(var(--color-primary-light-hsl) / 0.6)' // Use primary-light for dark mode markers
-        : 'hsl(var(--color-primary-hsl) / 0.5)'; // Use primary for light mode markers
+        ? 'hsl(var(--color-primary-light-hsl) / 0.6)'
+        : 'hsl(var(--color-primary-hsl) / 0.5)';
 
     return EditorView.theme({
         "&": {
@@ -127,15 +125,15 @@ const createEditorTheme = (colors: typeof light | typeof dark, isDark: boolean) 
         },
         ".cm-scroller": {
             fontFamily: "'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-            fontSize: "13.5px", // Match body font size
-            lineHeight: "1.65", // Match body line height
-            overflow: "auto !important", // FIX: Ensure scrolling
+            fontSize: "13.5px",
+            lineHeight: "1.65",
+            overflow: "auto !important",
         },
         "&.cm-focused": {
             outline: "none",
         },
         ".cm-content": {
-            padding: "16px 8px 16px 16px", // Adjust padding for scrollbar
+            padding: "16px 8px 16px 16px",
         },
         ".cm-content.cm-focused": {
             outline: "none",
