@@ -62,12 +62,6 @@ const PrivacyPolicyPage: React.FC = () => {
     return (
         <div className="min-h-screen bg-white dark:bg-neutral-800">
             <div className="max-w-4xl mx-auto px-6 py-12">
-                <div className="mb-8">
-                    <Button asChild variant="ghost" icon="arrow-left" className="mb-4">
-                        <Link to="/">{t('common.backToApp')}</Link>
-                    </Button>
-                </div>
-
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {content}
@@ -76,7 +70,7 @@ const PrivacyPolicyPage: React.FC = () => {
 
                 <div className="mt-12 pt-8 border-t border-grey-light dark:border-neutral-700">
                     <div className="text-center">
-                        <Button asChild>
+                        <Button asChild variant="ghost">
                             <Link to="/">{t('common.backToApp')}</Link>
                         </Button>
                     </div>
