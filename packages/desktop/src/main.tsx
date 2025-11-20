@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { Provider as JotaiProvider } from 'jotai';
@@ -7,58 +7,74 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import storageManager from '@tada/core/services/storageManager';
 import { SqliteStorageService } from './services/sqliteStorageService';
 
-// Import and initialize i18n configuration from the core package.
 import '@tada/core/locales';
-
-// Import base styles from the core package.
 import '@tada/core/styles/index.css';
 
-/**
- * Initializes and renders the React application for the desktop environment.
- * It sets up the SQLite storage service before mounting the root App component.
- */
-const initializeApp = async () => {
-    const storageService = new SqliteStorageService();
-    await storageService.initialize();
-    storageManager.register(storageService);
+// 创建一个包装组件来处理异步初始化
+const DesktopAppLauncher = () => {
+    const [isReady, setIsReady] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Preload all data from the database into memory caches for faster initial render.
-    await storageService.preloadData();
+    useEffect(() => {
+        const init = async () => {
+            try {
+                const storageService = new SqliteStorageService();
+                // 1. 初始化数据库连接
+                await storageService.initialize();
 
-    const rootElement = document.getElementById('root');
-    if (!rootElement) {
-        throw new Error("Failed to find the root element. Ensure your HTML has an element with id='root'.");
+                // 2. 注册服务
+                storageManager.register(storageService);
+
+                // 3. 预加载数据
+                await storageService.preloadData();
+
+                setIsReady(true);
+            } catch (err: any) {
+                console.error('Desktop initialization failed:', err);
+                setError(err.message || String(err));
+            }
+        };
+        init();
+    }, []);
+
+    if (error) {
+        return (
+            <div className="h-screen w-screen flex flex-col items-center justify-center bg-red-50 text-red-900 p-10 text-center">
+                <h1 className="text-2xl font-bold mb-4">Application Failed to Start</h1>
+                <p className="mb-4">We encountered an error while initializing the database.</p>
+                <pre className="bg-white p-4 rounded border border-red-200 text-left overflow-auto max-w-full">
+                    {error}
+                </pre>
+            </div>
+        );
     }
 
-    const root = ReactDOM.createRoot(rootElement);
+    if (!isReady) {
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-white dark:bg-[#1D2530]">
+                <div className="animate-pulse flex flex-col items-center">
+                    <div className="h-12 w-12 rounded-full border-4 border-gray-200 border-t-blue-500 animate-spin mb-4"></div>
+                    <span className="text-gray-500">Loading Tada...</span>
+                </div>
+            </div>
+        );
+    }
 
-    root.render(
-        <React.StrictMode>
-            <JotaiProvider>
-                <Tooltip.Provider delayDuration={200}>
-                    <HashRouter>
-                        <App />
-                    </HashRouter>
-                </Tooltip.Provider>
-            </JotaiProvider>
-        </React.StrictMode>
+    return (
+        <JotaiProvider>
+            <Tooltip.Provider delayDuration={200}>
+                <HashRouter>
+                    <App />
+                </HashRouter>
+            </Tooltip.Provider>
+        </JotaiProvider>
     );
 };
 
-// Execute the app initialization and catch any critical errors.
-initializeApp().catch(error => {
-    console.error('Failed to initialize app:', error);
-    const errorMessage = String(error);
-    const errorDetails = error instanceof Error ? error.stack : JSON.stringify(error, null, 2);
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+    throw new Error("Failed to find the root element.");
+}
 
-    // Display a detailed error message in the UI if initialization fails.
-    document.body.innerHTML = `
-        <div style="padding: 20px; color: #d9534f; background: #f2dede; border: 1px solid #ebccd1; white-space: pre-wrap; font-family: monospace;">
-            <h1>Application Failed to Start</h1>
-            <p>${errorMessage}</p>
-            <hr />
-            <h2>Error Details:</h2>
-            <pre>${errorDetails}</pre>
-        </div>
-    `;
-});
+const root = ReactDOM.createRoot(rootElement);
+root.render(<React.StrictMode><DesktopAppLauncher /></React.StrictMode>);

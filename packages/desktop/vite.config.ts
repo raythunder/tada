@@ -7,6 +7,7 @@ import autoprefixer from 'autoprefixer';
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
+    base: './',
     plugins: [react()],
 
     css: {

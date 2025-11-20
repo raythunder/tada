@@ -21,7 +21,8 @@
             "sql:allow-load",
             "sql:allow-execute",
             "sql:allow-select",
-            "sql:default"
+            "sql:default",
+            "core:default"
           ]
         }
       ]
@@ -35,7 +36,8 @@
         "minWidth": 800,
         "minHeight": 600,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "devtools": true
       }
     ]
   },
