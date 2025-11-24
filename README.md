@@ -20,7 +20,20 @@
 
 </div>
 
----
+> [!IMPORTANT]
+> **⚠️ macOS Users: Read Before Installing**
+>
+> Since this is an open-source project without a paid Apple Developer ID ($99/year), macOS Gatekeeper may falsely report that **"Tada.app is damaged and can't be opened. You should move it to the Trash."**
+>
+> This is not a bug. To bypass this security check, please open your **Terminal** and run the following command after moving the app to your Applications folder:
+>
+> ```bash
+> sudo xattr -r -d com.apple.quarantine /Applications/Tada.app
+> ```
+>
+> *(You may need to enter your password. Characters will not show while typing.)*
+
+-----
 
 ## 📖 Overview
 
@@ -28,37 +41,44 @@
 
 Engineered as a modern Monorepo, Tada leverages **React** and **Jotai** for a fluid, reactive user experience, while **Tauri** provides a secure, performant native runtime. At its heart lies **Moondown**, a bespoke, WYSIWYG Markdown editor powered by CodeMirror 6, featuring AI-driven text continuation ("Ghost Writer") and slash commands.
 
----
+-----
 
 ## ✨ Key Features
 
 ### 🔒 Privacy & Data Sovereignty
+
 Tada is designed for the privacy-conscious user.
-*   **Zero Data Collection:** No tracking, no analytics, no remote servers for data storage.
-*   **Adaptive Persistence Layer:**
-    *   **Web:** Utilizes `LocalStorage` and `IndexedDB` for instant, browser-based persistence.
-    *   **Desktop:** Leverages `SQLite` via Tauri for robust, file-system based storage capable of handling massive datasets.
-*   **BYOK (Bring Your Own Key):** AI features connect directly from your device to the provider (OpenAI, Anthropic, etc.). Your API keys never leave your machine.
+
+* **Zero Data Collection:** No tracking, no analytics, no remote servers for data storage.
+* **Adaptive Persistence Layer:**
+    * **Web:** Utilizes `LocalStorage` and `IndexedDB` for instant, browser-based persistence.
+    * **Desktop:** Leverages `SQLite` via Tauri for robust, file-system based storage capable of handling massive datasets.
+* **BYOK (Bring Your Own Key):** AI features connect directly from your device to the provider (OpenAI, Anthropic, etc.). Your API keys never leave your machine.
 
 ### 🧠 Intelligent Workflows
+
 Tada integrates Large Language Models (LLMs) deeply into the workflow, not just as a chatbot, but as a productivity engine.
-*   **Natural Language Capture:** Describe a complex project in plain English. Tada parses it into a structured task with a title, description, due date, priority, tags, and subtasks automatically.
-*   **Ghost Writer:** An AI co-pilot embedded within the task description editor. It understands the context of your task and suggests content, outlines, or next steps in real-time.
-*   **Smart Summaries:** Select any date range or list to generate comprehensive Markdown reports of your accomplishments, pending items, and future blockers.
+
+* **Natural Language Capture:** Describe a complex project in plain English. Tada parses it into a structured task with a title, description, due date, priority, tags, and subtasks automatically.
+* **Ghost Writer:** An AI co-pilot embedded within the task description editor. It understands the context of your task and suggests content, outlines, or next steps in real-time.
+* **Smart Summaries:** Select any date range or list to generate comprehensive Markdown reports of your accomplishments, pending items, and future blockers.
 
 ### 📝 The Moondown Editor
+
 A powerful, custom-built Markdown editing experience.
-*   **Hybrid Editing:** Writes like a document, saves as Markdown.
-*   **Rich Features:** Support for GFM (GitHub Flavored Markdown), tables, images (drag & drop), checklists, and code blocks with syntax highlighting.
-*   **Slash Commands:** Type `/` to instantly access formatting tools, insert tables, or trigger AI generation.
+
+* **Hybrid Editing:** Writes like a document, saves as Markdown.
+* **Rich Features:** Support for GFM (GitHub Flavored Markdown), tables, images (drag & drop), checklists, and code blocks with syntax highlighting.
+* **Slash Commands:** Type `/` to instantly access formatting tools, insert tables, or trigger AI generation.
 
 ### 🎨 Refined UI/UX
-*   **Calendar View:** A fully interactive drag-and-drop calendar for rescheduling tasks.
-*   **Kanban & Lists:** Flexible organization with custom lists and tags.
-*   **Beautiful Theming:** Native Dark/Light mode support with configurable accent colors (Coral, Ocean, Forest, etc.).
-*   **Fluid Animations:** Powered by `framer-motion` for a tactile, responsive feel.
 
----
+* **Calendar View:** A fully interactive drag-and-drop calendar for rescheduling tasks.
+* **Kanban & Lists:** Flexible organization with custom lists and tags.
+* **Beautiful Theming:** Native Dark/Light mode support with configurable accent colors (Coral, Ocean, Forest, etc.).
+* **Fluid Animations:** Powered by `framer-motion` for a tactile, responsive feel.
+
+-----
 
 ## 🏗 Architecture
 
@@ -78,11 +98,11 @@ graph TD
     Desktop -- Implements --> SqliteStorageService
 ```
 
-*   **`packages/core`**: The nucleus of the application. Contains reusable UI components (Radix UI + Tailwind), Jotai state atoms, React hooks, i18n locales, and the `Moondown` editor logic.
-*   **`packages/web`**: A lightweight wrapper that injects the `LocalStorageService`. Optimized for instant loading in browsers.
-*   **`packages/desktop`**: A Rust-backed wrapper using Tauri. Injects the `SqliteStorageService` for ACID-compliant database storage and system tray integration.
+* **`packages/core`**: The nucleus of the application. Contains reusable UI components (Radix UI + Tailwind), Jotai state atoms, React hooks, i18n locales, and the `Moondown` editor logic.
+* **`packages/web`**: A lightweight wrapper that injects the `LocalStorageService`. Optimized for instant loading in browsers.
+* **`packages/desktop`**: A Rust-backed wrapper using Tauri. Injects the `SqliteStorageService` for ACID-compliant database storage and system tray integration.
 
----
+-----
 
 ## 🛠 Technology Stack
 
@@ -97,24 +117,27 @@ graph TD
 | **AI & Networking** | Native Fetch Streaming, AbortController signals |
 | **Internationalization** | i18next, react-i18next |
 
----
+-----
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-*   **Node.js**: v18.0.0 or higher.
-*   **pnpm**: v9.0.0+ (Recommended package manager).
-*   **Rust & Cargo**: Required only for building the desktop application.
+
+* **Node.js**: v18.0.0 or higher.
+* **pnpm**: v9.0.0+ (Recommended package manager).
+* **Rust & Cargo**: Required only for building the desktop application.
 
 ### Installation
 
 1.  **Clone the repository:**
+
     ```bash
     git clone https://github.com/your-org/tada.git
     cd tada
     ```
 
 2.  **Install dependencies:**
+
     ```bash
     pnpm install
     ```
@@ -123,6 +146,7 @@ graph TD
 
 **Web Environment:**
 Run the standalone web application in your browser.
+
 ```bash
 pnpm dev
 # Application accessible at http://localhost:5173/tada/
@@ -130,11 +154,12 @@ pnpm dev
 
 **Desktop Environment:**
 Run the application in a native window using Tauri.
+
 ```bash
 pnpm dev:desktop
 ```
 
----
+-----
 
 ## 🔌 AI Configuration
 
@@ -143,28 +168,30 @@ To unlock Tada's full potential, configure an AI provider.
 1.  Navigate to **Settings** > **AI Settings**.
 2.  **Cloud Providers:** Select OpenAI, Anthropic, or Google. Enter your API key.
 3.  **Local LLMs (Ollama):**
-    *   Ensure Ollama is running (`ollama serve`).
-    *   Select **Ollama** as the provider.
-    *   Set Base URL to `http://localhost:11434`.
-    *   Model fetching is automatic.
+    * Ensure Ollama is running (`ollama serve`).
+    * Select **Ollama** as the provider.
+    * Set Base URL to `http://localhost:11434`.
+    * Model fetching is automatic.
 
----
+-----
 
 ## 📦 Building for Production
 
 **Web Build:**
 Generates a static site in `packages/web/dist` suitable for Netlify, Vercel, or GitHub Pages.
+
 ```bash
 pnpm build
 ```
 
 **Desktop Build:**
 Generates native binaries (`.dmg`, `.exe`, `.deb`) via Tauri.
+
 ```bash
 pnpm build:desktop
 ```
 
----
+-----
 
 ## 🤝 Contributing
 
@@ -176,8 +203,8 @@ We welcome contributions from the community. Whether it's a bug fix, a new featu
 4.  Push to the branch.
 5.  Open a Pull Request.
 
----
+-----
 
 ## 📄 License
 
-Distributed under the **Apache 2.0 License**. See [LICENSE](LICENSE) for more information.
+Distributed under the **Apache 2.0 License**. See [LICENSE](./LICENSE) for more information.
