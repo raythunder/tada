@@ -6,6 +6,7 @@ import { App } from '@tada/core';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import storageManager from '@tada/core/services/storageManager';
 import { SqliteStorageService } from './services/sqliteStorageService';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import '@tada/core/locales';
 import '@tada/core/styles/index.css';
@@ -31,6 +32,34 @@ const DesktopAppLauncher = () => {
             }
         };
         init();
+    }, []);
+
+    useEffect(() => {
+        const appWindow = getCurrentWindow();
+        let unlisten: () => void;
+
+        const setupListener = async () => {
+            unlisten = await appWindow.onCloseRequested(async (event) => {
+                // Prevent immediate closing
+                event.preventDefault();
+                console.log("Window close requested. Flushing storage...");
+                try {
+                    await storageManager.flush();
+                    console.log("Storage flushed. Closing window.");
+                    // Explicitly destroy the window after flush
+                    await appWindow.destroy();
+                } catch (e) {
+                    console.error("Failed to flush on exit:", e);
+                    await appWindow.destroy();
+                }
+            });
+        };
+
+        setupListener();
+
+        return () => {
+            if (unlisten) unlisten();
+        };
     }, []);
 
     if (error) {

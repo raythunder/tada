@@ -6,7 +6,6 @@ import {
     preferencesSettingsLoadingAtom,
     selectedTaskAtom,
     selectedTaskIdAtom,
-    tasksAtom,
     userListsAtom,
 } from '@/store/jotai.ts';
 import Icon from '@/components/ui/Icon.tsx';
@@ -36,11 +35,11 @@ import {arrayMove, SortableContext, verticalListSortingStrategy} from "@dnd-kit/
 import {AnimatePresence, motion} from "framer-motion";
 import SubtaskItemDetail from "./SubtaskItemDetail";
 import {useTranslation} from "react-i18next";
-import storageManager from '@/services/storageManager.ts';
 import CodeMirrorEditor, {CodeMirrorEditorRef} from "@/components/ui/Editor.tsx";
 import AddTagsPopoverContent from "@/components/ui/TagInput.tsx";
 import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
 import ConfirmDeleteModalRadix from "@/components/ui/ConfirmDeleteModal.tsx";
+import { useTaskOperations } from '@/hooks/useTaskOperations';
 
 interface TagPillProps {
     tag: string;
@@ -48,9 +47,6 @@ interface TagPillProps {
     disabled?: boolean;
 }
 
-/**
- * A small pill component to display a single tag.
- */
 const TagPill: React.FC<TagPillProps> = React.memo(({tag, onRemove, disabled}) => (
     <span
         className={twMerge(
@@ -83,9 +79,6 @@ interface RadixMenuItemProps extends DropdownMenu.DropdownMenuItemProps {
     isDanger?: boolean;
 }
 
-/**
- * A styled wrapper around Radix UI's DropdownMenu.Item for consistent menu item appearance.
- */
 const RadixMenuItem = React.forwardRef<
     React.ElementRef<typeof DropdownMenu.Item>,
     RadixMenuItemProps
@@ -121,20 +114,16 @@ const RadixMenuItem = React.forwardRef<
 ));
 RadixMenuItem.displayName = 'RadixMenuItem';
 
-/**
- * A full-panel component that displays the details of a selected task.
- * It allows for editing all task properties, managing subtasks, and performing actions like deletion or duplication.
- */
 const TaskDetail: React.FC = () => {
     const {t} = useTranslation();
     const selectedTask = useAtomValue(selectedTaskAtom);
-    const setTasks = useSetAtom(tasksAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const allUserLists = useAtomValue(userListsAtom);
     const preferencesData = useAtomValue(preferencesSettingsAtom);
     const isLoadingPreferences = useAtomValue(preferencesSettingsLoadingAtom);
     const preferences = useMemo(() => preferencesData ?? defaultPreferencesSettingsForApi(), [preferencesData]);
 
+    const { updateTask, deleteTask, createTask, createSubtask, updateSubtask, deleteSubtask } = useTaskOperations();
 
     const [localTitle, setLocalTitle] = useState(selectedTask?.title || '');
     const [localContent, setLocalContent] = useState(selectedTask?.content || '');
@@ -143,7 +132,6 @@ const TaskDetail: React.FC = () => {
         return date && isValid(date) ? date : undefined;
     });
 
-    // Refs to hold the latest state values for use in callbacks that might otherwise capture stale state.
     const localTitleRef = useRef(localTitle);
     const localContentRef = useRef(localContent);
     const localDueDateRef = useRef(localDueDate);
@@ -178,11 +166,6 @@ const TaskDetail: React.FC = () => {
     const hasUnsavedChangesRef = useRef(false);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    /**
-     * Saves any pending local changes (title, content, due date) to the global state.
-     * This function uses refs to access the latest state, ensuring that debounced calls
-     * or calls from unmount effects have the most current data.
-     */
     const savePendingChanges = useCallback(() => {
         if (!selectedTask || !hasUnsavedChangesRef.current) return;
 
@@ -197,34 +180,19 @@ const TaskDetail: React.FC = () => {
 
         const processedDueDateTimestamp = currentDueDate && isValid(currentDueDate) ? currentDueDate.getTime() : null;
 
-        setTasks(prevTasksValue => {
-            const prevTasks = prevTasksValue ?? [];
-            const originalTaskState = prevTasks.find(t => t.id === selectedTask.id);
-            if (!originalTaskState) return prevTasks;
+        const changesToSave: Partial<Task> = {};
+        if (processedTitle !== selectedTask.title) changesToSave.title = processedTitle || t('common.untitledTask');
+        if (currentContent !== (selectedTask.content || '')) changesToSave.content = currentContent;
+        const originalDueTime = selectedTask.dueDate ?? null;
+        if (processedDueDateTimestamp !== originalDueTime) changesToSave.dueDate = processedDueDateTimestamp;
 
-            const changesToSave: Partial<Task> = {};
-            if (processedTitle !== originalTaskState.title) changesToSave.title = processedTitle || t('common.untitledTask');
-            if (currentContent !== (originalTaskState.content || '')) changesToSave.content = currentContent;
-
-            const originalDueTime = originalTaskState.dueDate ?? null;
-            if (processedDueDateTimestamp !== originalDueTime) changesToSave.dueDate = processedDueDateTimestamp;
-
-            if (Object.keys(changesToSave).length > 0) {
-                return prevTasks.map(t => (t.id === selectedTask.id ? {
-                    ...t, ...changesToSave,
-                    updatedAt: Date.now()
-                } : t));
-            }
-            return prevTasks;
-        });
+        if (Object.keys(changesToSave).length > 0) {
+            updateTask(selectedTask.id, changesToSave);
+        }
 
         hasUnsavedChangesRef.current = false;
-    }, [selectedTask, setTasks, t]);
+    }, [selectedTask, updateTask, t]);
 
-
-    /**
-     * Effect to ensure pending changes are saved when the component unmounts.
-     */
     useEffect(() => {
         return () => {
             if (hasUnsavedChangesRef.current) {
@@ -237,6 +205,19 @@ const TaskDetail: React.FC = () => {
     }, [savePendingChanges]);
 
     useEffect(() => {
+        if (selectedTask) {
+            if (document.activeElement !== titleInputRef.current) {
+                setLocalTitle(selectedTask.title);
+            }
+            if (document.activeElement !== editorRef.current?.getView()?.contentDOM) {
+                // CodeMirror handles its own updates usually
+            }
+            const date = safeParseDate(selectedTask.dueDate);
+            setLocalDueDate(date && isValid(date) ? date : undefined);
+        }
+    }, [selectedTask]);
+
+    useEffect(() => {
         if (selectedTask && selectedTask.title === '' && titleInputRef.current) {
             const timer = setTimeout(() => {
                 titleInputRef.current?.focus();
@@ -246,7 +227,6 @@ const TaskDetail: React.FC = () => {
         }
     }, [selectedTask]);
 
-
     useEffect(() => {
         if (newSubtaskDueDate && newSubtaskDateDisplayRef.current) {
             setSubtaskDateTextWidth(newSubtaskDateDisplayRef.current.offsetWidth);
@@ -255,9 +235,7 @@ const TaskDetail: React.FC = () => {
         }
     }, [newSubtaskDueDate, isNewSubtaskDatePickerOpen]);
 
-    /**
-     * Triggers a debounced save operation. Marks changes as pending and sets a timeout.
-     */
+    // Debounce input for title and content to avoid spamming storage on every keystroke
     const triggerSave = useCallback(() => {
         hasUnsavedChangesRef.current = true;
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -266,12 +244,9 @@ const TaskDetail: React.FC = () => {
         }, 700);
     }, [savePendingChanges]);
 
-    /**
-     * Updates a specific property of the current task and saves it immediately.
-     */
-    const updateTask = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'subtasks'>>) => {
+    // Wrapper for immediate updates (checkboxes, dates, etc.)
+    const updateTaskImmediately = useCallback((updates: Partial<Omit<Task, 'groupCategory' | 'completedAt' | 'subtasks'>>) => {
         if (!selectedTask) return;
-
         if (hasUnsavedChangesRef.current) {
             savePendingChanges();
         }
@@ -279,20 +254,9 @@ const TaskDetail: React.FC = () => {
             clearTimeout(saveTimeoutRef.current);
             saveTimeoutRef.current = null;
         }
+        updateTask(selectedTask.id, updates);
+    }, [selectedTask, updateTask, savePendingChanges]);
 
-        setTasks(prevTasksValue => {
-            const prevTasks = prevTasksValue ?? [];
-            return prevTasks.map(t => (t.id === selectedTask.id ? {
-                ...t, ...updates,
-                updatedAt: Date.now()
-            } : t));
-        });
-    }, [selectedTask, setTasks, savePendingChanges]);
-
-
-    /**
-     * Handles closing the task detail panel, ensuring any pending changes are saved first.
-     */
     const handleClose = useCallback(() => {
         if (hasUnsavedChangesRef.current) {
             savePendingChanges();
@@ -318,15 +282,14 @@ const TaskDetail: React.FC = () => {
 
     const handleFooterDatePickerSelect = useCallback((dateWithTime: Date | undefined) => {
         setLocalDueDate(dateWithTime);
-        updateTask({dueDate: dateWithTime ? dateWithTime.getTime() : null});
+        updateTaskImmediately({dueDate: dateWithTime ? dateWithTime.getTime() : null});
         setIsFooterDatePickerOpen(false);
         setIsDateTooltipOpen(false);
-    }, [updateTask]);
+    }, [updateTaskImmediately]);
 
     const handleTagsApply = useCallback((newTags: string[]) => {
-        updateTask({tags: newTags});
-    }, [updateTask]);
-
+        updateTaskImmediately({tags: newTags});
+    }, [updateTaskImmediately]);
 
     const closeFooterDatePickerPopover = useCallback(() => {
         setIsFooterDatePickerOpen(false);
@@ -348,7 +311,6 @@ const TaskDetail: React.FC = () => {
         }
     }, []);
 
-
     const closeHeaderMenuDatePickerPopover = useCallback(() => {
         handleHeaderMenuPopoverOpenChange(false, 'date');
     }, [handleHeaderMenuPopoverOpenChange]);
@@ -357,49 +319,48 @@ const TaskDetail: React.FC = () => {
         handleHeaderMenuPopoverOpenChange(false, 'tags');
     }, [handleHeaderMenuPopoverOpenChange]);
 
-
     const handleListChange = useCallback((newListName: string) => {
         const listObject = allUserLists?.find(l => l.name === newListName);
         if (listObject) {
-            updateTask({listName: newListName, listId: listObject.id});
+            updateTaskImmediately({listName: newListName, listId: listObject.id});
         }
         setIsMoreActionsOpen(false);
-    }, [updateTask, allUserLists]);
+    }, [updateTaskImmediately, allUserLists]);
 
     const handlePriorityChange = useCallback((newPriority: number | null) => {
-        updateTask({priority: newPriority});
-    }, [updateTask]);
+        updateTaskImmediately({priority: newPriority});
+    }, [updateTaskImmediately]);
 
     const handleProgressChange = useCallback((newPercentage: number | null) => {
-        updateTask({
+        updateTaskImmediately({
             completePercentage: newPercentage,
             completed: newPercentage === 100,
         });
-    }, [updateTask]);
+    }, [updateTaskImmediately]);
 
     const cycleCompletionPercentage = useCallback(() => {
         if (!selectedTask || selectedTask.listName === 'Trash') return;
         const isCurrentlyCompleted = selectedTask.completed || (selectedTask.completePercentage ?? 0) === 100;
         const nextCompleted = !isCurrentlyCompleted;
         const nextPercentage = nextCompleted ? 100 : null;
-        updateTask({
+        updateTaskImmediately({
             completed: nextCompleted,
             completePercentage: nextPercentage,
         });
         if (nextCompleted) {
             setSelectedTaskId(null);
         }
-    }, [selectedTask, updateTask, setSelectedTaskId]);
-
+    }, [selectedTask, updateTaskImmediately, setSelectedTaskId]);
 
     const closeDeleteConfirm = useCallback(() => setIsDeleteDialogOpen(false), []);
 
     const confirmDelete = useCallback(() => {
         if (!selectedTask) return;
-        updateTask({listName: 'Trash', completePercentage: null});
+        // Soft delete (move to trash)
+        updateTaskImmediately({listName: 'Trash', completePercentage: null});
         setSelectedTaskId(null);
         closeDeleteConfirm();
-    }, [selectedTask, updateTask, setSelectedTaskId, closeDeleteConfirm]);
+    }, [selectedTask, updateTaskImmediately, setSelectedTaskId, closeDeleteConfirm]);
 
     const handleDeleteTask = useCallback(() => {
         if (isLoadingPreferences) return;
@@ -416,16 +377,16 @@ const TaskDetail: React.FC = () => {
 
     const confirmPermanentDelete = useCallback(() => {
         if (!selectedTask) return;
-        storageManager.get().deleteTask(selectedTask.id);
-        setTasks(prev => (prev ?? []).filter(t => t.id !== selectedTask.id));
+        // Hard delete
+        deleteTask(selectedTask.id);
         setSelectedTaskId(null);
         setIsPermanentDeleteDialogOpen(false);
-    }, [selectedTask, setTasks, setSelectedTaskId]);
+    }, [selectedTask, deleteTask, setSelectedTaskId]);
 
     const handleRestore = useCallback(() => {
         if (!selectedTask || selectedTask.listName !== 'Trash') return;
-        updateTask({listName: 'Inbox'});
-    }, [selectedTask, updateTask]);
+        updateTaskImmediately({listName: 'Inbox'});
+    }, [selectedTask, updateTaskImmediately]);
 
     const handleDuplicateTask = useCallback(() => {
         if (!selectedTask) return;
@@ -433,50 +394,41 @@ const TaskDetail: React.FC = () => {
         savePendingChanges();
 
         const now = Date.now();
-        const localId = `task-${now}-${Math.random().toString(16).slice(2)}`;
-
-        const duplicatedSubtasks = (selectedTask.subtasks || []).map(sub => ({
-            ...sub,
-            id: `subtask-${now}-${Math.random().toString(16).slice(2)}`,
-            parentId: localId,
-            createdAt: now,
-            updatedAt: now,
-            completedAt: sub.completed ? now : null,
-        }));
-
         // Use refs to get the absolute latest values for duplication
         const newTitle = `${localTitleRef.current || t('common.untitledTask')} (Copy)`;
         const newContent = localContentRef.current;
         const newDueDate = localDueDateRef.current;
 
-        const newTaskData: Omit<Task, 'groupCategory'> & { groupCategory?: TaskGroupCategory } = {
-            ...selectedTask,
-            id: localId,
+        const newTaskData = {
             title: newTitle,
             content: newContent,
             dueDate: newDueDate ? newDueDate.getTime() : null,
+            listName: selectedTask.listName,
+            listId: selectedTask.listId,
+            priority: selectedTask.priority,
+            tags: selectedTask.tags,
             order: (selectedTask.order ?? 0) + 0.01,
-            createdAt: now,
-            updatedAt: now,
             completed: false,
             completedAt: null,
             completePercentage: null,
-            subtasks: duplicatedSubtasks,
         };
-        delete newTaskData.groupCategory;
 
-        setTasks(prevValue => {
-            const prev = prevValue ?? [];
-            const index = prev.findIndex(t => t.id === selectedTask.id);
-            const newTasks = [...prev];
-            newTasks.splice(index !== -1 ? index + 1 : prev.length, 0, newTaskData as Task);
-            return newTasks;
-        });
+        const createdTask = createTask(newTaskData);
 
-        setSelectedTaskId(localId);
+        // Duplicate subtasks
+        if (selectedTask.subtasks) {
+            selectedTask.subtasks.forEach(sub => {
+                createSubtask(createdTask.id, {
+                    title: sub.title,
+                    order: sub.order,
+                    dueDate: sub.dueDate || null
+                });
+            });
+        }
+
+        setSelectedTaskId(createdTask.id);
         setIsMoreActionsOpen(false);
-    }, [selectedTask, setTasks, setSelectedTaskId, t, savePendingChanges]);
-
+    }, [selectedTask, createTask, createSubtask, setSelectedTaskId, t, savePendingChanges]);
 
     const handleTitleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -498,74 +450,51 @@ const TaskDetail: React.FC = () => {
 
     const handleAddSubtask = useCallback(() => {
         if (!selectedTask || !newSubtaskTitle.trim() || isInteractiveDisabled) return;
-        const now = Date.now();
-        const newSub: Subtask = {
-            id: `subtask-${now}-${Math.random().toString(16).slice(2)}`,
-            parentId: selectedTask.id,
+
+        const maxOrder = selectedTask.subtasks?.reduce((max, s) => Math.max(max, s.order), 0) || 0;
+        createSubtask(selectedTask.id, {
             title: newSubtaskTitle.trim(),
-            completed: false,
-            completedAt: null,
-            order: (selectedTask.subtasks?.reduce((max, s) => Math.max(max, s.order), 0) || 0) + 1000,
-            createdAt: now,
-            updatedAt: now,
-            dueDate: newSubtaskDueDate ? newSubtaskDueDate.getTime() : null,
-        };
-        setTasks(prevTasksValue => {
-            const prevTasks = prevTasksValue ?? [];
-            return prevTasks.map(t => t.id === selectedTask.id ? {
-                ...t,
-                subtasks: [...(t.subtasks || []), newSub].sort((a, b) => a.order - b.order)
-            } : t)
+            order: maxOrder + 1000,
+            dueDate: newSubtaskDueDate ? newSubtaskDueDate.getTime() : null
         });
+
         setNewSubtaskTitle('');
         setNewSubtaskDueDate(undefined);
         newSubtaskInputRef.current?.focus();
-    }, [selectedTask, newSubtaskTitle, setTasks, isInteractiveDisabled, newSubtaskDueDate]);
+    }, [selectedTask, newSubtaskTitle, createSubtask, isInteractiveDisabled, newSubtaskDueDate]);
 
     const handleUpdateSubtask = useCallback((subtaskId: string, updates: Partial<Omit<Subtask, 'id' | 'parentId' | 'createdAt'>>) => {
         if (!selectedTask) return;
-        setTasks(prevTasksValue => {
-            const prevTasks = prevTasksValue ?? [];
-            return prevTasks.map(t => t.id === selectedTask.id ? {
-                ...t,
-                subtasks: (t.subtasks || []).map(sub => sub.id === subtaskId ? {
-                    ...sub, ...updates,
-                    updatedAt: Date.now()
-                } : sub)
-            } : t)
-        });
-    }, [selectedTask, setTasks]);
+        updateSubtask(selectedTask.id, subtaskId, updates);
+    }, [selectedTask, updateSubtask]);
 
     const handleDeleteSubtask = useCallback((subtaskId: string) => {
         if (!selectedTask) return;
-        setTasks(prevTasksValue => {
-            const prevTasks = prevTasksValue ?? [];
-            return prevTasks.map(t => t.id === selectedTask.id ? {
-                ...t,
-                subtasks: (t.subtasks || []).filter(sub => sub.id !== subtaskId)
-            } : t)
-        });
-    }, [selectedTask, setTasks]);
+        deleteSubtask(selectedTask.id, subtaskId);
+    }, [selectedTask, deleteSubtask]);
 
     const sensors = useSensors(useSensor(PointerSensor, {activationConstraint: {distance: 3}}), useSensor(KeyboardSensor, {}));
     const handleSubtaskDragStart = (event: DragStartEvent) => {
         if (event.active.data.current?.type === 'subtask-item-detail') setDraggingSubtaskId(event.active.id.toString().replace('subtask-detail-', ''));
     };
+
     const handleSubtaskDragEnd = (event: DragEndEvent) => {
         setDraggingSubtaskId(null);
         const {active, over} = event;
         if (!selectedTask || !active || !over || active.id === over.id) return;
         if (active.data.current?.type !== 'subtask-item-detail' || over.data.current?.type !== 'subtask-item-detail') return;
+
         const activeId = active.id.toString().replace('subtask-detail-', '');
         const overId = over.id.toString().replace('subtask-detail-', '');
+
         const oldIndex = selectedTask.subtasks?.findIndex(s => s.id === activeId) ?? -1;
         const newIndex = selectedTask.subtasks?.findIndex(s => s.id === overId) ?? -1;
+
         if (oldIndex !== -1 && newIndex !== -1 && selectedTask.subtasks) {
             const reorderedSubtasksRaw = arrayMove(selectedTask.subtasks, oldIndex, newIndex);
-            const finalSubtasks = reorderedSubtasksRaw.map((sub, index) => ({...sub, order: (index + 1) * 1000}));
-            setTasks(prevTasksValue => {
-                const prevTasks = prevTasksValue ?? [];
-                return prevTasks.map(t => t.id === selectedTask.id ? {...t, subtasks: finalSubtasks} : t)
+            // Update order for all affected subtasks
+            reorderedSubtasksRaw.forEach((sub, index) => {
+                updateSubtask(selectedTask.id, sub.id, { order: (index + 1) * 1000 });
             });
         }
     };
@@ -579,10 +508,7 @@ const TaskDetail: React.FC = () => {
     const mainPanelClass = useMemo(() => twMerge("h-full flex flex-col", "bg-transparent"), []);
     const headerClass = useMemo(() => twMerge("px-4 py-2 h-[56px] flex items-center justify-between flex-shrink-0", "border-b border-grey-light/50 dark:border-neutral-700/50", "bg-white/50 dark:bg-grey-deep/50 backdrop-blur-md transition-colors duration-300"), []);
     const noPriorityBgColor = 'bg-grey-light dark:bg-neutral-600';
-    const popoverContentWrapperClasses = useMemo(() => twMerge(
-        "z-[70] bg-white rounded-base shadow-popover dark:bg-neutral-800 dark:border dark:border-neutral-700",
-        "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"
-    ), []);
+    const popoverContentWrapperClasses = useMemo(() => twMerge("z-[70] bg-white rounded-base shadow-popover dark:bg-neutral-800 dark:border dark:border-neutral-700", "data-[state=open]:animate-popoverShow data-[state=closed]:animate-popoverHide"), []);
     const taskListPriorityMap: Record<number, {
         label: string;
         iconColor: string;
@@ -742,9 +668,7 @@ const TaskDetail: React.FC = () => {
                                         }
                                     }}
                                 >
-                                    <div
-                                        className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">{t('taskDetail.progress')}
-                                    </div>
+                                    <div className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">{t('taskDetail.progress')}</div>
                                     <div className="flex justify-around items-center px-1.5 py-1">
                                         {progressMenuItems.map(item => {
                                             const isSelected = (selectedTask.completePercentage ?? null) === item.value;
@@ -767,12 +691,9 @@ const TaskDetail: React.FC = () => {
                                         })}
                                     </div>
 
-                                    <DropdownMenu.Separator
-                                        className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
+                                    <DropdownMenu.Separator className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
-                                    <div
-                                        className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">{t('common.priority')}
-                                    </div>
+                                    <div className="px-2.5 pt-1.5 pb-0.5 text-[11px] text-grey-medium dark:text-neutral-400 uppercase tracking-wider">{t('common.priority')}</div>
                                     <div className="flex justify-around items-center px-1.5 py-1">
                                         {[1, 2, 3].map(pVal => {
                                             const pData = taskListPriorityMap[pVal];
@@ -811,8 +732,7 @@ const TaskDetail: React.FC = () => {
                                         </button>
                                     </div>
 
-                                    <DropdownMenu.Separator
-                                        className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
+                                    <DropdownMenu.Separator className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
                                     <DropdownMenu.Sub>
                                         <DropdownMenu.SubTrigger
@@ -827,12 +747,9 @@ const TaskDetail: React.FC = () => {
                                                 if (isHeaderMenuTagsPopoverOpen) handleHeaderMenuPopoverOpenChange(false, 'tags');
                                             }}
                                         >
-                                            <Icon name="folder" size={14} strokeWidth={1.5}
-                                                  className="mr-2 opacity-80"/>
+                                            <Icon name="folder" size={14} strokeWidth={1.5} className="mr-2 opacity-80"/>
                                             {t('taskDetail.moveTo')}
-                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={14}
-                                                                                strokeWidth={1.5}
-                                                                                className="opacity-70"/></div>
+                                            <div className="ml-auto pl-5"><Icon name="chevron-right" size={14} strokeWidth={1.5} className="opacity-70"/></div>
                                         </DropdownMenu.SubTrigger>
                                         <DropdownMenu.Portal>
                                             <DropdownMenu.SubContent
@@ -864,8 +781,7 @@ const TaskDetail: React.FC = () => {
                                         </DropdownMenu.Portal>
                                     </DropdownMenu.Sub>
 
-                                    <DropdownMenu.Separator
-                                        className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
+                                    <DropdownMenu.Separator className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
 
                                     <Popover.Root modal={false} open={isHeaderMenuTagsPopoverOpen}
                                                   onOpenChange={(open) => handleHeaderMenuPopoverOpenChange(open, 'tags')}>
@@ -955,15 +871,11 @@ const TaskDetail: React.FC = () => {
                                         </Popover.Portal>
                                     </Popover.Root>
 
-                                    <DropdownMenu.Separator
-                                        className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
-                                    <RadixMenuItem icon="copy-plus"
-                                                   onSelect={handleDuplicateTask}
-                                                   disabled={isTrash}>
+                                    <DropdownMenu.Separator className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
+                                    <RadixMenuItem icon="copy-plus" onSelect={handleDuplicateTask} disabled={isTrash}>
                                         {t('taskDetail.duplicate')}
                                     </RadixMenuItem>
-                                    <DropdownMenu.Separator
-                                        className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
+                                    <DropdownMenu.Separator className="h-px bg-grey-light dark:bg-neutral-700 my-1"/>
                                     {isTrash ? (
                                         <>
                                             <RadixMenuItem icon="arrow-left"
@@ -995,8 +907,7 @@ const TaskDetail: React.FC = () => {
                     </div>
                 </div>
 
-                <div
-                    className="flex-1 overflow-y-auto styled-scrollbar-thin flex flex-col bg-transparent">
+                <div className="flex-1 overflow-y-auto styled-scrollbar-thin flex flex-col bg-transparent">
                     <div className={editorContainerClass}>
                         <CodeMirrorEditor
                             key={selectedTask.id}
@@ -1010,26 +921,16 @@ const TaskDetail: React.FC = () => {
                             taskTitle={localTitle}
                         />
                     </div>
-                    <div
-                        className={twMerge(
-                            "px-5",
-                            "flex-shrink-0 flex flex-col bg-transparent"
-                        )}
-                    >
+                    <div className={twMerge("px-5", "flex-shrink-0 flex flex-col bg-transparent")}>
                         <div className="h-px bg-grey-light/70 dark:bg-neutral-700/40 mt-2 mb-3"></div>
 
-                        <div className={twMerge(
-                            "pb-3",
-                            "flex flex-col",
-                            sortedSubtasks.length > 0 ? "max-h-[45vh]" : ""
-                        )}>
+                        <div className={twMerge("pb-3", "flex flex-col", sortedSubtasks.length > 0 ? "max-h-[45vh]" : "")}>
                             {sortedSubtasks.length > 0 && (
                                 <>
                                     <div className="flex justify-between items-center mb-3 flex-shrink-0">
                                         <h3 className="text-sm font-semibold text-grey-dark dark:text-neutral-300">
                                             {t('taskDetail.subtasks')}
-                                            <span
-                                                className="ml-2 font-normal text-xs text-grey-medium dark:text-neutral-400">
+                                            <span className="ml-2 font-normal text-xs text-grey-medium dark:text-neutral-400">
                                                 {t('taskDetail.subtasksCompleted', {
                                                     completed: sortedSubtasks.filter(s => s.completed).length,
                                                     total: sortedSubtasks.length
@@ -1037,8 +938,7 @@ const TaskDetail: React.FC = () => {
                                             </span>
                                         </h3>
                                     </div>
-                                    <div
-                                        className="flex-1 overflow-y-auto styled-scrollbar-thin -mx-2 pr-2 mb-3 min-h-[80px]">
+                                    <div className="flex-1 overflow-y-auto styled-scrollbar-thin -mx-2 pr-2 mb-3 min-h-[80px]">
                                         <DndContext sensors={sensors} collisionDetection={closestCenter}
                                                     onDragStart={handleSubtaskDragStart}
                                                     onDragEnd={handleSubtaskDragEnd}
@@ -1049,7 +949,7 @@ const TaskDetail: React.FC = () => {
                                                     {sortedSubtasks.map(subtask => (
                                                         <SubtaskItemDetail
                                                             key={subtask.id} subtask={subtask}
-                                                            onUpdate={handleUpdateSubtask}
+                                                            onUpdate={(id, updates) => handleUpdateSubtask(id, updates)}
                                                             onDelete={handleDeleteSubtask}
                                                             isTaskCompletedOrTrashed={isInteractiveDisabled}
                                                         />
@@ -1060,10 +960,8 @@ const TaskDetail: React.FC = () => {
                                                 {draggingSubtaskId && selectedTask.subtasks?.find(s => s.id === draggingSubtaskId) ? (
                                                     <SubtaskItemDetail
                                                         subtask={selectedTask.subtasks.find(s => s.id === draggingSubtaskId)!}
-                                                        onUpdate={() => {
-                                                        }}
-                                                        onDelete={() => {
-                                                        }}
+                                                        onUpdate={() => {}}
+                                                        onDelete={() => {}}
                                                         isTaskCompletedOrTrashed={isInteractiveDisabled}
                                                         isDraggingOverlay={true}
                                                     />
@@ -1075,18 +973,9 @@ const TaskDetail: React.FC = () => {
                             )}
 
                             {!isInteractiveDisabled && (
-                                <div
-                                    className={twMerge(
-                                        "flex items-center flex-shrink-0",
-                                        "pt-1.5 pb-1.5",
-                                        sortedSubtasks.length > 0
-                                            ? "border-t border-grey-light/50 dark:border-neutral-700/30 mt-auto"
-                                            : "mt-0"
-                                    )}>
-                                    <div
-                                        className="group relative flex items-center flex-1 h-8 bg-white/50 dark:bg-neutral-800/50 rounded-base transition-all duration-150 ease-in-out border border-transparent dark:border-transparent backdrop-blur-sm">
-                                        <div
-                                            className="absolute left-0.5 top-1/2 -translate-y-1/2 flex items-center h-full">
+                                <div className={twMerge("flex items-center flex-shrink-0", "pt-1.5 pb-1.5", sortedSubtasks.length > 0 ? "border-t border-grey-light/50 dark:border-neutral-700/30 mt-auto" : "mt-0")}>
+                                    <div className="group relative flex items-center flex-1 h-8 bg-white/50 dark:bg-neutral-800/50 rounded-base transition-all duration-150 ease-in-out border border-transparent dark:border-transparent backdrop-blur-sm">
+                                        <div className="absolute left-0.5 top-1/2 -translate-y-1/2 flex items-center h-full">
                                             <Popover.Root open={isNewSubtaskDatePickerOpen}
                                                           onOpenChange={setIsNewSubtaskDatePickerOpen}>
                                                 <Popover.Trigger asChild>

@@ -56,6 +56,7 @@ import {analyzeTaskInputWithAI} from '@/services/aiService';
 import {useTranslation} from "react-i18next";
 import CustomDatePickerContent from "@/components/ui/DatePicker.tsx";
 import {AI_PROVIDERS} from "@/config/aiProviders.ts";
+import { useTaskOperations } from '@/hooks/useTaskOperations';
 
 /**
  * A header component for a group of tasks (e.g., "Overdue", "Today").
@@ -127,7 +128,6 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
     const allTasksData = useAtomValue(tasksAtom);
     const allTasks = useMemo(() => allTasksData ?? [], [allTasksData]);
     const isLoadingTasks = useAtomValue(tasksLoadingAtom);
-    const setTasks = useSetAtom(tasksAtom);
     const currentFilterGlobal = useAtomValue(currentFilterAtom);
     const setSelectedTaskId = useSetAtom(selectedTaskIdAtom);
     const groupedTasks = useAtomValue(groupedAllTasksAtom);
@@ -142,6 +142,8 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
 
     const setIsSettingsOpen = useSetAtom(isSettingsOpenAtom);
     const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
+
+    const { createTask, createSubtask, batchUpdateTasks } = useTaskOperations();
 
     const isAiEnabled = useMemo(() => {
         return !!(aiSettings && aiSettings.provider && (aiSettings.apiKey || !AI_PROVIDERS.find(p => p.id === aiSettings.provider)?.requiresApiKey));
@@ -294,105 +296,105 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         }
         const categoryChanged = targetGroupCategory && targetGroupCategory !== originalTask.groupCategory;
 
-        setTasks((currentTasksValue) => {
-            const currentTasks = currentTasksValue ?? [];
-            const oldIndex = currentTasks.findIndex(t => t.id === activeId);
-            const newIndex = currentTasks.findIndex(t => t.id === overId);
+        let currentTasks = [...allTasks];
+        const oldIndex = currentTasks.findIndex(t => t.id === activeId);
+        const newIndex = currentTasks.findIndex(t => t.id === overId);
 
-            if (oldIndex === -1 || newIndex === -1) {
-                return currentTasks;
-            }
+        if (oldIndex === -1 || newIndex === -1) return;
 
-            const currentVisualOrderIds = sortableItems as string[];
-            const activeVisualIndex = currentVisualOrderIds.indexOf(activeId);
-            const overVisualIndex = currentVisualOrderIds.indexOf(overId);
+        const currentVisualOrderIds = sortableItems as string[];
+        const activeVisualIndex = currentVisualOrderIds.indexOf(activeId);
+        const overVisualIndex = currentVisualOrderIds.indexOf(overId);
 
-            if (activeVisualIndex === -1 || overVisualIndex === -1) {
-                return currentTasks;
-            }
+        if (activeVisualIndex === -1 || overVisualIndex === -1) return;
 
-            const movedVisualOrderIds = arrayMove(currentVisualOrderIds, activeVisualIndex, overVisualIndex);
-            const finalMovedVisualIndex = movedVisualOrderIds.indexOf(activeId);
+        const movedVisualOrderIds = arrayMove(currentVisualOrderIds, activeVisualIndex, overVisualIndex);
+        const finalMovedVisualIndex = movedVisualOrderIds.indexOf(activeId);
 
-            const prevTaskId = finalMovedVisualIndex > 0 ? movedVisualOrderIds[finalMovedVisualIndex - 1] : null;
-            const nextTaskId = finalMovedVisualIndex < movedVisualOrderIds.length - 1 ? movedVisualOrderIds[finalMovedVisualIndex + 1] : null;
+        const prevTaskId = finalMovedVisualIndex > 0 ? movedVisualOrderIds[finalMovedVisualIndex - 1] : null;
+        const nextTaskId = finalMovedVisualIndex < movedVisualOrderIds.length - 1 ? movedVisualOrderIds[finalMovedVisualIndex + 1] : null;
 
-            const prevTask = prevTaskId ? currentTasks.find((t: Task) => t.id === prevTaskId) : null;
-            const nextTask = nextTaskId ? currentTasks.find((t: Task) => t.id === nextTaskId) : null;
+        const prevTask = prevTaskId ? currentTasks.find((t: Task) => t.id === prevTaskId) : null;
+        const nextTask = nextTaskId ? currentTasks.find((t: Task) => t.id === nextTaskId) : null;
 
-            const prevOrder = prevTask?.order;
-            const nextOrder = nextTask?.order;
-            let newOrderValue: number;
+        const prevOrder = prevTask?.order;
+        const nextOrder = nextTask?.order;
+        let newOrderValue: number;
 
-            if (prevOrder === undefined || prevOrder === null) {
-                newOrderValue = (nextOrder ?? Date.now()) - 1000;
-            } else if (nextOrder === undefined || nextOrder === null) {
-                newOrderValue = prevOrder + 1000;
+        if (prevOrder === undefined || prevOrder === null) {
+            newOrderValue = (nextOrder ?? Date.now()) - 1000;
+        } else if (nextOrder === undefined || nextOrder === null) {
+            newOrderValue = prevOrder + 1000;
+        } else {
+            const mid = prevOrder + (nextOrder - prevOrder) / 2;
+            if (!Number.isFinite(mid) || mid <= prevOrder || mid >= nextOrder) {
+                newOrderValue = prevOrder + Math.random();
             } else {
-                const mid = prevOrder + (nextOrder - prevOrder) / 2;
-                if (!Number.isFinite(mid) || mid <= prevOrder || mid >= nextOrder) {
-                    newOrderValue = prevOrder + Math.random();
-                } else {
-                    newOrderValue = mid;
-                }
+                newOrderValue = mid;
             }
-            if (!Number.isFinite(newOrderValue)) {
-                newOrderValue = Date.now();
+        }
+        if (!Number.isFinite(newOrderValue)) {
+            newOrderValue = Date.now();
+        }
+
+        let newDueDateValue: number | null | undefined = undefined;
+
+        if (categoryChanged && targetGroupCategory) {
+            const todayStart = startOfDay(new Date());
+            switch (targetGroupCategory) {
+                case 'today':
+                    newDueDateValue = todayStart.getTime();
+                    break;
+                case 'next7days':
+                    newDueDateValue = startOfDay(addDays(todayStart, 1)).getTime();
+                    break;
+                case 'later':
+                    newDueDateValue = startOfDay(addDays(todayStart, 8)).getTime();
+                    break;
+                case 'overdue':
+                    newDueDateValue = startOfDay(subDays(todayStart, 1)).getTime();
+                    break;
+                case 'nodate':
+                    newDueDateValue = null;
+                    break;
             }
-
-            let newDueDateValue: number | null | undefined = undefined;
-
-            if (categoryChanged && targetGroupCategory) {
-                const todayStart = startOfDay(new Date());
-                switch (targetGroupCategory) {
-                    case 'today':
-                        newDueDateValue = todayStart.getTime();
-                        break;
-                    case 'next7days':
-                        newDueDateValue = startOfDay(addDays(todayStart, 1)).getTime();
-                        break;
-                    case 'later':
-                        newDueDateValue = startOfDay(addDays(todayStart, 8)).getTime();
-                        break;
-                    case 'overdue':
-                        newDueDateValue = startOfDay(subDays(todayStart, 1)).getTime();
-                        break;
-                    case 'nodate':
-                        newDueDateValue = null;
-                        break;
-                }
-                if (newDueDateValue !== null && originalTask.dueDate) {
-                    const originalDateObj = safeParseDate(originalTask.dueDate);
-                    if (originalDateObj && isValid(originalDateObj)) {
-                        const hours = originalDateObj.getHours();
-                        const minutes = originalDateObj.getMinutes();
-                        if (hours !== 0 || minutes !== 0) {
-                            const newDateWithTime = new Date(newDueDateValue);
-                            newDateWithTime.setHours(hours, minutes, 0, 0);
-                            newDueDateValue = newDateWithTime.getTime();
-                        }
+            if (newDueDateValue !== null && originalTask.dueDate) {
+                const originalDateObj = safeParseDate(originalTask.dueDate);
+                if (originalDateObj && isValid(originalDateObj)) {
+                    const hours = originalDateObj.getHours();
+                    const minutes = originalDateObj.getMinutes();
+                    if (hours !== 0 || minutes !== 0) {
+                        const newDateWithTime = new Date(newDueDateValue);
+                        newDateWithTime.setHours(hours, minutes, 0, 0);
+                        newDueDateValue = newDateWithTime.getTime();
                     }
                 }
-                const currentDueDateObj = safeParseDate(originalTask.dueDate);
-                const currentDueDayStart = currentDueDateObj && isValid(currentDueDateObj) ? startOfDay(currentDueDateObj).getTime() : null;
-                const newDueDayStart = newDueDateValue !== null && newDueDateValue !== undefined ? startOfDay(new Date(newDueDateValue)).getTime() : null;
-
-                if (currentDueDayStart === newDueDayStart) {
-                    newDueDateValue = undefined;
-                }
             }
-            return currentTasks.map((task: Task) => {
-                if (task.id === activeId) {
-                    const updates: Partial<Task> = {order: newOrderValue,};
-                    if (newDueDateValue !== undefined) {
-                        updates.dueDate = newDueDateValue;
-                    }
-                    return {...task, ...updates};
+            const currentDueDateObj = safeParseDate(originalTask.dueDate);
+            const currentDueDayStart = currentDueDateObj && isValid(currentDueDateObj) ? startOfDay(currentDueDateObj).getTime() : null;
+            const newDueDayStart = newDueDateValue !== null && newDueDateValue !== undefined ? startOfDay(new Date(newDueDateValue)).getTime() : null;
+
+            if (currentDueDayStart === newDueDayStart) {
+                newDueDateValue = undefined;
+            }
+        }
+
+        const updatedTasks = currentTasks.map((task: Task) => {
+            if (task.id === activeId) {
+                const updates: Partial<Task> = {order: newOrderValue,};
+                if (newDueDateValue !== undefined) {
+                    updates.dueDate = newDueDateValue;
                 }
-                return task;
-            });
+                return {...task, ...updates};
+            }
+            return task;
         });
-    }, [setTasks, currentFilterGlobal, sortableItems]);
+
+        // Use batchUpdateTasks for reordering as it involves potential mass updates (though here only one changes,
+        // maintaining consistency is key, and batch update handles transactions)
+        batchUpdateTasks(updatedTasks);
+
+    }, [allTasks, currentFilterGlobal, sortableItems, batchUpdateTasks]);
 
     const commitNewTask = useCallback(() => {
         const titleToSave = newTaskTitle.trim();
@@ -407,15 +409,13 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
             return;
         }
 
-        const now = Date.now();
         const topTask = (allTasks ?? [])
             .filter(t => !t.completed && t.listName !== 'Trash')
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0];
 
         const newOrder = topTask?.order ? topTask.order - 1000 : Date.now();
 
-        const taskToAdd: Task = {
-            id: `task-${now}-${Math.random().toString(16).slice(2)}`,
+        const taskData = {
             title: titleToSave,
             completed: false,
             completedAt: null,
@@ -425,15 +425,12 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
             dueDate: newTaskDueDate ? newTaskDueDate.getTime() : null,
             priority: newTaskPriority,
             order: newOrder,
-            createdAt: now,
-            updatedAt: now,
             content: '',
             tags: [],
-            groupCategory: 'nodate',
             subtasks: []
         };
 
-        setTasks(prev => [(taskToAdd), ...(prev ?? [])]);
+        createTask(taskData);
 
         setNewTaskTitle('');
         let defaultDate: Date | null = null;
@@ -454,7 +451,7 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         newTaskTitleInputRef.current?.focus();
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        setTasks, allTasks, preferences, availableListsForNewTask, allUserLists
+        createTask, allTasks, preferences, availableListsForNewTask, allUserLists
     ]);
 
     const isRegularNewTaskModeAllowed = useMemo(() =>
@@ -526,13 +523,10 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
                 throw new Error("Could not find a valid list for the new AI task.");
             }
 
-            const now = Date.now();
             const topTask = (allTasks ?? []).filter(t => !t.completed && t.listName !== 'Trash').sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0];
             const newOrder = topTask?.order ? topTask.order - 1000 : Date.now();
-            const taskId = `task-${now}-${Math.random().toString(16).slice(2)}`;
 
-            const taskToAdd: Task = {
-                id: taskId,
+            const taskData = {
                 title: aiAnalysis.title || sentence,
                 completed: false,
                 completedAt: null,
@@ -542,25 +536,22 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
                 dueDate: aiAnalysis.dueDate ? new Date(aiAnalysis.dueDate).getTime() : (newTaskDueDate ? newTaskDueDate.getTime() : null),
                 priority: aiAnalysis.priority,
                 order: newOrder,
-                createdAt: now,
-                updatedAt: now,
                 content: aiAnalysis.content,
-                tags: aiAnalysis.tags,
-                subtasks: aiAnalysis.subtasks.map((sub, index) => ({
-                    id: `subtask-${taskId}-${index}-${Math.random().toString(16).slice(2)}`,
-                    parentId: taskId,
-                    title: sub.title,
-                    completed: false,
-                    completedAt: null,
-                    dueDate: sub.dueDate ? (safeParseDate(sub.dueDate)?.getTime() ?? null) : null,
-                    order: index * 1000,
-                    createdAt: now,
-                    updatedAt: now,
-                })),
-                groupCategory: 'nodate'
+                tags: aiAnalysis.tags
             };
 
-            setTasks(prev => [taskToAdd, ...(prev ?? [])]);
+            const createdTask = createTask(taskData);
+
+            if (aiAnalysis.subtasks && aiAnalysis.subtasks.length > 0) {
+                aiAnalysis.subtasks.forEach((sub, index) => {
+                    createSubtask(createdTask.id, {
+                        title: sub.title,
+                        order: index * 1000,
+                        dueDate: sub.dueDate ? (safeParseDate(sub.dueDate)?.getTime() ?? null) : null
+                    });
+                });
+            }
+
             setNewTaskTitle('');
             let defaultDate: Date | null = null;
             if (preferences.defaultNewTaskDueDate === 'today') defaultDate = startOfDay(new Date());
@@ -581,7 +572,7 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         }
     }, [
         newTaskTitle, newTaskDueDate, newTaskPriority, newTaskListState,
-        setTasks, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists, t, aiSettings, addNotification
+        createTask, createSubtask, allTasks, isAiProcessing, isRegularNewTaskModeAllowed, preferences, allUserLists, t, aiSettings, addNotification
     ]);
 
 
@@ -592,23 +583,22 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
         }
         const newDueDateTimestamp = date.getTime();
 
-        setTasks(currentTasksValue => {
-            const currentTasks = currentTasksValue ?? [];
-            return currentTasks.map((task: Task) => {
-                const isTaskOverdue = !task.completed &&
-                    task.listName !== 'Trash' &&
-                    task.dueDate != null &&
-                    isValid(task.dueDate) &&
-                    isBefore(startOfDay(safeParseDate(task.dueDate)!), startOfDay(new Date()));
+        const updatedTasks = allTasks.map((task: Task) => {
+            const isTaskOverdue = !task.completed &&
+                task.listName !== 'Trash' &&
+                task.dueDate != null &&
+                isValid(task.dueDate) &&
+                isBefore(startOfDay(safeParseDate(task.dueDate)!), startOfDay(new Date()));
 
-                if (isTaskOverdue) {
-                    return {...task, dueDate: newDueDateTimestamp};
-                }
-                return task;
-            })
+            if (isTaskOverdue) {
+                return {...task, dueDate: newDueDateTimestamp};
+            }
+            return task;
         });
+
+        batchUpdateTasks(updatedTasks);
         setIsBulkRescheduleOpen(false);
-    }, [setTasks]);
+    }, [allTasks, batchUpdateTasks]);
 
     const closeBulkReschedulePopover = useCallback(() => setIsBulkRescheduleOpen(false), []);
 
