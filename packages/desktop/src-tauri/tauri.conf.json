@@ -26,7 +26,8 @@
             "sql:default",
             "core:window:allow-start-dragging",
             "core:window:allow-destroy",
-            "core:default"
+            "core:default",
+            "core:tray:default"
           ]
         }
       ]

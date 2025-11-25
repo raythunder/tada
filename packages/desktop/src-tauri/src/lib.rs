@@ -1,4 +1,15 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    Manager, WindowEvent,
+};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+// Define the application status to track whether a real exit operation is being performed
+struct AppState {
+    is_quitting: AtomicBool,
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -91,12 +102,84 @@ pub fn run() {
     ];
 
     tauri::Builder::default()
+        .manage(AppState {
+            is_quitting: AtomicBool::new(false),
+        })
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:tada.db", migrations)
                 .build(),
         )
+        .setup(|app| {
+            // Create a tray menu
+            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let show_i = MenuItem::with_id(app, "show", "Show Tada", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+
+            // Build the tray icon
+            let _tray = TrayIconBuilder::with_id("tray")
+                .icon(app.default_window_icon().unwrap().clone())
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "quit" => {
+                        // User clicked the exit button of the tray
+                        let state = app.state::<AppState>();
+                        state.is_quitting.store(true, Ordering::Relaxed);
+                        app.exit(0);
+                    }
+                    "show" => {
+                        // User clicked "Display"
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| match event {
+                    // Left-click the tray icon on Windows/Linux to display the window
+                    TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        ..
+                    } => {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    _ => {}
+                })
+                .build(app)?;
+
+            Ok(())
+        })
+        // Handle window events (block the close button)
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                let app_handle = window.app_handle();
+                let state = app_handle.state::<AppState>();
+
+                // If it is not exited through the Quit button on the tray or Cmd+Q (which triggers the App Exit process), it will be blocked and hidden
+                if !state.is_quitting.load(Ordering::Relaxed) {
+                    api.prevent_close();
+                    window.hide().unwrap();
+                }
+            }
+        })
         // .plugin(tauri_plugin_updater::Builder::new().build())
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| match event {
+            // To handle macOS, click the Dock icon to reopen the window
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => {
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            _ => {}
+        });
 }
