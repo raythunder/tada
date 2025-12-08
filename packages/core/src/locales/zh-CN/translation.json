@@ -16,7 +16,9 @@
     "clear": "清除",
     "today": "今天",
     "tomorrow": "明天",
-    "backToApp": "返回应用"
+    "backToApp": "返回应用",
+    "complete": "完成",
+    "undo": "撤销"
   },
   "priorityLabels": {
     "none": "无优先级",
@@ -343,6 +345,15 @@
       "title": "暂无总结",
       "description": "选择任务并生成一个新的总结。"
     }
+  },
+  "zen": {
+    "expired": "已过期",
+    "addPlan": "增加计划",
+    "logMemories": "补足回忆",
+    "aiPlaceholder": "用 AI 描述任务",
+    "emptyMind": "空空如也，心无杂念",
+    "noRegrets": "往事已矣",
+    "shyNativeMode": "母语羞涩模式"
   },
   "moondown": {
     "ai": {

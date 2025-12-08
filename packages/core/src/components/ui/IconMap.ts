@@ -91,6 +91,9 @@ export const iconMap = {
     'circle-slash': LucideIcons.CircleSlash,
     'circle-check': LucideIcons.CircleCheckBig,
     'circle-gauge': LucideIcons.GaugeCircle,
+    'maximize-2': LucideIcons.Maximize2,
+    'minimize-2': LucideIcons.Minimize2,
+    'undo': LucideIcons.Undo2,
 };
 
 export type IconName = keyof typeof iconMap;

@@ -112,6 +112,7 @@ export interface PreferencesSettings {
     defaultNewTaskPriority: number | null;
     defaultNewTaskList: string;
     confirmDeletions: boolean;
+    zenModeShyNative: boolean;
 }
 
 /**

@@ -10,6 +10,7 @@ import MainLayout from '@/components/features/layout/MainLayout';
 const MainPage = lazy(() => import('@/pages/MainPage'));
 const SummaryPage = lazy(() => import('@/pages/SummaryPage'));
 const CalendarPage = lazy(() => import('@/pages/CalendarPage'));
+const ZenPage = lazy(() => import('@/pages/ZenPage'));
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
 const TermsOfUsePage = lazy(() => import('@/pages/TermsOfUsePage'));
 const ChangelogPage = lazy(() => import('@/pages/ChangelogPage'));
@@ -37,7 +38,7 @@ const RouteChangeHandler: React.FC = () => {
         else if (pathname === '/trash') newFilter = 'trash';
         else if (pathname.startsWith('/list/') && listName) newFilter = `list-${listName}`;
         else if (pathname.startsWith('/tag/') && tagName) newFilter = `tag-${tagName}`;
-        else if (pathname === '/summary' || pathname === '/calendar' || pathname === '/all' || pathname === '/') newFilter = 'all';
+        else if (pathname === '/summary' || pathname === '/calendar' || pathname === '/zen' || pathname === '/all' || pathname === '/') newFilter = 'all';
 
         if (currentFilterInternal !== newFilter) {
             setCurrentFilter(newFilter);
@@ -104,6 +105,7 @@ const AppRouter: React.FC = () => {
                     <Route path="trash" element={<MainPage title={t('sidebar.trash')} filter="trash" />} />
                     <Route path="summary" element={<SummaryPage />} />
                     <Route path="calendar" element={<CalendarPage />} />
+                    <Route path="zen" element={<ZenPage />} />
                     <Route path="list/:listName" element={<ListPageWrapper />} />
                     <Route path="list/" element={<Navigate to="/list/Inbox" replace />} />
                     <Route path="tag/:tagName" element={<TagPageWrapper />} />

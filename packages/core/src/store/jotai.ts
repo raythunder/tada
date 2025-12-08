@@ -62,7 +62,7 @@ export const defaultAppearanceSettingsForApi = (): AppearanceSettings => ({
 });
 export const defaultPreferencesSettingsForApi = (): PreferencesSettings => ({
     language: 'zh-CN', defaultNewTaskDueDate: null, defaultNewTaskPriority: null,
-    defaultNewTaskList: 'Inbox', confirmDeletions: true,
+    defaultNewTaskList: 'Inbox', confirmDeletions: true, zenModeShyNative: false,
 });
 export const defaultAISettingsForApi = (): AISettings => ({
     provider: 'openai',
@@ -140,6 +140,7 @@ export const isAddListModalOpenAtom = atom<boolean>(false);
 export const currentFilterAtom = atom<TaskFilter>('all');
 export const searchTermAtom = atom<string>('');
 export const notificationsAtom = atom<Notification[]>([]);
+export const isZenFullScreenAtom = atom<boolean>(false); // Added for Zen Mode
 
 export const addNotificationAtom = atom(
     null,

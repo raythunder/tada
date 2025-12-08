@@ -24,6 +24,7 @@ const IconBar: React.FC = memo(() => {
         {path: '/all', icon: 'archive', labelKey: 'iconBar.allTasks'},
         {path: '/calendar', icon: 'calendar-days', labelKey: 'iconBar.calendar'},
         {path: '/summary', icon: 'sparkles', labelKey: 'iconBar.aiSummary'},
+        {path: '/zen', icon: 'circle', labelKey: 'Zen Mode'},
     ], []);
 
     const handleSettingsClick = useCallback(() => {
@@ -40,7 +41,8 @@ const IconBar: React.FC = memo(() => {
         const currentPath = location.pathname;
         if (itemPath === '/calendar') isSectionActive = currentPath.startsWith('/calendar');
         else if (itemPath === '/summary') isSectionActive = currentPath.startsWith('/summary');
-        else if (itemPath === '/all') isSectionActive = !currentPath.startsWith('/calendar') && !currentPath.startsWith('/summary');
+        else if (itemPath === '/zen') isSectionActive = currentPath.startsWith('/zen');
+        else if (itemPath === '/all') isSectionActive = !currentPath.startsWith('/calendar') && !currentPath.startsWith('/summary') && !currentPath.startsWith('/zen');
 
         return twMerge(
             'flex items-center justify-center w-10 h-10 rounded-base transition-colors duration-200 ease-in-out group relative',
@@ -72,7 +74,7 @@ const IconBar: React.FC = memo(() => {
                 >
                     <g id="tada" stroke="none" strokeWidth="1">
                         <path
-                            d="M 194.5,660 C 194.5,743.118855 261.881145,810.5 345,810.5 C 392.548231,810.5 431.872984,771.391829 431.872984,723.149455 C 431.872984,680.808999 401.581557,645.504519 361.37491,637.5 C 290.715561,621.431263 229.356785,574.033996 194.5,509.5 L 194.5,660.5 Z"
+                            d="M 194.5,660 C 194.5,743.118855 261.881145,810.5 345,810.5 C 392.548231,810.5 431.872984,771.391829 431.872984,723.149455 431.872984,680.808999 401.581557,645.504519 361.37491,637.5 C 290.715561,621.431263 229.356785,574.033996 194.5,509.5 L 194.5,660.5 Z"
                             id="rb"
                             className="text-primary/70 dark:text-primary-light/70"
                             fill="currentColor"/>
@@ -97,13 +99,13 @@ const IconBar: React.FC = memo(() => {
                 {navigationItems.map((item) => (
                     <SortTooltip.Root key={item.path} delayDuration={200}>
                         <SortTooltip.Trigger asChild>
-                            <NavLink to={item.path} className={getNavLinkClass(item.path)} aria-label={t(item.labelKey)}>
+                            <NavLink to={item.path} className={getNavLinkClass(item.path)} aria-label={item.labelKey === 'Zen Mode' ? 'Zen Mode' : t(item.labelKey)}>
                                 <Icon name={item.icon} size={20} strokeWidth={1}/>
                             </NavLink>
                         </SortTooltip.Trigger>
                         <SortTooltip.Portal>
                             <SortTooltip.Content className={tooltipContentClass} side="right" sideOffset={6}>
-                                {t(item.labelKey)}
+                                {item.labelKey === 'Zen Mode' ? 'Zen Mode' : t(item.labelKey)}
                                 <SortTooltip.Arrow className="fill-grey-dark dark:fill-neutral-900"/>
                             </SortTooltip.Content>
                         </SortTooltip.Portal>

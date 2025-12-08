@@ -5,6 +5,8 @@ import Sidebar from './Sidebar';
 import SettingsModal from '../settings/SettingsModal';
 import Icon from "@/components/ui/Icon.tsx";
 import {twMerge} from 'tailwind-merge';
+import {useAtomValue} from "jotai";
+import {isZenFullScreenAtom} from "@/store/jotai.ts";
 
 /**
  * A loading spinner component displayed as a fallback for suspended content.
@@ -24,17 +26,18 @@ LoadingSpinner.displayName = 'LoadingSpinner';
  */
 const MainLayout: React.FC = () => {
     const location = useLocation();
+    const isZenFullScreen = useAtomValue(isZenFullScreenAtom);
 
     // Determine if the sidebar should be hidden based on the current route.
     const hideSidebar = useMemo(() => {
-        return ['/calendar', '/summary'].some(path => location.pathname.startsWith(path));
+        return ['/calendar', '/summary', '/zen'].some(path => location.pathname.startsWith(path));
     }, [location.pathname]);
 
     return (
         <div
             className="flex h-screen bg-transparent overflow-hidden font-primary">
-            <IconBar/>
-            {!hideSidebar && (
+            {!isZenFullScreen && <IconBar/>}
+            {!hideSidebar && !isZenFullScreen && (
                 <div className={twMerge(
                     "w-[240px] flex-shrink-0 h-full relative border-r border-grey-light/50 dark:border-grey-deep/50",
                     "bg-white/50 dark:bg-grey-deep/50 backdrop-blur-md transition-colors duration-300"

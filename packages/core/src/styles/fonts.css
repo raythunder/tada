@@ -1,0 +1,44 @@
+/* Italiana - Regular */
+@font-face {
+    font-family: 'Italiana';
+    font-style: normal;
+    font-weight: 400;
+    src: url('/fonts/italiana-v21-latin-regular.woff2') format('woff2');
+    font-display: swap;
+}
+
+/* Lato - Light */
+@font-face {
+    font-family: 'Lato';
+    font-style: normal;
+    font-weight: 300;
+    src: url('/fonts/lato-v25-latin-300.woff2') format('woff2');
+    font-display: swap;
+}
+
+/* Noto Serif SC - ExtraLight */
+@font-face {
+    font-family: 'Noto Serif SC';
+    font-style: normal;
+    font-weight: 200;
+    src: url('/fonts/noto-serif-sc-v34-chinese-simplified-200.woff2') format('woff2');
+    font-display: swap;
+}
+
+/* Noto Serif SC - Light */
+@font-face {
+    font-family: 'Noto Serif SC';
+    font-style: normal;
+    font-weight: 300;
+    src: url('/fonts/noto-serif-sc-v34-chinese-simplified-300.woff2') format('woff2');
+    font-display: swap;
+}
+
+/* Noto Serif SC - Regular */
+@font-face {
+    font-family: 'Noto Serif SC';
+    font-style: normal;
+    font-weight: 400;
+    src: url('/fonts/noto-serif-sc-v34-chinese-simplified-regular.woff2') format('woff2');
+    font-display: swap;
+}

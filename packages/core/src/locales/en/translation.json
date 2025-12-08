@@ -16,7 +16,9 @@
     "clear": "Clear",
     "today": "Today",
     "tomorrow": "Tomorrow",
-    "backToApp": "Back to App"
+    "backToApp": "Back to App",
+    "complete": "Complete",
+    "undo": "Undo"
   },
   "priorityLabels": {
     "none": "No Priority",
@@ -343,6 +345,15 @@
       "title": "No summary available",
       "description": "Select tasks and generate a new summary."
     }
+  },
+  "zen": {
+    "expired": "Expired",
+    "addPlan": "Add Plan",
+    "logMemories": "Log Memories",
+    "aiPlaceholder": "Describe task for AI",
+    "emptyMind": "Empty mind, empty list",
+    "noRegrets": "No past regrets",
+    "shyNativeMode": "Shy Native Mode"
   },
   "moondown": {
     "ai": {
