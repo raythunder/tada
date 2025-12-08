@@ -263,17 +263,45 @@ const ZenModeView: React.FC = () => {
             setIsFullScreen(!!document.fullscreenElement);
         };
         document.addEventListener('fullscreenchange', handleFullscreenChange);
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+        };
     }, [setIsFullScreen]);
 
-    const toggleFullScreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch((err) => {
-                console.error(`Error attempting to enable fullscreen: ${err.message}`);
-            });
+    const toggleFullScreen = async () => {
+        // Detect Tauri environment
+        // @ts-ignore
+        const isTauri = typeof window !== 'undefined' && window.__TAURI_INTERNALS__ !== undefined;
+
+        if (isTauri) {
+            try {
+                const { getCurrentWindow } = await import('@tauri-apps/api/window');
+                const appWindow = getCurrentWindow();
+                const isFull = await appWindow.isFullscreen();
+                await appWindow.setFullscreen(!isFull);
+                setIsFullScreen(!isFull);
+                return;
+            } catch (e) {
+                console.warn("Tauri fullscreen failed, falling back to DOM", e);
+            }
+        }
+
+        const doc = document as any;
+        const docEl = document.documentElement as any;
+
+        const isFullscreen = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement;
+
+        if (!isFullscreen) {
+            const requestFullScreen = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.mozRequestFullScreen || docEl.msRequestFullscreen;
+            if (requestFullScreen) {
+                requestFullScreen.call(docEl).catch((err: any) => console.error("Fullscreen request failed", err));
+            }
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
+            const exitFullScreen = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+            if (exitFullScreen) {
+                exitFullScreen.call(doc);
             }
         }
     };
