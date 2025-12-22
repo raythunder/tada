@@ -30,6 +30,9 @@ class ImagePastePlugin implements PluginValue {
 
     private handleDragOver = (e: DragEvent) => {
         e.preventDefault();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'copy';
+        }
     };
 
     private handleDrop = (e: DragEvent) => {
@@ -38,8 +41,12 @@ class ImagePastePlugin implements PluginValue {
         if (files && files.length > 0) {
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                if (file.type.startsWith('image/')) {
-                    this.processImage(file, this.view.posAtCoords({x: e.clientX, y: e.clientY}));
+                if (this.isImageFile(file)) {
+                    let pos = this.view.posAtCoords({x: e.clientX, y: e.clientY});
+                    if (pos === null) {
+                        pos = this.view.state.selection.main.head;
+                    }
+                    this.processImage(file, pos);
                 }
             }
         }
@@ -60,6 +67,10 @@ class ImagePastePlugin implements PluginValue {
             }
         }
     };
+
+    private isImageFile(file: File): boolean {
+        return file.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(file.name);
+    }
 
     /**
      * Reads an image file, converts it to Base64, and inserts it into the editor at the given position.
