@@ -821,7 +821,7 @@ const AISettings: React.FC = memo(() => {
                                 type="url"
                                 value={currentSettings.baseUrl ?? ''}
                                 onChange={(e) => handleBaseUrlChange(e.target.value)}
-                                placeholder={currentProvider.defaultBaseUrl ?? 'http://localhost:11434'}
+                                placeholder={currentProvider.defaultBaseUrl ?? 'https://api.openai.com'}
                                 className={twMerge(
                                     "w-[240px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
                                     "bg-grey-ultra-light dark:bg-neutral-700",
