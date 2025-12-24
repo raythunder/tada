@@ -365,7 +365,14 @@ export class LocalStorageService implements IStorageService {
      * Batch update tasks with deferred write for improved performance
      */
     async batchUpdateTasks(tasks: Task[]): Promise<void> {
-        this.tasksCache.set(tasks, true);
+        const currentTasks = this.fetchTasks();
+        const updatesMap = new Map(tasks.map(t => [t.id, t]));
+
+        const mergedTasks = currentTasks.map(t =>
+            updatesMap.has(t.id) ? updatesMap.get(t.id)! : t
+        );
+
+        this.tasksCache.set(mergedTasks, true);
         this.pendingWrites.add(KEYS.TASKS);
         this.scheduleBatchFlush();
     }

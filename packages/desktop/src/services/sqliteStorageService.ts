@@ -541,7 +541,11 @@ export class SqliteStorageService implements IStorageService {
     }
 
     async batchUpdateTasks(tasks: Task[]): Promise<void> {
-        this.tasksCache = tasks;
+        const updatesMap = new Map(tasks.map(t => [t.id, t]));
+        this.tasksCache = this.tasksCache.map(t =>
+            updatesMap.has(t.id) ? updatesMap.get(t.id)! : t
+        );
+
         await this.queueWrite(async () => {
             const db = this.getDb();
             const now = Date.now();

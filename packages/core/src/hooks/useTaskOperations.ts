@@ -54,8 +54,15 @@ export const useTaskOperations = () => {
         } else {
             service.updateTasks(tasks);
         }
-        // Update atom state
-        setTasks(tasks);
+
+        setTasks((prev) => {
+            const currentTasks = prev ?? [];
+            const updatesMap = new Map(tasks.map(t => [t.id, t]));
+
+            return currentTasks.map(t =>
+                updatesMap.has(t.id) ? updatesMap.get(t.id)! : t
+            );
+        });
     }, [setTasks]);
 
     // --- Subtask Operations ---
