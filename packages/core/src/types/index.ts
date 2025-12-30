@@ -95,7 +95,7 @@ export interface StoredSummary {
 }
 
 /**
- * Represents a stored Echo (Resonance) report.
+ * Represents a stored Echo report.
  */
 export interface EchoReport {
     id: string;

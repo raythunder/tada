@@ -262,7 +262,7 @@ storedSummariesAtom.onMount = (setSelf) => {
     setSelf(RESET);
 };
 
-// --- Echo (Resonance) Feature Atoms ---
+// --- Echo Feature Atoms ---
 const baseEchoReportsAtom = atom<EchoReport[] | null>(null);
 export const echoReportsAtom: LocalDataAtom<EchoReport[]> = atom(
     (get) => get(baseEchoReportsAtom),

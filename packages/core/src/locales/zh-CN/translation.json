@@ -125,7 +125,7 @@
       "confirmDeletions": "删除前确认",
       "confirmDeletionsDescription": "将任务移至垃圾桶前显示确认对话框。",
       "enableEcho": "启用回响",
-      "enableEchoDescription": "启用创意日报生成器（Resonance）。"
+      "enableEchoDescription": "启用创意日报生成器。"
     },
     "ai": {
       "title": "AI 设置",

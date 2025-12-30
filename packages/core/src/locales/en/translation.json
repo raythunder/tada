@@ -125,7 +125,7 @@
       "confirmDeletions": "Confirm Deletions",
       "confirmDeletionsDescription": "Show a confirmation dialog before moving tasks to trash.",
       "enableEcho": "Enable Echo",
-      "enableEchoDescription": "Enable the creative daily report generator (Resonance)."
+      "enableEchoDescription": "Enable the creative daily report generator."
     },
     "ai": {
       "title": "AI Settings",
@@ -389,7 +389,7 @@
       "freelance": "Hours, Client Comms"
     },
     "emptyState": {
-      "title": "Create Resonance",
+      "title": "Create Echo",
       "description": "Generate a professional reflection of your day, focusing on value and depth.",
       "button": "Generate Daily Echo"
     },
