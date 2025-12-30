@@ -1,8 +1,96 @@
 import {EditorSelection, type Extension} from "@codemirror/state";
-import {EditorView, ViewUpdate} from "@codemirror/view";
+import {EditorView, ViewUpdate, keymap} from "@codemirror/view";
 import {imageSizeField, placeholderField} from "./fields.ts";
 import {imageWidgetPlugin} from "./image-renderer.ts";
 import {imageDragAndDropPlugin} from "./image-drag-n-drop.ts";
+
+/**
+ * Checks if the position is at the boundary of an image markdown
+ */
+function getImageAtPosition(view: EditorView, pos: number): {from: number, to: number} | null {
+    const doc = view.state.doc;
+    const line = doc.lineAt(pos);
+    const lineText = line.text;
+    const imageReg = /!\[([^\]]*)\]\(([^)]+)\)/g;
+
+    let match;
+    while ((match = imageReg.exec(lineText)) !== null) {
+        const matchStart = line.from + match.index;
+        const matchEnd = matchStart + match[0].length;
+
+        // Check if cursor is at the end or start of the image markdown
+        if (pos === matchEnd || pos === matchStart) {
+            return {from: matchStart, to: matchEnd};
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Handles backspace key to select image before deleting
+ */
+function handleBackspace(view: EditorView): boolean {
+    const {from, to} = view.state.selection.main;
+
+    // If there's a selection, let default behavior handle it
+    if (from !== to) {
+        return false;
+    }
+
+    // Check if cursor is at the end of an image markdown
+    const imageRange = getImageAtPosition(view, from);
+    if (imageRange && from === imageRange.to) {
+        // Select the entire image
+        view.dispatch({
+            selection: EditorSelection.single(imageRange.from, imageRange.to),
+            scrollIntoView: true
+        });
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Handles delete key to select image before deleting
+ */
+function handleDelete(view: EditorView): boolean {
+    const {from, to} = view.state.selection.main;
+
+    // If there's a selection, let default behavior handle it
+    if (from !== to) {
+        return false;
+    }
+
+    // Check if cursor is at the start of an image markdown
+    const imageRange = getImageAtPosition(view, from);
+    if (imageRange && from === imageRange.from) {
+        // Select the entire image
+        view.dispatch({
+            selection: EditorSelection.single(imageRange.from, imageRange.to),
+            scrollIntoView: true
+        });
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Keymap for image-specific keyboard shortcuts
+ * This needs to be loaded BEFORE default keymaps to take precedence
+ */
+export const imageKeymap = keymap.of([
+    {
+        key: "Backspace",
+        run: handleBackspace
+    },
+    {
+        key: "Delete",
+        run: handleDelete
+    }
+]);
 
 /**
  * Returns a CodeMirror extension that provides comprehensive image handling.

@@ -17,7 +17,7 @@ import { Strikethrough } from "./strikethrough-parser";
 import { finalNewLine } from "./final-new-line";
 import { tableExtension } from "./table";
 import { slashCommand } from "./slash-command";
-import { imageExtension } from "./image";
+import { imageExtension, imageKeymap } from "./image";
 import { fencedCode } from "./fenced-code";
 import { blockquote } from "./blockquote";
 import { bubbleMenu } from "./bubble-menu";
@@ -90,8 +90,8 @@ export const defaultExtensions: Extension[] = [
     // State Fields for dynamic configuration
     onAIStreamState,
     translationsState,
+    imageKeymap,
 
-    // Keymaps
     keymap.of([
         indentWithTab,
         ...defaultKeymap,
