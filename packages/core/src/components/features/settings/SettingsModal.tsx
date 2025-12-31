@@ -282,6 +282,10 @@ const PreferencesSettings: React.FC = memo(() => {
         ...(p ?? defaultPreferencesFromAtoms),
         enableEcho: checked
     }));
+    const handleAlwaysUseAITaskToggle = (checked: boolean) => setPreferences(p => ({
+        ...(p ?? defaultPreferencesFromAtoms),
+        alwaysUseAITask: checked
+    }));
 
     const dueDateOptions = [
         {value: 'none', label: t('settings.preferences.dueDateOptions.none')},
@@ -363,6 +367,24 @@ const PreferencesSettings: React.FC = memo(() => {
                 >
                     <RadixSwitch.Thumb
                         className={twMerge("custom-switch-thumb", currentPreferences.enableEcho ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
+                </RadixSwitch.Root>
+            </SettingsRow>
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+            <SettingsRow label={t('settings.preferences.alwaysUseAITask')}
+                         description={t('settings.preferences.alwaysUseAITaskDescription')}
+                         htmlFor="alwaysUseAITaskToggle">
+                <RadixSwitch.Root
+                    id="alwaysUseAITaskToggle"
+                    checked={currentPreferences.alwaysUseAITask}
+                    onCheckedChange={handleAlwaysUseAITaskToggle}
+                    aria-label="Toggle always use AI task"
+                    className={twMerge(
+                        "custom-switch-track",
+                        currentPreferences.alwaysUseAITask ? "custom-switch-track-on" : "custom-switch-track-off"
+                    )}
+                >
+                    <RadixSwitch.Thumb
+                        className={twMerge("custom-switch-thumb", currentPreferences.alwaysUseAITask ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
                 </RadixSwitch.Root>
             </SettingsRow>
         </div>

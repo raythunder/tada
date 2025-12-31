@@ -200,6 +200,14 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
 
     }, [preferences, availableListsForNewTask, isLoadingPreferences]);
 
+    // Auto-enable AI task input when alwaysUseAITask is enabled and on the "all" page
+    useEffect(() => {
+        if (isLoadingPreferences) return;
+        if (preferences.alwaysUseAITask && currentFilterGlobal === 'all') {
+            setIsAiTaskInputVisible(true);
+        }
+    }, [preferences.alwaysUseAITask, currentFilterGlobal, isLoadingPreferences]);
+
     const {tasksToDisplay, isGroupedView, isSearching} = useMemo(() => {
         const searching = searchTerm.trim().length > 0;
         if (searching) {
@@ -571,7 +579,10 @@ const TaskList: React.FC<{ title: string }> = ({title: pageTitle}) => {
             addNotification({type: 'error', message: t('taskList.aiCreationError', {message: errorMessage})});
         } finally {
             setIsAiProcessing(false);
-            setIsAiTaskInputVisible(false);
+            // Keep AI task input visible if alwaysUseAITask is enabled
+            if (!preferences.alwaysUseAITask) {
+                setIsAiTaskInputVisible(false);
+            }
             if (isRegularNewTaskModeAllowed) {
                 setTimeout(() => newTaskTitleInputRef.current?.focus(), 0);
             }
