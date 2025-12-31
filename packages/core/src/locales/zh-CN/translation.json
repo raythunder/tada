@@ -125,7 +125,9 @@
       "confirmDeletions": "删除前确认",
       "confirmDeletionsDescription": "将任务移至垃圾桶前显示确认对话框。",
       "enableEcho": "启用回响",
-      "enableEchoDescription": "启用创意日报生成器。"
+      "enableEchoDescription": "启用创意日报生成器。",
+      "alwaysUseAITask": "始终使用 AI 任务",
+      "alwaysUseAITaskDescription": "打开「所有任务」页面时自动启用 AI 任务输入"
     },
     "ai": {
       "title": "AI 设置",

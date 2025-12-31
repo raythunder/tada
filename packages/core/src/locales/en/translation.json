@@ -125,7 +125,9 @@
       "confirmDeletions": "Confirm Deletions",
       "confirmDeletionsDescription": "Show a confirmation dialog before moving tasks to trash.",
       "enableEcho": "Enable Echo",
-      "enableEchoDescription": "Enable the creative daily report generator."
+      "enableEchoDescription": "Enable the creative daily report generator.",
+      "alwaysUseAITask": "Always Use AI Task",
+      "alwaysUseAITaskDescription": "Automatically enable AI task input when opening the All Tasks page"
     },
     "ai": {
       "title": "AI Settings",
