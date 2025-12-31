@@ -148,7 +148,10 @@
       "connectionSuccessful": "连接测试成功！",
       "connectionFailed": "连接测试失败。",
       "statusReady": "AI 功能已就绪",
-      "statusIncomplete": "请完成配置以启用 AI 功能"
+      "statusIncomplete": "请完成配置以启用 AI 功能",
+      "searchModels": "搜索模型...",
+      "noModelsFound": "未找到模型",
+      "modelDescriptionCustom": "输入您提供商的自定义模型名称。"
     },
     "data": {
       "title": "数据管理",

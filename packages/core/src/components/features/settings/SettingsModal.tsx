@@ -888,7 +888,9 @@ const AISettings: React.FC = memo(() => {
                                     value={currentSettings.model}
                                     onChange={handleModelChange}
                                     models={availableModels}
-                                    placeholder="Select Model"
+                                    placeholder={t('settings.ai.model')}
+                                    searchPlaceholder={t('settings.ai.searchModels')}
+                                    noResultsText={t('settings.ai.noModelsFound')}
                                 />
                                 {currentProvider.listModelsEndpoint && !currentProvider.requiresApiKey && (
                                     <Button

@@ -14,6 +14,10 @@ interface ModelComboboxProps {
     models: AIModel[];
     /** Placeholder text when no model is selected */
     placeholder?: string;
+    /** Placeholder text for search input */
+    searchPlaceholder?: string;
+    /** Text shown when no models match the search */
+    noResultsText?: string;
     /** Whether the combobox is disabled */
     disabled?: boolean;
     /** Additional className for the trigger element */
@@ -79,6 +83,8 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
     onChange,
     models,
     placeholder = 'Select Model',
+    searchPlaceholder = 'Search models...',
+    noResultsText = 'No models found',
     disabled = false,
     className,
     id,
@@ -231,7 +237,7 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
                                     value={searchValue}
                                     onChange={(e) => setSearchValue(e.target.value)}
                                     onKeyDown={handleKeyDown}
-                                    placeholder="Search models..."
+                                    placeholder={searchPlaceholder}
                                     className={searchInputClasses}
                                 />
                             </div>
@@ -257,7 +263,7 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
                                 ))
                             ) : (
                                 <p className="px-3 py-4 text-center text-[12px] text-grey-medium dark:text-neutral-400 italic">
-                                    No models found
+                                    {noResultsText}
                                 </p>
                             )}
                         </div>
