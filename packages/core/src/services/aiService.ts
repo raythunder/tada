@@ -128,7 +128,7 @@ export const testConnection = async (settings: AISettings): Promise<boolean> => 
             payload = provider.requestBodyTransformer(payload);
         }
 
-        const endpoint = provider.id === 'ollama' ? `${getApiEndpoint(settings, 'chat')}/api/chat` : getApiEndpoint(settings, 'chat');
+        const endpoint = getApiEndpoint(settings, 'chat');
 
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -189,7 +189,7 @@ export const analyzeTaskInputWithAI = async (prompt: string, settings: AISetting
         payload = provider.requestBodyTransformer(payload);
     }
 
-    const endpoint = provider.id === 'ollama' ? `${getApiEndpoint(settings, 'chat')}/api/chat` : getApiEndpoint(settings, 'chat');
+    const endpoint = getApiEndpoint(settings, 'chat');
 
     try {
         const response = await fetch(endpoint, {
@@ -204,7 +204,13 @@ export const analyzeTaskInputWithAI = async (prompt: string, settings: AISetting
 
         const data = await response.json();
         const content = extractContentFromResponse(data, provider.id);
-        const cleanedContent = content.replace(/^```json\s*|```\s*$/g, '').trim();
+        // Remove markdown code blocks and extract JSON object
+        let cleanedContent = content.replace(/^```json\s*|```\s*$/g, '').trim();
+        // Try to extract JSON object if content contains non-JSON text
+        const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            cleanedContent = jsonMatch[0];
+        }
         return JSON.parse(cleanedContent) as AiTaskAnalysis;
     } catch (error) {
         console.error("AI Task analysis failed:", error);
@@ -272,7 +278,7 @@ export const streamChatCompletionForEditor = async (
         payload = provider.requestBodyTransformer(payload);
     }
 
-    const endpoint = provider.id === 'ollama' ? `${getApiEndpoint(settings, 'chat')}/api/chat` : getApiEndpoint(settings, 'chat');
+    const endpoint = getApiEndpoint(settings, 'chat');
 
     const response = await fetch(endpoint, {
         method: 'POST',
