@@ -802,17 +802,6 @@ const AISettings: React.FC = memo(() => {
         }
     }, [currentProvider, currentSettings, isTestingConnection, addNotification, t, setConnectionStatus]);
 
-    const modelOptions = availableModels.map(m => ({ value: m.id, label: m.name }));
-
-    let modelPlaceholder = "Select Model";
-    if (!isCustomProvider && availableModels.length === 0) {
-        if (currentProvider.requiresApiKey && !currentSettings.apiKey) {
-            modelPlaceholder = "Enter API Key & Refresh ->";
-        } else {
-            modelPlaceholder = "Refresh to fetch models ->";
-        }
-    }
-
     const isConfigurallyReady = (currentProvider.requiresApiKey ? !!currentSettings.apiKey : true) && !!currentSettings.model;
     let statusColor = "bg-orange-400";
     let statusText = t('settings.ai.statusIncomplete');
