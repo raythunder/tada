@@ -24,6 +24,8 @@ interface ModelComboboxProps {
     className?: string;
     /** ID for the combobox (for accessibility) */
     id?: string;
+    /** Allow user to type a custom value not in the list */
+    allowCustom?: boolean;
 }
 
 /** Single model option in the dropdown list */
@@ -33,7 +35,8 @@ const ModelOption: React.FC<{
     isHighlighted: boolean;
     onSelect: () => void;
     onMouseEnter: () => void;
-}> = memo(({model, isSelected, isHighlighted, onSelect, onMouseEnter}) => (
+    isCustom?: boolean;
+}> = memo(({model, isSelected, isHighlighted, onSelect, onMouseEnter, isCustom}) => (
     <button
         type="button"
         role="option"
@@ -47,11 +50,15 @@ const ModelOption: React.FC<{
             isHighlighted && "bg-grey-ultra-light dark:bg-neutral-600",
             isSelected
                 ? "text-primary dark:text-primary-light"
-                : "text-grey-dark dark:text-neutral-100"
+                : "text-grey-dark dark:text-neutral-100",
+            isCustom && "italic text-primary dark:text-primary-light"
         )}
     >
-        <span className="flex-1 truncate text-left">{model.name}</span>
-        {isSelected && (
+        {isCustom && <Icon name="plus" size={12} strokeWidth={2} className="mr-2 opacity-70"/>}
+        <span className="flex-1 truncate text-left">
+            {isCustom ? `Use custom: "${model.name}"` : model.name}
+        </span>
+        {isSelected && !isCustom && (
             <Icon name="check" size={12} strokeWidth={2} className="ml-2 flex-shrink-0"/>
         )}
     </button>
@@ -76,19 +83,20 @@ const searchInputClasses = twMerge(
  * A searchable combobox for selecting AI models.
  * - Click to open search dropdown
  * - Supports keyboard navigation (Arrow keys, Enter, Escape)
- * - Auto-selects first model if closed without selection
+ * - Supports custom value entry (Free Solo) via allowCustom prop
  */
 const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
-    value,
-    onChange,
-    models,
-    placeholder = 'Select Model',
-    searchPlaceholder = 'Search models...',
-    noResultsText = 'No models found',
-    disabled = false,
-    className,
-    id,
-}) => {
+                                                              value,
+                                                              onChange,
+                                                              models,
+                                                              placeholder = 'Select Model',
+                                                              searchPlaceholder = 'Search or enter model...',
+                                                              noResultsText = 'No models found',
+                                                              disabled = false,
+                                                              className,
+                                                              id,
+                                                              allowCustom = true, // Default to true for better UX
+                                                          }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
     const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -97,21 +105,42 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
 
     const debouncedSearch = useDebounce(searchValue.toLowerCase().trim(), 150);
 
-    const selectedModel = useMemo(
-        () => models.find(m => m.id === value),
-        [models, value]
-    );
+    const selectedModel = useMemo(() => {
+        const found = models.find(m => m.id === value);
+        if (found) return found;
+        if (value && allowCustom) return { id: value, name: value };
+        return null;
+    }, [models, value, allowCustom]);
 
-    const filteredModels = useMemo(() => {
-        if (!debouncedSearch) return models;
-        return models.filter(m =>
-            m.name.toLowerCase().includes(debouncedSearch) ||
-            m.id.toLowerCase().includes(debouncedSearch)
-        );
-    }, [models, debouncedSearch]);
+    const displayOptions = useMemo(() => {
+        let filtered = models;
+
+        if (debouncedSearch) {
+            filtered = models.filter(m =>
+                m.name.toLowerCase().includes(debouncedSearch) ||
+                m.id.toLowerCase().includes(debouncedSearch)
+            );
+        }
+
+        if (allowCustom && debouncedSearch) {
+            const exactMatch = filtered.find(
+                m => m.id.toLowerCase() === debouncedSearch || m.name.toLowerCase() === debouncedSearch
+            );
+
+            if (!exactMatch) {
+                const customOption: AIModel = {
+                    id: searchValue.trim(),
+                    name: searchValue.trim()
+                };
+                return [{ ...customOption, isCustom: true } as any, ...filtered];
+            }
+        }
+
+        return filtered;
+    }, [models, debouncedSearch, allowCustom, searchValue]);
 
     // Reset highlight when list changes
-    useEffect(() => setHighlightedIndex(0), [filteredModels.length]);
+    useEffect(() => setHighlightedIndex(0), [displayOptions.length]);
 
     // Focus input on open, clear search on close
     useEffect(() => {
@@ -131,11 +160,8 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
     }, [highlightedIndex, isOpen]);
 
     const handleOpenChange = useCallback((open: boolean) => {
-        if (!open && !value && filteredModels.length > 0) {
-            onChange(filteredModels[0].id);
-        }
         setIsOpen(open);
-    }, [value, filteredModels, onChange]);
+    }, []);
 
     const handleSelect = useCallback((model: AIModel) => {
         onChange(model.id);
@@ -147,7 +173,7 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
         switch (e.key) {
             case 'ArrowDown':
                 e.preventDefault();
-                setHighlightedIndex(i => Math.min(i + 1, filteredModels.length - 1));
+                setHighlightedIndex(i => Math.min(i + 1, displayOptions.length - 1));
                 break;
             case 'ArrowUp':
                 e.preventDefault();
@@ -155,19 +181,16 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
                 break;
             case 'Enter':
                 e.preventDefault();
-                if (filteredModels[highlightedIndex]) {
-                    handleSelect(filteredModels[highlightedIndex]);
+                if (displayOptions[highlightedIndex]) {
+                    handleSelect(displayOptions[highlightedIndex]);
                 }
                 break;
             case 'Escape':
                 e.preventDefault();
-                if (!value && filteredModels.length > 0) {
-                    onChange(filteredModels[0].id);
-                }
                 setIsOpen(false);
                 break;
         }
-    }, [filteredModels, highlightedIndex, handleSelect, value, onChange]);
+    }, [displayOptions, highlightedIndex, handleSelect]);
 
     const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
         e.stopPropagation();
@@ -239,6 +262,7 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
                                     onKeyDown={handleKeyDown}
                                     placeholder={searchPlaceholder}
                                     className={searchInputClasses}
+                                    autoComplete="off"
                                 />
                             </div>
                         </div>
@@ -250,15 +274,16 @@ const ModelCombobox: React.FC<ModelComboboxProps> = memo(({
                             className="max-h-[224px] overflow-y-auto styled-scrollbar p-1"
                             onWheel={handleWheel}
                         >
-                            {filteredModels.length > 0 ? (
-                                filteredModels.map((model, index) => (
+                            {displayOptions.length > 0 ? (
+                                displayOptions.map((model, index) => (
                                     <ModelOption
-                                        key={model.id}
+                                        key={model.id + (model as any).isCustom ? '_custom' : ''}
                                         model={model}
                                         isSelected={model.id === value}
                                         isHighlighted={index === highlightedIndex}
                                         onSelect={() => handleSelect(model)}
                                         onMouseEnter={() => setHighlightedIndex(index)}
+                                        isCustom={(model as any).isCustom}
                                     />
                                 ))
                             ) : (

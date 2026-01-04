@@ -942,48 +942,32 @@ const AISettings: React.FC = memo(() => {
                         ? t('settings.ai.modelDescriptionCustom')
                         : t('settings.ai.modelDescription')
                     }
-                    htmlFor={isCustomProvider ? "modelInput" : "modelSelect"}
+                    htmlFor="modelSelect"
                 >
                     <div className="flex items-center space-x-2">
-                        {isCustomProvider ? (
-                            <input
-                                id="modelInput"
-                                type="text"
-                                value={currentSettings.model}
-                                onChange={(e) => handleModelChange(e.target.value)}
-                                placeholder="Enter model name (e.g. gpt-4, claude-3-sonnet)"
-                                className={twMerge(
-                                    "w-[240px] h-8 px-3 text-[13px] font-light rounded-base focus:outline-none",
-                                    "bg-grey-ultra-light dark:bg-neutral-700",
-                                    "placeholder:text-grey-medium dark:placeholder:text-neutral-400",
-                                    "text-grey-dark dark:text-neutral-100 transition-colors duration-200 ease-in-out",
-                                    "border border-grey-light dark:border-neutral-600 focus:border-primary dark:focus:border-primary-light"
-                                )}
+                        {/* 统一使用 ModelCombobox，开启 allowCustom 支持手动输入 */}
+                        <ModelCombobox
+                            id="modelSelect"
+                            value={currentSettings.model}
+                            onChange={handleModelChange}
+                            models={availableModels}
+                            placeholder={t('settings.ai.model')}
+                            searchPlaceholder={t('settings.ai.searchModels')}
+                            noResultsText={t('settings.ai.noModelsFound')}
+                            allowCustom={true}
+                        />
+
+                        {currentProvider.listModelsEndpoint && !currentProvider.requiresApiKey && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                icon="refresh-cw"
+                                onClick={handleFetchModels}
+                                disabled={isFetchingModels}
+                                loading={isFetchingModels}
+                                className="w-7 h-7 text-grey-medium dark:text-neutral-400"
+                                aria-label="Fetch models"
                             />
-                        ) : (
-                            <>
-                                <ModelCombobox
-                                    id="modelSelect"
-                                    value={currentSettings.model}
-                                    onChange={handleModelChange}
-                                    models={availableModels}
-                                    placeholder={t('settings.ai.model')}
-                                    searchPlaceholder={t('settings.ai.searchModels')}
-                                    noResultsText={t('settings.ai.noModelsFound')}
-                                />
-                                {currentProvider.listModelsEndpoint && !currentProvider.requiresApiKey && (
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        icon="refresh-cw"
-                                        onClick={handleFetchModels}
-                                        disabled={isFetchingModels}
-                                        loading={isFetchingModels}
-                                        className="w-7 h-7 text-grey-medium dark:text-neutral-400"
-                                        aria-label="Fetch models"
-                                    />
-                                )}
-                            </>
                         )}
                     </div>
                 </SettingsRow>
