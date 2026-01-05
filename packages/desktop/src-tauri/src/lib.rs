@@ -115,9 +115,6 @@ pub fn run() {
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_echo_reports_created_at ON echo_reports(created_at);
-
-                -- 更新默认设置，增加 Echo 相关的字段 (如果需要的话，也可以在代码逻辑中处理默认值)
-                -- 这里不需要强制更新 settings 表，因为代码中的 Jotai atom 会处理默认值的合并。
             "#,
             kind: MigrationKind::Up,
         }
