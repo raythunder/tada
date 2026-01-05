@@ -18,7 +18,14 @@ export const useTaskOperations = () => {
         const newTask = service.createTask(taskData);
 
         // Update the atom state with the new task
-        setTasks(prev => [newTask, ...(prev ?? [])]);
+        setTasks(prev => {
+            const currentTasks = prev ?? [];
+            // Prevent duplication if service mutation affected prev reference
+            if (currentTasks.some(t => t.id === newTask.id)) {
+                return [...currentTasks];
+            }
+            return [newTask, ...currentTasks];
+        });
         return newTask;
     }, [setTasks]);
 
@@ -75,7 +82,17 @@ export const useTaskOperations = () => {
             const currentTasks = prev ?? [];
             return currentTasks.map(t => {
                 if (t.id === taskId) {
-                    const subtasks = t.subtasks ? [...t.subtasks, newSubtask] : [newSubtask];
+                    const existingSubtasks = t.subtasks || [];
+
+                    const alreadyExists = existingSubtasks.some(s => s.id === newSubtask.id);
+
+                    let subtasks;
+                    if (alreadyExists) {
+                        subtasks = [...existingSubtasks];
+                    } else {
+                        subtasks = [...existingSubtasks, newSubtask];
+                    }
+
                     return { ...t, subtasks: subtasks.sort((a, b) => a.order - b.order) };
                 }
                 return t;
