@@ -14,6 +14,7 @@ import DailyTaskRefresh from '@/components/global/DailyTaskRefresh';
 import GlobalStatusDisplay from '@/components/global/GlobalStatusDisplay';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import storageManager from '@/services/storageManager';
+import { useIcsAutoSync } from '@/services/icsAutoSync';
 
 /**
  * The root component of the application.
@@ -29,6 +30,9 @@ const App: React.FC = () => {
     useAtomValue(preferencesSettingsAtom);
     useAtomValue(aiSettingsAtom);
     useAtomValue(storedSummariesAtom);
+
+    // Auto sync tasks to ICS server when configured
+    useIcsAutoSync();
 
     // Ensure all pending writes are flushed when the app unmounts.
     useEffect(() => {
