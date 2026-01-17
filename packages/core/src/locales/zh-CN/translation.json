@@ -18,7 +18,8 @@
     "tomorrow": "明天",
     "backToApp": "返回应用",
     "complete": "完成",
-    "undo": "撤销"
+    "undo": "撤销",
+    "close": "关闭"
   },
   "priorityLabels": {
     "none": "无优先级",
@@ -140,7 +141,24 @@
       "enableEchoDescription": "启用创意日报生成器。",
       "alwaysUseAITask": "始终使用 AI 任务",
       "alwaysUseAITaskDescription": "打开「所有任务」页面时自动启用 AI 任务输入",
-      "alwaysUseAITaskDisabledHint": "需配置 AI 提供商和 API 密钥后才可启用此功能。"
+      "alwaysUseAITaskDisabledHint": "需配置 AI 提供商和 API 密钥后才可启用此功能。",
+      "scheduledReport": {
+        "title": "定时报告",
+        "description": "在设定的时间自动生成日报或回响。如果今日有已完成的任务，则生成日报；否则生成回响。",
+        "enable": "启用定时生成",
+        "aiRequiredHint": "需配置 AI 提供商和 API 密钥后才可启用此功能。",
+        "time": "生成时间",
+        "days": "生效日期",
+        "dayLabels": {
+          "sun": "日",
+          "mon": "一",
+          "tue": "二",
+          "wed": "三",
+          "thu": "四",
+          "fri": "五",
+          "sat": "六"
+        }
+      }
     },
     "ai": {
       "title": "AI 设置",
@@ -479,6 +497,12 @@
       "markdown": "复制 Markdown",
       "plainText": "复制纯文本"
     }
+  },
+  "scheduledReport": {
+    "dailyReportGenerated": "日报已生成",
+    "echoGenerated": "回响已生成",
+    "generatedAt": "生成于 {{time}}",
+    "viewFull": "查看完整内容"
   },
   "moondown": {
     "ai": {

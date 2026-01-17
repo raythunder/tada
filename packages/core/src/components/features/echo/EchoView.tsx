@@ -1,27 +1,28 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai';
-import {AnimatePresence, motion} from 'framer-motion';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
     aiSettingsAtom,
     echoReportsAtom,
     preferencesSettingsAtom,
     isSettingsOpenAtom,
-    settingsSelectedTabAtom
+    settingsSelectedTabAtom,
+    selectedEchoReportIdAtom,
 } from '@/store/jotai.ts';
 import Button from '@/components/ui/Button.tsx';
 import Icon from '@/components/ui/Icon.tsx';
-import {EchoReport} from '@/types';
-import {useTranslation} from 'react-i18next';
+import { EchoReport } from '@/types';
+import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as RadioGroup from '@radix-ui/react-radio-group';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import {twMerge} from 'tailwind-merge';
-import {generateEchoReport, isAIConfigValid} from '@/services/aiService';
-import {formatDistanceToNow} from 'date-fns';
-import {zhCN, enUS} from 'date-fns/locale';
-import {AI_PROVIDERS} from "@/config/aiProviders";
+import { twMerge } from 'tailwind-merge';
+import { generateEchoReport, isAIConfigValid } from '@/services/aiService';
+import { formatDistanceToNow } from 'date-fns';
+import { zhCN, enUS } from 'date-fns/locale';
+import { AI_PROVIDERS } from "@/config/aiProviders";
 
 // --- Types ---
 interface EchoConfigModalProps {
@@ -46,13 +47,13 @@ const JOB_TYPES = [
 
 // --- Onboarding / Config Modal ---
 const EchoConfigModal: React.FC<EchoConfigModalProps> = ({
-                                                             isOpen,
-                                                             onClose,
-                                                             onComplete,
-                                                             initialJobTypes = [],
-                                                             initialExamples = '',
-                                                             canClose = false
-                                                         }) => {
+    isOpen,
+    onClose,
+    onComplete,
+    initialJobTypes = [],
+    initialExamples = '',
+    canClose = false
+}) => {
     const { t } = useTranslation();
     const [selectedJobs, setSelectedJobs] = useState<string[]>(initialJobTypes);
     const [examples, setExamples] = useState(initialExamples);
@@ -366,6 +367,7 @@ const EchoView: React.FC = () => {
     const aiSettings = useAtomValue(aiSettingsAtom);
     const setIsSettingsOpen = useSetAtom(isSettingsOpenAtom);
     const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
+    const [selectedEchoReportId, setSelectedEchoReportId] = useAtom(selectedEchoReportIdAtom);
 
     // UI State
     const [isGenerating, setIsGenerating] = useState(false);
@@ -379,6 +381,19 @@ const EchoView: React.FC = () => {
     const [currentReportId, setCurrentReportId] = useState<string | null>(null);
     const [currentStyle, setCurrentStyle] = useState<'balanced' | 'exploration' | 'reflection'>('balanced');
     const [currentInput, setCurrentInput] = useState("");
+
+    useEffect(() => {
+        if (selectedEchoReportId && echoReports) {
+            const report = echoReports.find(r => r.id === selectedEchoReportId);
+            if (report) {
+                setCurrentReportId(report.id);
+                setCurrentReportText(report.content);
+                setCurrentStyle(report.style as any);
+                setCurrentInput(report.userInput || "");
+            }
+            setSelectedEchoReportId(null);
+        }
+    }, [selectedEchoReportId, echoReports, setSelectedEchoReportId]);
 
     // Effects for status animation
     useEffect(() => {
@@ -538,6 +553,35 @@ const EchoView: React.FC = () => {
                     <div className="flex-1 flex flex-col min-h-0 p-6 max-w-3xl mx-auto w-full">
                         <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-grey-light dark:border-neutral-700 flex-1 flex flex-col min-h-0 overflow-hidden">
 
+                            <div className="px-4 py-3 border-b border-grey-light dark:border-neutral-700 flex items-center justify-between shrink-0">
+                                <span className="text-[10px] font-medium uppercase tracking-wider text-grey-medium dark:text-neutral-500 px-2 py-1 rounded bg-grey-light/50 dark:bg-neutral-700">
+                                    {t(`echo.adjust.${currentStyle}`)}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="!h-7 !px-2 text-grey-medium hover:text-grey-dark"
+                                        onClick={() => handleGenerate('balanced', '')}
+                                        disabled={isGenerating}
+                                        icon="refresh-cw"
+                                        iconProps={{ size: 14 }}
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="!h-7 !px-2 text-grey-medium hover:text-grey-dark"
+                                        onClick={() => {
+                                            setCurrentReportId(null);
+                                            setCurrentReportText("");
+                                        }}
+                                        disabled={isGenerating}
+                                        icon="x"
+                                        iconProps={{ size: 14 }}
+                                    />
+                                </div>
+                            </div>
+
                             {/* Scrollable Markdown Content */}
                             <div className="flex-1 overflow-y-auto p-8 prose prose-sm dark:prose-invert max-w-none font-serif leading-relaxed styled-scrollbar">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -551,9 +595,6 @@ const EchoView: React.FC = () => {
                             {/* Toolbar */}
                             <div className="p-4 border-t border-grey-light dark:border-neutral-700 bg-grey-ultra-light/50 dark:bg-neutral-900/30 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-medium uppercase tracking-wider text-grey-medium dark:text-neutral-500 px-2 py-1 rounded bg-grey-light/50 dark:bg-neutral-700">
-                                        {t(`echo.adjust.${currentStyle}`)}
-                                    </span>
                                     {currentInput && (
                                         <span className="text-[10px] text-grey-medium truncate max-w-[150px]" title={currentInput}>
                                             Input: {currentInput}
@@ -567,17 +608,6 @@ const EchoView: React.FC = () => {
                                     <CopyButton text={currentReportText} disabled={isGenerating} />
                                 </div>
                             </div>
-                        </div>
-
-                        <div className="mt-4 flex justify-center shrink-0">
-                            <Button
-                                variant="ghost"
-                                className="opacity-50 hover:opacity-100"
-                                onClick={() => handleGenerate('balanced', '')}
-                                disabled={isGenerating}
-                            >
-                                <Icon name="refresh-cw" size={14} className="mr-2"/> {t('echo.generateNew')}
-                            </Button>
                         </div>
                     </div>
                 )}

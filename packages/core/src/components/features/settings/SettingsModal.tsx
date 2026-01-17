@@ -1,5 +1,5 @@
-import React, {memo, useCallback, useMemo, useState, useEffect} from 'react';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import React, { memo, useCallback, useMemo, useState, useEffect } from 'react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
     addNotificationAtom,
     aiConnectionStatusAtom,
@@ -17,12 +17,12 @@ import {
     settingsSelectedTabAtom,
     userListNamesAtom,
 } from '@/store/jotai.ts';
-import {AISettings as AISettingsType, SettingsTab, AppearanceSettings as AppearanceSettingsType} from '@/types';
+import { AISettings as AISettingsType, SettingsTab, AppearanceSettings as AppearanceSettingsType } from '@/types';
 import Icon from '@/components/ui/Icon.tsx';
 import Button from '@/components/ui/Button.tsx';
 import ModelCombobox from '@/components/ui/ModelCombobox.tsx';
-import {twMerge} from 'tailwind-merge';
-import {IconName} from "@/components/ui/IconMap.ts";
+import { twMerge } from 'tailwind-merge';
+import { IconName } from "@/components/ui/IconMap.ts";
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Select from '@radix-ui/react-select';
 import * as RadioGroup from '@radix-ui/react-radio-group';
@@ -35,14 +35,14 @@ import {
     loadPrivacyPolicy,
     loadTermsOfUse
 } from '@/config/app.ts';
-import {useTranslation} from "react-i18next";
-import {AIProvider, AI_PROVIDERS} from "@/config/aiProviders";
-import {fetchProviderModels, testConnection, isAIConfigValid} from "@/services/aiService";
+import { useTranslation } from "react-i18next";
+import { AIProvider, AI_PROVIDERS } from "@/config/aiProviders";
+import { fetchProviderModels, testConnection, isAIConfigValid } from "@/services/aiService";
 import DataSettings from './DataSettings';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {fetchWithProxy, isTauri} from "@/utils/networkUtils";
+import { fetchWithProxy, isTauri } from "@/utils/networkUtils";
 
 interface SettingsItem {
     id: SettingsTab;
@@ -51,12 +51,12 @@ interface SettingsItem {
 }
 
 const settingsSections: SettingsItem[] = [
-    {id: 'appearance', labelKey: 'settings.appearance.title', icon: 'settings'},
-    {id: 'preferences', labelKey: 'settings.preferences.title', icon: 'sliders'},
-    {id: 'ai', labelKey: 'settings.ai.title', icon: 'sparkles'},
-    {id: 'proxy', labelKey: 'settings.proxy.title', icon: 'network'},
-    {id: 'data', labelKey: 'settings.data.title', icon: 'hard-drive'},
-    {id: 'about', labelKey: 'settings.about.title', icon: 'info'},
+    { id: 'appearance', labelKey: 'settings.appearance.title', icon: 'settings' },
+    { id: 'preferences', labelKey: 'settings.preferences.title', icon: 'sliders' },
+    { id: 'ai', labelKey: 'settings.ai.title', icon: 'sparkles' },
+    { id: 'proxy', labelKey: 'settings.proxy.title', icon: 'network' },
+    { id: 'data', labelKey: 'settings.data.title', icon: 'hard-drive' },
+    { id: 'about', labelKey: 'settings.about.title', icon: 'info' },
 ];
 
 /**
@@ -70,11 +70,11 @@ const SettingsRow: React.FC<{
     children?: React.ReactNode,
     description?: string,
     htmlFor?: string,
-}> = memo(({label, value, action, children, description, htmlFor}) => (
+}> = memo(({ label, value, action, children, description, htmlFor }) => (
     <div className="flex justify-between items-center py-3 min-h-[48px]">
         <div className="flex-1 mr-4">
             <label htmlFor={htmlFor}
-                   className="text-[13px] text-grey-dark dark:text-neutral-200 font-normal block cursor-default">{label}</label>
+                className="text-[13px] text-grey-dark dark:text-neutral-200 font-normal block cursor-default">{label}</label>
             {description &&
                 <p className="text-[11px] text-grey-medium dark:text-neutral-400 mt-0.5 font-light">{description}</p>}
         </div>
@@ -93,14 +93,14 @@ SettingsRow.displayName = 'SettingsRow';
  * A radio group component for selecting the dark mode preference (Light, Dark, System).
  */
 const DarkModeSelector: React.FC<{ value: DarkModeOption; onChange: (value: DarkModeOption) => void; }> = memo(({
-                                                                                                                    value,
-                                                                                                                    onChange
-                                                                                                                }) => {
-    const {t} = useTranslation();
+    value,
+    onChange
+}) => {
+    const { t } = useTranslation();
     const options: { value: DarkModeOption; label: string; icon: IconName }[] = [
-        {value: 'light', label: t('settings.appearance.darkModeOptions.light'), icon: 'sun'},
-        {value: 'dark', label: t('settings.appearance.darkModeOptions.dark'), icon: 'moon'},
-        {value: 'system', label: t('settings.appearance.darkModeOptions.system'), icon: 'settings'},
+        { value: 'light', label: t('settings.appearance.darkModeOptions.light'), icon: 'sun' },
+        { value: 'dark', label: t('settings.appearance.darkModeOptions.dark'), icon: 'moon' },
+        { value: 'system', label: t('settings.appearance.darkModeOptions.system'), icon: 'settings' },
     ];
 
     return (
@@ -122,7 +122,7 @@ const DarkModeSelector: React.FC<{ value: DarkModeOption; onChange: (value: Dark
                             : "text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200"
                     )}
                 >
-                    <Icon name={option.icon} size={14} strokeWidth={1.5} className="mr-1.5 opacity-80"/>
+                    <Icon name={option.icon} size={14} strokeWidth={1.5} className="mr-1.5 opacity-80" />
                     {option.label}
                 </RadioGroup.Item>
             ))}
@@ -139,7 +139,7 @@ const ColorSwitch: React.FC<{
     selected: boolean;
     onClick: () => void;
     themeName: string;
-}> = memo(({colorValue, selected, onClick, themeName}) => (
+}> = memo(({ colorValue, selected, onClick, themeName }) => (
     <button
         type="button"
         onClick={onClick}
@@ -148,7 +148,7 @@ const ColorSwitch: React.FC<{
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-grey-deep",
             selected ? "ring-2 ring-offset-1 ring-current" : "border-transparent hover:border-grey-medium/50 dark:hover:border-neutral-400/50"
         )}
-        style={{backgroundColor: `hsl(${colorValue})`, borderColor: selected ? `hsl(${colorValue})` : undefined}}
+        style={{ backgroundColor: `hsl(${colorValue})`, borderColor: selected ? `hsl(${colorValue})` : undefined }}
         aria-label={`Select ${themeName} theme`}
         aria-pressed={selected}
     />
@@ -161,7 +161,7 @@ const defaultAppearanceSettingsFromAtoms = defaultAppearanceSettingsForApi();
  * Settings panel for managing application appearance, including dark mode and theme color.
  */
 const AppearanceSettings: React.FC = memo(() => {
-    const {t} = useTranslation();
+    const { t } = useTranslation();
     const [appearance, setAppearance] = useAtom(appearanceSettingsAtom);
 
     if (!appearance) {
@@ -190,12 +190,12 @@ const AppearanceSettings: React.FC = memo(() => {
     return (
         <div className="space-y-6">
             <SettingsRow label={t('settings.appearance.mode')} description={t('settings.appearance.modeDescription')}>
-                <DarkModeSelector value={currentAppearance.darkMode} onChange={handleDarkModeChange}/>
+                <DarkModeSelector value={currentAppearance.darkMode} onChange={handleDarkModeChange} />
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
 
             <SettingsRow label={t('settings.appearance.themeColor')}
-                         description={t('settings.appearance.themeColorDescription')}>
+                description={t('settings.appearance.themeColorDescription')}>
                 <div className="flex space-x-2">
                     {APP_THEMES.map(theme => (
                         <ColorSwitch
@@ -289,9 +289,9 @@ const renderSelect = (id: string, value: string | null, onChange: (value: string
             )}
             aria-label={placeholder}
         >
-            <Select.Value placeholder={placeholder}/>
+            <Select.Value placeholder={placeholder} />
             <Select.Icon className="text-grey-medium dark:text-neutral-400">
-                <Icon name="chevron-down" size={14} strokeWidth={1.5}/>
+                <Icon name="chevron-down" size={14} strokeWidth={1.5} />
             </Select.Icon>
         </Select.Trigger>
         <Select.Portal>
@@ -308,7 +308,7 @@ const renderSelect = (id: string, value: string | null, onChange: (value: string
                         >
                             <Select.ItemText>{opt.label}</Select.ItemText>
                             <Select.ItemIndicator className="absolute right-2">
-                                <Icon name="check" size={12} strokeWidth={2}/>
+                                <Icon name="check" size={12} strokeWidth={2} />
                             </Select.ItemIndicator>
                         </Select.Item>
                     ))}
@@ -322,7 +322,7 @@ const renderSelect = (id: string, value: string | null, onChange: (value: string
  * Settings panel for managing user preferences like language and default task properties.
  */
 const PreferencesSettings: React.FC = memo(() => {
-    const {t} = useTranslation();
+    const { t } = useTranslation();
     const [preferences, setPreferences] = useAtom(preferencesSettingsAtom);
     const aiSettings = useAtomValue(aiSettingsAtom);
     const userLists = useAtomValue(userListNamesAtom) ?? [];
@@ -374,15 +374,15 @@ const PreferencesSettings: React.FC = memo(() => {
     }));
 
     const dueDateOptions = [
-        {value: 'none', label: t('settings.preferences.dueDateOptions.none')},
-        {value: 'today', label: t('settings.preferences.dueDateOptions.today')},
-        {value: 'tomorrow', label: t('settings.preferences.dueDateOptions.tomorrow')},
+        { value: 'none', label: t('settings.preferences.dueDateOptions.none') },
+        { value: 'today', label: t('settings.preferences.dueDateOptions.today') },
+        { value: 'tomorrow', label: t('settings.preferences.dueDateOptions.tomorrow') },
     ];
     const priorityOptions = [
-        {value: 'none', label: t('settings.preferences.priorityOptions.none')},
-        {value: '1', label: t('settings.preferences.priorityOptions.1')},
-        {value: '2', label: t('settings.preferences.priorityOptions.2')},
-        {value: '3', label: t('settings.preferences.priorityOptions.3')},
+        { value: 'none', label: t('settings.preferences.priorityOptions.none') },
+        { value: '1', label: t('settings.preferences.priorityOptions.1') },
+        { value: '2', label: t('settings.preferences.priorityOptions.2') },
+        { value: '3', label: t('settings.preferences.priorityOptions.3') },
     ];
     const listOptions = useMemo(() => {
         return userLists.map(l => ({
@@ -396,35 +396,35 @@ const PreferencesSettings: React.FC = memo(() => {
     return (
         <div className="space-y-0">
             <SettingsRow label={t('settings.preferences.language')}
-                         description={t('settings.preferences.languageDescription')}
-                         htmlFor="languageSelect">
+                description={t('settings.preferences.languageDescription')}
+                htmlFor="languageSelect">
                 {renderSelect('languageSelect', currentPreferences.language, handleLanguageChange, [
-                    {value: 'en', label: t('settings.preferences.languages.en')},
-                    {value: 'zh-CN', label: t('settings.preferences.languages.zh-CN')}
+                    { value: 'en', label: t('settings.preferences.languages.en') },
+                    { value: 'zh-CN', label: t('settings.preferences.languages.zh-CN') }
                 ], "Select Language")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label={t('settings.preferences.defaultDueDate')}
-                         description={t('settings.preferences.defaultDueDateDescription')}
-                         htmlFor="defaultDueDateSelect">
+                description={t('settings.preferences.defaultDueDateDescription')}
+                htmlFor="defaultDueDateSelect">
                 {renderSelect('defaultDueDateSelect', currentPreferences.defaultNewTaskDueDate, handleDefaultDueDateChange, dueDateOptions, "Select Due Date")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label={t('settings.preferences.defaultPriority')}
-                         description={t('settings.preferences.defaultPriorityDescription')}
-                         htmlFor="defaultPrioritySelect">
+                description={t('settings.preferences.defaultPriorityDescription')}
+                htmlFor="defaultPrioritySelect">
                 {renderSelect('defaultPrioritySelect', currentPreferences.defaultNewTaskPriority?.toString() ?? 'none', handleDefaultPriorityChange, priorityOptions, "Select Priority")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label={t('settings.preferences.defaultList')}
-                         description={t('settings.preferences.defaultListDescription')}
-                         htmlFor="defaultListSelect">
+                description={t('settings.preferences.defaultListDescription')}
+                htmlFor="defaultListSelect">
                 {renderSelect('defaultListSelect', currentPreferences.defaultNewTaskList, handleDefaultListChange, listOptions, "Select List")}
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label={t('settings.preferences.confirmDeletions')}
-                         description={t('settings.preferences.confirmDeletionsDescription')}
-                         htmlFor="confirmDeletionsToggle">
+                description={t('settings.preferences.confirmDeletionsDescription')}
+                htmlFor="confirmDeletionsToggle">
                 <RadixSwitch.Root
                     id="confirmDeletionsToggle"
                     checked={currentPreferences.confirmDeletions}
@@ -436,13 +436,13 @@ const PreferencesSettings: React.FC = memo(() => {
                     )}
                 >
                     <RadixSwitch.Thumb
-                        className={twMerge("custom-switch-thumb", currentPreferences.confirmDeletions ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
+                        className={twMerge("custom-switch-thumb", currentPreferences.confirmDeletions ? "custom-switch-thumb-on" : "custom-switch-thumb-off")} />
                 </RadixSwitch.Root>
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label={t('settings.preferences.enableEcho')}
-                         description={t('settings.preferences.enableEchoDescription')}
-                         htmlFor="echoToggle">
+                description={t('settings.preferences.enableEchoDescription')}
+                htmlFor="echoToggle">
                 <RadixSwitch.Root
                     id="echoToggle"
                     checked={currentPreferences.enableEcho}
@@ -454,13 +454,13 @@ const PreferencesSettings: React.FC = memo(() => {
                     )}
                 >
                     <RadixSwitch.Thumb
-                        className={twMerge("custom-switch-thumb", currentPreferences.enableEcho ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
+                        className={twMerge("custom-switch-thumb", currentPreferences.enableEcho ? "custom-switch-thumb-on" : "custom-switch-thumb-off")} />
                 </RadixSwitch.Root>
             </SettingsRow>
             <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
             <SettingsRow label={t('settings.preferences.alwaysUseAITask')}
-                         description={t('settings.preferences.alwaysUseAITaskDescription')}
-                         htmlFor="alwaysUseAITaskToggle">
+                description={t('settings.preferences.alwaysUseAITaskDescription')}
+                htmlFor="alwaysUseAITaskToggle">
                 <Tooltip.Provider>
                     <Tooltip.Root delayDuration={0}>
                         <Tooltip.Trigger asChild>
@@ -478,7 +478,7 @@ const PreferencesSettings: React.FC = memo(() => {
                                     )}
                                 >
                                     <RadixSwitch.Thumb
-                                        className={twMerge("custom-switch-thumb", currentPreferences.alwaysUseAITask ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}/>
+                                        className={twMerge("custom-switch-thumb", currentPreferences.alwaysUseAITask ? "custom-switch-thumb-on" : "custom-switch-thumb-off")} />
                                 </RadixSwitch.Root>
                             </div>
                         </Tooltip.Trigger>
@@ -493,6 +493,175 @@ const PreferencesSettings: React.FC = memo(() => {
                     </Tooltip.Root>
                 </Tooltip.Provider>
             </SettingsRow>
+
+            {/* Scheduled Report Generation Section */}
+            <div className="h-px bg-grey-light dark:bg-neutral-700 my-0"></div>
+            <div className="pt-4">
+                <h3 className="text-[13px] text-grey-dark dark:text-neutral-200 font-normal mb-2 flex items-center">
+                    <Icon name="clock-8" size={14} strokeWidth={1.5} className="mr-2 opacity-70" />
+                    {t('settings.preferences.scheduledReport.title')}
+                </h3>
+                <p className="text-[11px] text-grey-medium dark:text-neutral-400 mb-3 font-light">
+                    {t('settings.preferences.scheduledReport.description')}
+                </p>
+
+                <SettingsRow
+                    label={t('settings.preferences.scheduledReport.enable')}
+                    htmlFor="scheduleEnabledToggle"
+                >
+                    <Tooltip.Provider>
+                        <Tooltip.Root delayDuration={0}>
+                            <Tooltip.Trigger asChild>
+                                <div className="inline-flex">
+                                    <RadixSwitch.Root
+                                        id="scheduleEnabledToggle"
+                                        checked={currentPreferences.scheduleSettings?.enabled ?? false}
+                                        onCheckedChange={(checked) => setPreferences(p => ({
+                                            ...(p ?? defaultPreferencesFromAtoms),
+                                            scheduleSettings: {
+                                                ...(p?.scheduleSettings ?? { enabled: false, time: '18:00', days: [1, 2, 3, 4, 5] }),
+                                                enabled: checked
+                                            }
+                                        }))}
+                                        disabled={!isAIConfigured}
+                                        aria-label="Toggle scheduled report generation"
+                                        className={twMerge(
+                                            "custom-switch-track",
+                                            currentPreferences.scheduleSettings?.enabled ? "custom-switch-track-on" : "custom-switch-track-off",
+                                            !isAIConfigured && "opacity-50 cursor-not-allowed"
+                                        )}
+                                    >
+                                        <RadixSwitch.Thumb
+                                            className={twMerge("custom-switch-thumb", currentPreferences.scheduleSettings?.enabled ? "custom-switch-thumb-on" : "custom-switch-thumb-off")}
+                                        />
+                                    </RadixSwitch.Root>
+                                </div>
+                            </Tooltip.Trigger>
+                            {!isAIConfigured && (
+                                <Tooltip.Portal>
+                                    <Tooltip.Content className={tooltipContentClass} side="left" sideOffset={5}>
+                                        {t('settings.preferences.scheduledReport.aiRequiredHint')}
+                                        <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900" />
+                                    </Tooltip.Content>
+                                </Tooltip.Portal>
+                            )}
+                        </Tooltip.Root>
+                    </Tooltip.Provider>
+                </SettingsRow>
+
+                {currentPreferences.scheduleSettings?.enabled && (
+                    <>
+                        <SettingsRow
+                            label={t('settings.preferences.scheduledReport.time')}
+                            htmlFor="scheduleTimeInput"
+                        >
+                            <div className="inline-flex items-center">
+                                <select
+                                    value={(currentPreferences.scheduleSettings?.time ?? '18:00').split(':')[0]}
+                                    onChange={(e) => {
+                                        const minute = (currentPreferences.scheduleSettings?.time ?? '18:00').split(':')[1];
+                                        setPreferences(p => ({
+                                            ...(p ?? defaultPreferencesFromAtoms),
+                                            scheduleSettings: {
+                                                ...(p?.scheduleSettings ?? { enabled: true, time: '18:00', days: [1, 2, 3, 4, 5] }),
+                                                time: `${e.target.value}:${minute}`
+                                            }
+                                        }));
+                                    }}
+                                    className={twMerge(
+                                        "appearance-none w-11 h-8 text-center text-[14px] font-medium tabular-nums",
+                                        "bg-grey-ultra-light dark:bg-neutral-700 rounded-md",
+                                        "text-grey-dark dark:text-neutral-100",
+                                        "border border-grey-light dark:border-neutral-600",
+                                        "hover:border-grey-medium dark:hover:border-neutral-500",
+                                        "focus:outline-none focus:border-primary dark:focus:border-primary-light",
+                                        "transition-colors cursor-pointer"
+                                    )}
+                                >
+                                    {Array.from({ length: 24 }, (_, i) => (
+                                        <option key={i} value={String(i).padStart(2, '0')}>
+                                            {String(i).padStart(2, '0')}
+                                        </option>
+                                    ))}
+                                </select>
+                                <span className="mx-1.5 text-[14px] font-medium text-grey-medium dark:text-neutral-400">:</span>
+                                <select
+                                    value={(currentPreferences.scheduleSettings?.time ?? '18:00').split(':')[1]}
+                                    onChange={(e) => {
+                                        const hour = (currentPreferences.scheduleSettings?.time ?? '18:00').split(':')[0];
+                                        setPreferences(p => ({
+                                            ...(p ?? defaultPreferencesFromAtoms),
+                                            scheduleSettings: {
+                                                ...(p?.scheduleSettings ?? { enabled: true, time: '18:00', days: [1, 2, 3, 4, 5] }),
+                                                time: `${hour}:${e.target.value}`
+                                            }
+                                        }));
+                                    }}
+                                    className={twMerge(
+                                        "appearance-none w-11 h-8 text-center text-[14px] font-medium tabular-nums",
+                                        "bg-grey-ultra-light dark:bg-neutral-700 rounded-md",
+                                        "text-grey-dark dark:text-neutral-100",
+                                        "border border-grey-light dark:border-neutral-600",
+                                        "hover:border-grey-medium dark:hover:border-neutral-500",
+                                        "focus:outline-none focus:border-primary dark:focus:border-primary-light",
+                                        "transition-colors cursor-pointer"
+                                    )}
+                                >
+                                    {['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'].map(m => (
+                                        <option key={m} value={m}>{m}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </SettingsRow>
+
+                        <SettingsRow
+                            label={t('settings.preferences.scheduledReport.days')}
+                        >
+                            <div className="inline-flex items-center gap-1">
+                                {[
+                                    { day: 0, label: t('settings.preferences.scheduledReport.dayLabels.sun') },
+                                    { day: 1, label: t('settings.preferences.scheduledReport.dayLabels.mon') },
+                                    { day: 2, label: t('settings.preferences.scheduledReport.dayLabels.tue') },
+                                    { day: 3, label: t('settings.preferences.scheduledReport.dayLabels.wed') },
+                                    { day: 4, label: t('settings.preferences.scheduledReport.dayLabels.thu') },
+                                    { day: 5, label: t('settings.preferences.scheduledReport.dayLabels.fri') },
+                                    { day: 6, label: t('settings.preferences.scheduledReport.dayLabels.sat') },
+                                ].map(({ day, label }) => {
+                                    const isSelected = currentPreferences.scheduleSettings?.days?.includes(day) ?? false;
+                                    return (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            onClick={() => {
+                                                const currentDays = currentPreferences.scheduleSettings?.days ?? [];
+                                                const newDays = isSelected
+                                                    ? currentDays.filter(d => d !== day)
+                                                    : [...currentDays, day].sort((a, b) => a - b);
+                                                setPreferences(p => ({
+                                                    ...(p ?? defaultPreferencesFromAtoms),
+                                                    scheduleSettings: {
+                                                        ...(p?.scheduleSettings ?? { enabled: true, time: '18:00', days: [1, 2, 3, 4, 5] }),
+                                                        days: newDays
+                                                    }
+                                                }));
+                                            }}
+                                            className={twMerge(
+                                                "w-7 h-7 rounded-md text-[11px] font-medium",
+                                                "transition-all duration-150",
+                                                isSelected
+                                                    ? "bg-primary text-white dark:bg-primary-light dark:text-grey-deep"
+                                                    : "bg-grey-ultra-light dark:bg-neutral-700 text-grey-medium dark:text-neutral-400 hover:text-grey-dark dark:hover:text-neutral-200 border border-grey-light dark:border-neutral-600"
+                                            )}
+                                        >
+                                            {label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </SettingsRow>
+                    </>
+                )}
+            </div>
         </div>
     );
 });
@@ -561,7 +730,7 @@ const AboutSettings: React.FC = memo(() => {
     const [changelogContent, setChangelogContent] = useState<string>('');
     const [privacyContent, setPrivacyContent] = useState<string>('');
     const [termsContent, setTermsContent] = useState<string>('');
-    const [loadingContent, setLoadingContent] = useState<{[key: string]: boolean}>({});
+    const [loadingContent, setLoadingContent] = useState<{ [key: string]: boolean }>({});
 
     const loadContent = async (type: 'changelog' | 'privacy' | 'terms') => {
         const language = i18n.language === 'zh-CN' ? 'zh-CN' : 'en';
@@ -1199,9 +1368,9 @@ const ProxySettings: React.FC = memo(() => {
 
                 <SettingsRow label={t('settings.proxy.protocol.label')} htmlFor="protocolSelect">
                     {renderSelect('protocolSelect', currentSettings.protocol, handleProtocolChange, [
-                        {value: 'http', label: 'HTTP'},
-                        {value: 'https', label: 'HTTPS'},
-                        {value: 'socks5', label: 'SOCKS5'},
+                        { value: 'http', label: 'HTTP' },
+                        { value: 'https', label: 'HTTPS' },
+                        { value: 'socks5', label: 'SOCKS5' },
                     ], t('settings.proxy.protocol.placeholder'))}
                 </SettingsRow>
 
@@ -1299,7 +1468,7 @@ ProxySettings.displayName = 'ProxySettings';
  * Appearance, Preferences, AI, Data, and About sections.
  */
 const SettingsModal: React.FC = () => {
-    const {t} = useTranslation();
+    const { t } = useTranslation();
     const [isOpen, setIsSettingsOpen] = useAtom(isSettingsOpenAtom);
     const [selectedTab, setSelectedTab] = useAtom(settingsSelectedTabAtom);
     const handleOpenChange = useCallback((open: boolean) => {
@@ -1309,9 +1478,9 @@ const SettingsModal: React.FC = () => {
     const renderContent = useMemo(() => {
         switch (selectedTab) {
             case 'appearance':
-                return <AppearanceSettings/>;
+                return <AppearanceSettings />;
             case 'preferences':
-                return <PreferencesSettings/>;
+                return <PreferencesSettings />;
             case 'ai':
                 return <AISettings />;
             case 'proxy':
@@ -1319,9 +1488,9 @@ const SettingsModal: React.FC = () => {
             case 'data':
                 return <DataSettings />;
             case 'about':
-                return <AboutSettings/>;
+                return <AboutSettings />;
             default:
-                return <AppearanceSettings/>;
+                return <AppearanceSettings />;
         }
     }, [selectedTab]);
     const modalTitle = useMemo(() => {
@@ -1333,7 +1502,7 @@ const SettingsModal: React.FC = () => {
         <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
             <Dialog.Portal>
                 <Dialog.Overlay
-                    className="fixed inset-0 bg-grey-dark/30 dark:bg-black/50 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-40 backdrop-blur-sm"/>
+                    className="fixed inset-0 bg-grey-dark/30 dark:bg-black/50 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-40 backdrop-blur-sm" />
                 <Dialog.Content
                     className={twMerge(
                         "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
@@ -1349,15 +1518,15 @@ const SettingsModal: React.FC = () => {
                         <nav className="space-y-0.5 flex-1 mt-2">
                             {settingsSections.map((item) => (
                                 <button key={item.id} onClick={() => handleTabClick(item.id)}
-                                        className={twMerge('flex items-center w-full px-3 py-2 h-8 text-[13px] rounded-base transition-colors duration-200 ease-in-out',
-                                            selectedTab === item.id
-                                                ? 'bg-grey-light text-primary dark:bg-primary-dark/30 dark:text-primary-light font-normal'
-                                                : 'text-grey-dark dark:text-neutral-200 font-light hover:bg-grey-light dark:hover:bg-neutral-700 hover:text-grey-dark dark:hover:text-neutral-100',
-                                            'focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-grey-ultra-light dark:focus-visible:ring-offset-grey-deep'
-                                        )} aria-current={selectedTab === item.id ? 'page' : undefined}>
+                                    className={twMerge('flex items-center w-full px-3 py-2 h-8 text-[13px] rounded-base transition-colors duration-200 ease-in-out',
+                                        selectedTab === item.id
+                                            ? 'bg-grey-light text-primary dark:bg-primary-dark/30 dark:text-primary-light font-normal'
+                                            : 'text-grey-dark dark:text-neutral-200 font-light hover:bg-grey-light dark:hover:bg-neutral-700 hover:text-grey-dark dark:hover:text-neutral-100',
+                                        'focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-grey-ultra-light dark:focus-visible:ring-offset-grey-deep'
+                                    )} aria-current={selectedTab === item.id ? 'page' : undefined}>
                                     <Icon name={item.icon} size={16} strokeWidth={1}
-                                          className="mr-2.5 opacity-90"
-                                          aria-hidden="true"/>
+                                        className="mr-2.5 opacity-90"
+                                        aria-hidden="true" />
                                     <span>{t(item.labelKey)}</span>
                                 </button>
                             ))}
@@ -1370,11 +1539,11 @@ const SettingsModal: React.FC = () => {
                                 className="text-[16px] font-normal text-grey-dark dark:text-neutral-100">{modalTitle}</Dialog.Title>
                             <Dialog.Close asChild>
                                 <Button variant="ghost" size="icon" icon="x"
-                                        className="text-grey-medium dark:text-neutral-400 hover:bg-grey-light dark:hover:bg-neutral-700 hover:text-grey-dark dark:hover:text-neutral-100 w-7 h-7 -mr-2"
-                                        iconProps={{strokeWidth: 1.5, size: 12}} aria-label="Close settings"/>
+                                    className="text-grey-medium dark:text-neutral-400 hover:bg-grey-light dark:hover:bg-neutral-700 hover:text-grey-dark dark:hover:text-neutral-100 w-7 h-7 -mr-2"
+                                    iconProps={{ strokeWidth: 1.5, size: 12 }} aria-label="Close settings" />
                             </Dialog.Close>
                         </div>
-                        <div className="flex-1 p-6 overflow-y-auto styled-scrollbar">{renderContent}</div>
+                        <div className="flex-1 p-6 overflow-y-auto styled-scrollbar" style={{ scrollbarGutter: 'stable' }}>{renderContent}</div>
                     </div>
                 </Dialog.Content>
             </Dialog.Portal>

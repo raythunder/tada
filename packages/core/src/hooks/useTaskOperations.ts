@@ -31,8 +31,24 @@ export const useTaskOperations = () => {
 
     const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
         const service = storageManager.get();
+
+        let finalUpdates = { ...updates };
+        if (updates.completed === true && !updates.completedAt) {
+            finalUpdates.completedAt = Date.now();
+        } else if (updates.completed === false) {
+            finalUpdates.completedAt = null;
+        }
+
+        if (updates.completePercentage === 100 && !updates.completedAt && updates.completed !== false) {
+            finalUpdates.completed = true;
+            finalUpdates.completedAt = Date.now();
+        } else if (updates.completePercentage !== undefined && updates.completePercentage !== null && updates.completePercentage < 100 && updates.completed === undefined) {
+            finalUpdates.completed = false;
+            finalUpdates.completedAt = null;
+        }
+
         // Persist to storage immediately
-        const updatedTask = service.updateTask(taskId, updates);
+        const updatedTask = service.updateTask(taskId, finalUpdates);
 
         // Update atom state
         setTasks(prev => {

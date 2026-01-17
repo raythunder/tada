@@ -18,7 +18,8 @@
     "tomorrow": "Tomorrow",
     "backToApp": "Back to App",
     "complete": "Complete",
-    "undo": "Undo"
+    "undo": "Undo",
+    "close": "Close"
   },
   "priorityLabels": {
     "none": "No Priority",
@@ -140,7 +141,24 @@
       "enableEchoDescription": "Enable the creative daily report generator.",
       "alwaysUseAITask": "Always Use AI Task",
       "alwaysUseAITaskDescription": "Automatically enable AI task input when opening the All Tasks page",
-      "alwaysUseAITaskDisabledHint": "Configure AI Provider and API Key to enable this feature."
+      "alwaysUseAITaskDisabledHint": "Configure AI Provider and API Key to enable this feature.",
+      "scheduledReport": {
+        "title": "Scheduled Report",
+        "description": "Automatically generate a daily report or echo at a scheduled time. If tasks were completed today, a report is generated; otherwise, an echo is created.",
+        "enable": "Enable Scheduled Generation",
+        "aiRequiredHint": "Configure AI Provider and API Key to enable this feature.",
+        "time": "Generation Time",
+        "days": "Active Days",
+        "dayLabels": {
+          "sun": "S",
+          "mon": "M",
+          "tue": "T",
+          "wed": "W",
+          "thu": "T",
+          "fri": "F",
+          "sat": "S"
+        }
+      }
     },
     "ai": {
       "title": "AI Settings",
@@ -479,6 +497,12 @@
       "markdown": "Copy Markdown",
       "plainText": "Copy Plain Text"
     }
+  },
+  "scheduledReport": {
+    "dailyReportGenerated": "Daily Report Generated",
+    "echoGenerated": "Echo Generated",
+    "generatedAt": "Generated at {{time}}",
+    "viewFull": "View Full"
   },
   "moondown": {
     "ai": {

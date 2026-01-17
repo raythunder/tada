@@ -12,6 +12,8 @@ import AppRouter from '@/router';
 import SettingsApplicator from '@/components/global/SettingsApplicator';
 import DailyTaskRefresh from '@/components/global/DailyTaskRefresh';
 import GlobalStatusDisplay from '@/components/global/GlobalStatusDisplay';
+import ScheduledReportGenerator from '@/components/global/ScheduledReportGenerator';
+import ScheduledReportModal from '@/components/global/ScheduledReportModal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import storageManager from '@/services/storageManager';
 
@@ -44,9 +46,11 @@ const App: React.FC = () => {
             {/* Global non-visual components */}
             <SettingsApplicator />
             <DailyTaskRefresh />
+            <ScheduledReportGenerator />
 
             {/* Global UI components */}
             <GlobalStatusDisplay />
+            <ScheduledReportModal />
 
             {/* Main application content with routing */}
             <Suspense fallback={<LoadingSpinner />}>

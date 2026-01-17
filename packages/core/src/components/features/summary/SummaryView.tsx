@@ -1,5 +1,5 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {useAtom, useAtomValue, useSetAtom} from 'jotai';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import * as Popover from '@radix-ui/react-popover';
@@ -26,11 +26,12 @@ import {
     tasksAtom,
     userListNamesAtom,
     isSettingsOpenAtom,
-    settingsSelectedTabAtom
+    settingsSelectedTabAtom,
+    selectedSummaryIdAtom,
 } from '@/store/jotai.ts';
 import Button from '@/components/ui/Button.tsx';
 import Icon from '@/components/ui/Icon.tsx';
-import {StoredSummary, Task} from '@/types';
+import { StoredSummary, Task } from '@/types';
 import {
     format,
     formatDateTime,
@@ -41,17 +42,17 @@ import {
     safeParseDate,
     startOfDay
 } from '@/utils/dateUtils';
-import {twMerge} from 'tailwind-merge';
+import { twMerge } from 'tailwind-merge';
 import useDebounce from '@/hooks/useDebounce';
 import SummaryHistoryModal from './SummaryHistoryModal';
-import {AnimatePresence, motion} from 'framer-motion';
-import {generateAiSummary, isAIConfigValid} from '@/services/aiService';
-import {useTranslation} from "react-i18next";
+import { AnimatePresence, motion } from 'framer-motion';
+import { generateAiSummary, isAIConfigValid } from '@/services/aiService';
+import { useTranslation } from "react-i18next";
 import storageManager from '@/services/storageManager.ts';
-import CodeMirrorEditor, {CodeMirrorEditorRef} from "@/components/ui/Editor.tsx";
+import CodeMirrorEditor, { CodeMirrorEditorRef } from "@/components/ui/Editor.tsx";
 import SelectionCheckboxRadix from "@/components/ui/SelectionCheckbox.tsx";
-import {CustomDateRangePickerContent} from "@/components/ui/DateRangePicker.tsx";
-import {AI_PROVIDERS} from "@/config/aiProviders.ts";
+import { CustomDateRangePickerContent } from "@/components/ui/DateRangePicker.tsx";
+import { AI_PROVIDERS } from "@/config/aiProviders.ts";
 
 /**
  * Returns the appropriate CSS classes for a Radix DropdownMenu radio item.
@@ -73,7 +74,7 @@ const getSummaryMenuRadioItemStyle = (checked?: boolean) => twMerge(
  * generate summaries, view past summaries, and edit generated content.
  */
 const SummaryView: React.FC = () => {
-    const {t} = useTranslation();
+    const { t } = useTranslation();
     const [period, setPeriod] = useAtom(summaryPeriodFilterAtom);
     const [listFilter, setListFilter] = useAtom(summaryListFilterAtom);
     const availableLists = useAtomValue(userListNamesAtom);
@@ -98,8 +99,16 @@ const SummaryView: React.FC = () => {
     const aiSettings = useAtomValue(aiSettingsAtom);
     const setIsSettingsOpen = useSetAtom(isSettingsOpenAtom);
     const setSettingsTab = useSetAtom(settingsSelectedTabAtom);
+    const [selectedSummaryId, setSelectedSummaryId] = useAtom(selectedSummaryIdAtom);
 
     const isAiEnabled = useMemo(() => isAIConfigValid(aiSettings), [aiSettings]);
+
+    useEffect(() => {
+        if (selectedSummaryId) {
+            setIsHistoryModalOpen(true);
+            setSelectedSummaryId(null);
+        }
+    }, [selectedSummaryId, setSelectedSummaryId]);
 
     const [summaryDisplayContent, setSummaryDisplayContent] = useState('');
     const [summaryEditorContent, setSummaryEditorContent] = useState('');
@@ -204,7 +213,7 @@ const SummaryView: React.FC = () => {
         } catch (error) {
             console.error("Error generating summary:", error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error during summary generation.';
-            addNotification({type: 'error', message: `Summary Failed: ${errorMessage}`});
+            addNotification({ type: 'error', message: `Summary Failed: ${errorMessage}` });
             setSummaryDisplayContent(`## Summary Generation Failed\n\n**Error:**\n\`\`\`\n${errorMessage}\n\`\`\``);
         } finally {
             setIsGenerating(false);
@@ -312,7 +321,7 @@ const SummaryView: React.FC = () => {
 
     const handleRangeApply = useCallback((startDate: Date, endDate: Date) => {
         forceSaveCurrentSummary();
-        setPeriod({start: startDate.getTime(), end: endDate.getTime()});
+        setPeriod({ start: startDate.getTime(), end: endDate.getTime() });
         setIsRangePickerOpen(false);
     }, [setPeriod, setIsRangePickerOpen, forceSaveCurrentSummary]);
 
@@ -326,13 +335,13 @@ const SummaryView: React.FC = () => {
     const closeRangePicker = useCallback(() => setIsRangePickerOpen(false), []);
 
     const periodOptions = useMemo((): { label: string, value: SummaryPeriodOption | 'custom' }[] => [
-        {label: t('summary.periods.today'), value: 'today'},
-        {label: t('summary.periods.yesterday'), value: 'yesterday'},
-        {label: t('summary.periods.thisWeek'), value: 'thisWeek'},
-        {label: t('summary.periods.lastWeek'), value: 'lastWeek'},
-        {label: t('summary.periods.thisMonth'), value: 'thisMonth'},
-        {label: t('summary.periods.lastMonth'), value: 'lastMonth'},
-        {label: t('summary.periods.custom'), value: 'custom'},
+        { label: t('summary.periods.today'), value: 'today' },
+        { label: t('summary.periods.yesterday'), value: 'yesterday' },
+        { label: t('summary.periods.thisWeek'), value: 'thisWeek' },
+        { label: t('summary.periods.lastWeek'), value: 'lastWeek' },
+        { label: t('summary.periods.thisMonth'), value: 'thisMonth' },
+        { label: t('summary.periods.lastMonth'), value: 'lastMonth' },
+        { label: t('summary.periods.custom'), value: 'custom' },
     ], [t]);
 
     const listOptions = useMemo(() => [{
@@ -419,9 +428,9 @@ const SummaryView: React.FC = () => {
                     title={task.title}>
                     <div
                         className={twMerge("flex-shrink-0 w-3.5 h-3.5 rounded-full border mt-[1px] mr-2 flex items-center justify-center", task.completed ? "bg-primary border-primary" : task.completePercentage != null && task.completePercentage > 0 ? "border-primary/70 dark:border-primary-light/70" : "bg-white dark:bg-neutral-750 border-grey-light dark:border-neutral-600")}> {task.completed &&
-                        <Icon name="check" size={8} strokeWidth={2}
-                              className="text-white"/>} {task.completePercentage != null && task.completePercentage > 0 && !task.completed && (
-                        <div className="w-1.5 h-1.5 bg-primary/80 dark:bg-primary-light/80 rounded-full"></div>)} </div>
+                            <Icon name="check" size={8} strokeWidth={2}
+                                className="text-white" />} {task.completePercentage != null && task.completePercentage > 0 && !task.completed && (
+                                    <div className="w-1.5 h-1.5 bg-primary/80 dark:bg-primary-light/80 rounded-full"></div>)} </div>
                     <div className="flex-1 overflow-hidden"><p
                         className={twMerge("text-[12px] font-normal text-grey-dark dark:text-neutral-100 leading-snug truncate", task.completed && "line-through text-grey-medium dark:text-neutral-400 font-light")}>{task.title || t('common.untitledTask')}</p>
                         <div
@@ -429,15 +438,15 @@ const SummaryView: React.FC = () => {
                             {task.completePercentage != null && task.completePercentage > 0 && !task.completed && (
                                 <span
                                     className="font-normal text-primary dark:text-primary-light">[{task.completePercentage}%]</span>)} {task.dueDate && isValid(safeParseDate(task.dueDate)) && (
-                            <span className="flex items-center whitespace-nowrap"><Icon name="calendar" size={10}
-                                                                                        strokeWidth={1}
-                                                                                        className="mr-0.5 opacity-80"/>{formatRelativeDate(task.dueDate, t, false, preferences?.language)}</span>)} {task.listName && task.listName !== 'Inbox' && (
-                            <span
-                                className="flex items-center bg-grey-ultra-light dark:bg-neutral-700 px-1 py-0 rounded-sm max-w-[70px] truncate"
-                                title={task.listName}><Icon name={task.listName === 'Trash' ? 'trash' : 'list'} size={9}
-                                                            strokeWidth={1}
-                                                            className="mr-0.5 opacity-80 flex-shrink-0"/><span
-                                className="truncate">{task.listName === 'Inbox' ? t('sidebar.inbox') : task.listName}</span></span>)} </div>
+                                        <span className="flex items-center whitespace-nowrap"><Icon name="calendar" size={10}
+                                            strokeWidth={1}
+                                            className="mr-0.5 opacity-80" />{formatRelativeDate(task.dueDate, t, false, preferences?.language)}</span>)} {task.listName && task.listName !== 'Inbox' && (
+                                                <span
+                                                    className="flex items-center bg-grey-ultra-light dark:bg-neutral-700 px-1 py-0 rounded-sm max-w-[70px] truncate"
+                                                    title={task.listName}><Icon name={task.listName === 'Trash' ? 'trash' : 'list'} size={9}
+                                                        strokeWidth={1}
+                                                        className="mr-0.5 opacity-80 flex-shrink-0" /><span
+                                                            className="truncate">{task.listName === 'Inbox' ? t('sidebar.inbox') : task.listName}</span></span>)} </div>
                     </div>
                 </li>))}</ul>) : (
                 <p className="text-[12px] text-grey-medium dark:text-neutral-400 italic p-4 text-center font-light">{t('summary.noReferencedTasks')}</p>)} </div>);
@@ -446,8 +455,8 @@ const SummaryView: React.FC = () => {
         task: Task;
         isSelected: boolean;
         onSelectionChange: (id: string, selected: boolean | 'indeterminate') => void;
-    }> = React.memo(({task, isSelected, onSelectionChange}) => {
-        const {t} = useTranslation();
+    }> = React.memo(({ task, isSelected, onSelectionChange }) => {
+        const { t } = useTranslation();
         const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
         const parsedDueDate = useMemo(() => safeParseDate(task.dueDate), [task.dueDate]);
         const overdue = useMemo(() => parsedDueDate != null && isValid(parsedDueDate) && isBefore(startOfDay(parsedDueDate), startOfDay(new Date())) && !task.completed, [parsedDueDate, task.completed]);
@@ -485,37 +494,37 @@ const SummaryView: React.FC = () => {
         }, [sortedSubtasks, INITIAL_VISIBLE_SUBTASKS]);
 
         return (<label htmlFor={uniqueId}
-                       className={twMerge("flex flex-col p-2 rounded-base transition-colors duration-150 ease-in-out", isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer", isSelected && !isDisabled ? "bg-black/5 dark:bg-white/5" : "hover:bg-black/5 dark:hover:bg-white/5")}
-                       onClick={handleLabelClick}>
+            className={twMerge("flex flex-col p-2 rounded-base transition-colors duration-150 ease-in-out", isDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer", isSelected && !isDisabled ? "bg-black/5 dark:bg-white/5" : "hover:bg-black/5 dark:hover:bg-white/5")}
+            onClick={handleLabelClick}>
             <div className="flex items-center">
                 <SelectionCheckboxRadix id={uniqueId} checked={isSelected}
-                                        onChange={(checkedState) => onSelectionChange(task.id, checkedState)}
-                                        aria-label={`Select task: ${task.title || t('common.untitledTask')}`}
-                                        className="mr-2 flex-shrink-0" size={16} disabled={isDisabled}/>
+                    onChange={(checkedState) => onSelectionChange(task.id, checkedState)}
+                    aria-label={`Select task: ${task.title || t('common.untitledTask')}`}
+                    className="mr-2 flex-shrink-0" size={16} disabled={isDisabled} />
                 <div className="flex-1 overflow-hidden">
                     <span
                         className={twMerge("text-[13px] font-normal text-grey-dark dark:text-neutral-100 block truncate", task.completed && !isDisabled && "line-through text-grey-medium dark:text-neutral-400 font-light", isDisabled && "text-grey-medium dark:text-neutral-400 font-light")}>{task.title ||
-                        <span className="italic">{t('common.untitledTask')}</span>}</span>
+                            <span className="italic">{t('common.untitledTask')}</span>}</span>
                     <div
                         className="text-[11px] font-light text-grey-medium dark:text-neutral-400 flex items-center space-x-2 mt-0.5 flex-wrap gap-y-0.5">
                         {task.completePercentage != null && task.completePercentage > 0 && task.completePercentage < 100 && !isDisabled && (<span
                             className="text-primary dark:text-primary-light font-normal">[{task.completePercentage}%]</span>)}
                         {parsedDueDate && isValid(parsedDueDate) && (<span
                             className={twMerge("flex items-center whitespace-nowrap", overdue && !task.completed && !isDisabled && "text-error dark:text-red-400 font-normal", task.completed && !isDisabled && "line-through")}><Icon
-                            name="calendar" size={10} strokeWidth={1}
-                            className="mr-0.5 opacity-80"/>{formatRelativeDate(parsedDueDate, t, false, preferences?.language)}</span>)}
+                                name="calendar" size={10} strokeWidth={1}
+                                className="mr-0.5 opacity-80" />{formatRelativeDate(parsedDueDate, t, false, preferences?.language)}</span>)}
                         {task.listName && task.listName !== 'Inbox' && (<span
                             className="flex items-center bg-black/5 dark:bg-white/5 px-1 rounded-sm text-[10px] max-w-[70px] truncate"
                             title={task.listName}><Icon name={task.listName === 'Trash' ? 'trash' : 'list'} size={10}
-                                                        strokeWidth={1}
-                                                        className="mr-0.5 opacity-80 flex-shrink-0"/><span
-                            className="truncate">{task.listName}</span></span>)}
+                                strokeWidth={1}
+                                className="mr-0.5 opacity-80 flex-shrink-0" /><span
+                                    className="truncate">{task.listName}</span></span>)}
                         {task.tags && task.tags.length > 0 && (
                             <span className="flex items-center space-x-1">{task.tags.slice(0, 1).map(tag => (
                                 <span key={tag}
-                                      className="bg-black/5 dark:bg-white/5 px-1 rounded-sm text-[10px] max-w-[60px] truncate">#{tag}</span>))}{task.tags.length > 1 &&
-                                <span
-                                    className="text-[10px] text-grey-medium/80 dark:text-neutral-400/80">+{task.tags.length - 1}</span>}</span>)}
+                                    className="bg-black/5 dark:bg-white/5 px-1 rounded-sm text-[10px] max-w-[60px] truncate">#{tag}</span>))}{task.tags.length > 1 &&
+                                        <span
+                                            className="text-[10px] text-grey-medium/80 dark:text-neutral-400/80">+{task.tags.length - 1}</span>}</span>)}
                     </div>
                 </div>
             </div>
@@ -525,47 +534,47 @@ const SummaryView: React.FC = () => {
                     <AnimatePresence initial={false}>
                         {isSubtasksExpanded && (
                             <motion.div key="subtask-list-animated" initial="collapsed"
-                                        animate={isSubtasksExpanded ? "open" : "collapsed"} exit="collapsed" variants={{
-                                open: {
-                                    opacity: 1,
-                                    height: 'auto',
-                                    transition: {duration: 0.25, ease: [0.33, 1, 0.68, 1]}
-                                },
-                                collapsed: {
-                                    opacity: 0,
-                                    height: 0,
-                                    transition: {duration: 0.2, ease: [0.33, 1, 0.68, 1]}
-                                }
-                            }} className="overflow-hidden">
+                                animate={isSubtasksExpanded ? "open" : "collapsed"} exit="collapsed" variants={{
+                                    open: {
+                                        opacity: 1,
+                                        height: 'auto',
+                                        transition: { duration: 0.25, ease: [0.33, 1, 0.68, 1] }
+                                    },
+                                    collapsed: {
+                                        opacity: 0,
+                                        height: 0,
+                                        transition: { duration: 0.2, ease: [0.33, 1, 0.68, 1] }
+                                    }
+                                }} className="overflow-hidden">
                                 <div
                                     className={twMerge("max-h-28 overflow-y-auto styled-scrollbar-thin pr-1", isSubtasksExpanded ? "pb-1" : "")}> {sortedSubtasks.map(sub => (
-                                    <div key={sub.id} className="flex items-center text-[12px] font-light mb-0.5">
-                                        <SelectionCheckboxRadix id={`summary-subtask-item-check-${sub.id}`}
-                                                                checked={sub.completed} onChange={() => {
-                                        }} aria-label={`Subtask: ${sub.title || 'Untitled Subtask'} status`}
-                                                                className="mr-1.5 flex-shrink-0 pointer-events-none opacity-80"
-                                                                size={11} disabled={true}/>
-                                        <span
-                                            className={twMerge("truncate text-grey-medium dark:text-neutral-400", sub.completed && "line-through opacity-70")}>{sub.title ||
-                                            <span className="italic">{t('common.untitledSubtask')}</span>}</span>
-                                    </div>))}
+                                        <div key={sub.id} className="flex items-center text-[12px] font-light mb-0.5">
+                                            <SelectionCheckboxRadix id={`summary-subtask-item-check-${sub.id}`}
+                                                checked={sub.completed} onChange={() => {
+                                                }} aria-label={`Subtask: ${sub.title || 'Untitled Subtask'} status`}
+                                                className="mr-1.5 flex-shrink-0 pointer-events-none opacity-80"
+                                                size={11} disabled={true} />
+                                            <span
+                                                className={twMerge("truncate text-grey-medium dark:text-neutral-400", sub.completed && "line-through opacity-70")}>{sub.title ||
+                                                    <span className="italic">{t('common.untitledSubtask')}</span>}</span>
+                                        </div>))}
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence> {!isSubtasksExpanded && subtasksToShow.map(sub => (
-                    <div key={`preview-${sub.id}`} className="flex items-center text-[12px] font-light mb-0.5">
-                        <SelectionCheckboxRadix id={`summary-subtask-item-preview-check-${sub.id}`}
-                                                checked={sub.completed} onChange={() => {
-                        }} aria-label={`Subtask: ${sub.title || 'Untitled Subtask'} status`}
-                                                className="mr-1.5 flex-shrink-0 pointer-events-none opacity-80"
-                                                size={11} disabled={true}/>
-                        <span
-                            className={twMerge("truncate text-grey-medium dark:text-neutral-400", sub.completed && "line-through opacity-70")}>{sub.title ||
-                            <span className="italic">{t('common.untitledSubtask')}</span>}</span>
-                    </div>))} {sortedSubtasks.length > INITIAL_VISIBLE_SUBTASKS && (
-                    <button type="button" data-subtask-expander="true" onClick={toggleSubtaskExpansion}
-                            className={twMerge("text-[10px] text-primary dark:text-primary-light hover:underline mt-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded font-light", "ml-[calc(0.5rem+11px)]")}
-                            aria-expanded={isSubtasksExpanded}>{isSubtasksExpanded ? "Show less" : `+ ${hiddenSubtasksCount} more subtask${hiddenSubtasksCount > 1 ? 's' : ''}`}</button>)}
+                        <div key={`preview-${sub.id}`} className="flex items-center text-[12px] font-light mb-0.5">
+                            <SelectionCheckboxRadix id={`summary-subtask-item-preview-check-${sub.id}`}
+                                checked={sub.completed} onChange={() => {
+                                }} aria-label={`Subtask: ${sub.title || 'Untitled Subtask'} status`}
+                                className="mr-1.5 flex-shrink-0 pointer-events-none opacity-80"
+                                size={11} disabled={true} />
+                            <span
+                                className={twMerge("truncate text-grey-medium dark:text-neutral-400", sub.completed && "line-through opacity-70")}>{sub.title ||
+                                    <span className="italic">{t('common.untitledSubtask')}</span>}</span>
+                        </div>))} {sortedSubtasks.length > INITIAL_VISIBLE_SUBTASKS && (
+                            <button type="button" data-subtask-expander="true" onClick={toggleSubtaskExpansion}
+                                className={twMerge("text-[10px] text-primary dark:text-primary-light hover:underline mt-0.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded font-light", "ml-[calc(0.5rem+11px)]")}
+                                aria-expanded={isSubtasksExpanded}>{isSubtasksExpanded ? "Show less" : `+ ${hiddenSubtasksCount} more subtask${hiddenSubtasksCount > 1 ? 's' : ''}`}</button>)}
                 </div>)}
         </label>);
     });
@@ -588,7 +597,7 @@ const SummaryView: React.FC = () => {
                                     icon="history"
                                     onClick={openHistoryModal}
                                     className="w-7 h-7 text-grey-medium dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-white/10"
-                                    iconProps={{size: 16, strokeWidth: 1}}
+                                    iconProps={{ size: 16, strokeWidth: 1 }}
                                     aria-label={t('summary.history.title')}
                                     disabled={isGenerating}
                                 />
@@ -596,7 +605,7 @@ const SummaryView: React.FC = () => {
                             <Tooltip.Portal>
                                 <Tooltip.Content className={tooltipContentClass} sideOffset={4}>
                                     {t('summary.history.tooltip')}
-                                    <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900/95"/>
+                                    <Tooltip.Arrow className="fill-grey-dark dark:fill-neutral-900/95" />
                                 </Tooltip.Content>
                             </Tooltip.Portal>
                         </Tooltip.Root>
@@ -608,31 +617,31 @@ const SummaryView: React.FC = () => {
                             <Popover.Anchor asChild>
                                 <DropdownMenu.Trigger asChild disabled={isGenerating}>
                                     <Button variant="ghost" size="sm"
-                                            className="!h-8 px-3 text-grey-dark dark:text-neutral-200 font-light hover:bg-black/5 dark:hover:bg-white/10 bg-white/50 dark:bg-neutral-800/50 min-w-[120px] tabular-nums">
+                                        className="!h-8 px-3 text-grey-dark dark:text-neutral-200 font-light hover:bg-black/5 dark:hover:bg-white/10 bg-white/50 dark:bg-neutral-800/50 min-w-[120px] tabular-nums">
                                         <Icon name="calendar-days" size={14} strokeWidth={1}
-                                              className="mr-1.5 opacity-80"/>
+                                            className="mr-1.5 opacity-80" />
                                         {selectedPeriodLabel}
                                         <Icon name="chevron-down" size={14} strokeWidth={1}
-                                              className="ml-auto opacity-70 pl-1"/>
+                                            className="ml-auto opacity-70 pl-1" />
                                     </Button>
                                 </DropdownMenu.Trigger>
                             </Popover.Anchor>
                             <DropdownMenu.Portal>
                                 <DropdownMenu.Content className={dropdownContentBaseClasses} sideOffset={5}
-                                                      align="center" onCloseAutoFocus={e => {
-                                    if (isRangePickerOpen) e.preventDefault();
-                                }}>
+                                    align="center" onCloseAutoFocus={e => {
+                                        if (isRangePickerOpen) e.preventDefault();
+                                    }}>
                                     <DropdownMenu.RadioGroup value={typeof period === 'string' ? period : 'custom'}
-                                                             onValueChange={handlePeriodValueChange}>
+                                        onValueChange={handlePeriodValueChange}>
                                         {periodOptions.map(p => (
                                             <DropdownMenu.RadioItem key={p.label}
-                                                                    value={typeof p.value === 'string' ? p.value : 'custom'}
-                                                                    className={getSummaryMenuRadioItemStyle((typeof period === 'string' && period === p.value) || (typeof period === 'object' && p.value === 'custom'))}>
+                                                value={typeof p.value === 'string' ? p.value : 'custom'}
+                                                className={getSummaryMenuRadioItemStyle((typeof period === 'string' && period === p.value) || (typeof period === 'object' && p.value === 'custom'))}>
                                                 {p.label}
                                                 <DropdownMenu.ItemIndicator
                                                     className="absolute right-2 inline-flex items-center"><Icon
-                                                    name="check" size={12}
-                                                    strokeWidth={2}/></DropdownMenu.ItemIndicator>
+                                                        name="check" size={12}
+                                                        strokeWidth={2} /></DropdownMenu.ItemIndicator>
                                             </DropdownMenu.RadioItem>
                                         ))}
                                     </DropdownMenu.RadioGroup>
@@ -641,23 +650,23 @@ const SummaryView: React.FC = () => {
                         </DropdownMenu.Root>
                         <Popover.Portal>
                             <Popover.Content side="bottom" align="center" sideOffset={5}
-                                             className={twMerge("z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800", popoverAnimationClasses)}
-                                             onOpenAutoFocus={(e) => e.preventDefault()}
-                                             onCloseAutoFocus={(e) => e.preventDefault()}>
+                                className={twMerge("z-[70] p-0 bg-white rounded-base shadow-modal dark:bg-neutral-800", popoverAnimationClasses)}
+                                onOpenAutoFocus={(e) => e.preventDefault()}
+                                onCloseAutoFocus={(e) => e.preventDefault()}>
                                 <CustomDateRangePickerContent
                                     initialStartDate={typeof period === 'object' ? new Date(period.start) : undefined}
                                     initialEndDate={typeof period === 'object' ? new Date(period.end) : undefined}
-                                    onApplyRange={handleRangeApply} closePopover={closeRangePicker}/>
+                                    onApplyRange={handleRangeApply} closePopover={closeRangePicker} />
                             </Popover.Content>
                         </Popover.Portal>
                     </Popover.Root>
                     <DropdownMenu.Root open={isListDropdownOpen} onOpenChange={setIsListDropdownOpen}>
                         <DropdownMenu.Trigger asChild disabled={isGenerating}>
                             <Button variant="ghost" size="sm"
-                                    className="!h-8 px-3 text-grey-dark dark:text-neutral-200 font-light hover:bg-black/5 dark:hover:bg-white/10 bg-white/50 dark:bg-neutral-800/50 min-w-[110px]"><Icon
-                                name="list" size={14} strokeWidth={1} className="mr-1.5 opacity-80"/>{selectedListLabel}<Icon
-                                name="chevron-down" size={14} strokeWidth={1}
-                                className="ml-auto opacity-70 pl-1"/></Button>
+                                className="!h-8 px-3 text-grey-dark dark:text-neutral-200 font-light hover:bg-black/5 dark:hover:bg-white/10 bg-white/50 dark:bg-neutral-800/50 min-w-[110px]"><Icon
+                                    name="list" size={14} strokeWidth={1} className="mr-1.5 opacity-80" />{selectedListLabel}<Icon
+                                    name="chevron-down" size={14} strokeWidth={1}
+                                    className="ml-auto opacity-70 pl-1" /></Button>
                         </DropdownMenu.Trigger>
                         <DropdownMenu.Portal>
                             <DropdownMenu.Content
@@ -665,11 +674,11 @@ const SummaryView: React.FC = () => {
                                 sideOffset={5} align="center" onCloseAutoFocus={e => e.preventDefault()}>
                                 <DropdownMenu.RadioGroup value={listFilter} onValueChange={handleListChange}>
                                     {listOptions.map(l => (<DropdownMenu.RadioItem key={l.value} value={l.value}
-                                                                                   className={getSummaryMenuRadioItemStyle(listFilter === l.value)}>{l.label}
+                                        className={getSummaryMenuRadioItemStyle(listFilter === l.value)}>{l.label}
                                         <DropdownMenu.ItemIndicator
                                             className="absolute right-2 inline-flex items-center"><Icon name="check"
-                                                                                                        size={12}
-                                                                                                        strokeWidth={2}/></DropdownMenu.ItemIndicator>
+                                                size={12}
+                                                strokeWidth={2} /></DropdownMenu.ItemIndicator>
                                     </DropdownMenu.RadioItem>))}
                                 </DropdownMenu.RadioGroup>
                             </DropdownMenu.Content>
@@ -678,8 +687,8 @@ const SummaryView: React.FC = () => {
                 </div>
                 <div className="w-1/3 flex justify-end">
                     <Button variant="primary" size="sm" icon={isGenerating ? undefined : "sparkles"}
-                            loading={isGenerating} onClick={handleGenerateClick} disabled={isGenerateDisabled}
-                            className="!h-8 px-3">
+                        loading={isGenerating} onClick={handleGenerateClick} disabled={isGenerateDisabled}
+                        className="!h-8 px-3">
                         <span className="font-normal">{isGenerating ? t('summary.generating') : t('summary.generate')}</span>
                     </Button>
                 </div>
@@ -709,14 +718,14 @@ const SummaryView: React.FC = () => {
                             <div
                                 className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-4 text-center pt-10">
                                 <Icon name="archive" size={32} strokeWidth={1}
-                                      className="mb-3 text-grey-light/70 dark:text-neutral-500/70 opacity-80"/>
+                                    className="mb-3 text-grey-light/70 dark:text-neutral-500/70 opacity-80" />
                                 <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">{t('summary.noTasks.title')}</p>
                                 <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">{t('summary.noTasks.description')}</p>
                             </div>
                         ) : (
                             filteredTasks.map(task => (
                                 <TaskItemMiniInline key={task.id} task={task} isSelected={selectedTaskIds.has(task.id)}
-                                                    onSelectionChange={handleTaskSelectionChange}/>))
+                                    onSelectionChange={handleTaskSelectionChange} />))
                         )}
                     </div>
                     {/* Future Plans Section */}
@@ -745,7 +754,7 @@ const SummaryView: React.FC = () => {
                         ) : (
                             futureTasks.map(task => (
                                 <TaskItemMiniInline key={task.id} task={task} isSelected={selectedFutureTaskIds.has(task.id)}
-                                                    onSelectionChange={handleFutureTaskSelectionChange}/>))
+                                    onSelectionChange={handleFutureTaskSelectionChange} />))
                         )}
                     </div>
                 </div>
@@ -762,16 +771,16 @@ const SummaryView: React.FC = () => {
                         <div className="flex items-center space-x-1.5">
                             {currentSummary && !isGenerating && !editMode && (
                                 <Button variant="ghost" size="sm" icon="pencil" className="!h-7 px-2"
-                                        onClick={handleStartEditing}>{t('common.edit')}</Button>
+                                    onClick={handleStartEditing}>{t('common.edit')}</Button>
                             )}
                             {currentSummary && !isGenerating && editMode && (
                                 <>
                                     <Button variant="ghost" size="sm" className="!h-7 px-2"
-                                            onClick={handleCancelEditing}>
+                                        onClick={handleCancelEditing}>
                                         {t('common.cancel')}
                                     </Button>
                                     <Button variant="primary" size="sm" icon="check" className="!h-7 px-2"
-                                            onClick={handleDoneEditing}>
+                                        onClick={handleDoneEditing}>
                                         {t('summary.doneEditing')}
                                     </Button>
                                 </>
@@ -780,14 +789,14 @@ const SummaryView: React.FC = () => {
                                 <div className="w-px h-4 bg-grey-light/50 dark:bg-neutral-700/50"></div>}
                             {currentSummary && !isGenerating && (
                                 <DropdownMenu.Root open={isRefTasksDropdownOpen}
-                                                   onOpenChange={setIsRefTasksDropdownOpen}>
+                                    onOpenChange={setIsRefTasksDropdownOpen}>
                                     <DropdownMenu.Trigger asChild>
                                         <Button variant="link" size="sm"
-                                                className="text-[11px] !h-5 px-1 text-primary hover:text-primary-dark -mr-1"
-                                                aria-haspopup="true">
-                                            {t('summary.tasksUsed', {count: tasksUsedCount})}
+                                            className="text-[11px] !h-5 px-1 text-primary hover:text-primary-dark -mr-1"
+                                            aria-haspopup="true">
+                                            {t('summary.tasksUsed', { count: tasksUsedCount })}
                                             <Icon name="chevron-down" size={12} strokeWidth={1}
-                                                  className="ml-0.5 opacity-70"/>
+                                                className="ml-0.5 opacity-70" />
                                         </Button>
                                     </DropdownMenu.Trigger>
                                     <DropdownMenu.Portal>
@@ -802,15 +811,15 @@ const SummaryView: React.FC = () => {
                             {totalRelevantSummaries > 0 && !isGenerating && (
                                 <>
                                     <Button variant="ghost" size="icon" icon="chevron-left" onClick={handlePrevSummary}
-                                            disabled={currentIndex >= totalRelevantSummaries - 1 || editMode} // Disable nav in edit mode
-                                            className="w-6 h-6 text-grey-medium dark:text-neutral-400"
-                                            iconProps={{size: 14, strokeWidth: 1}} aria-label={t('summary.older')}/>
+                                        disabled={currentIndex >= totalRelevantSummaries - 1 || editMode} // Disable nav in edit mode
+                                        className="w-6 h-6 text-grey-medium dark:text-neutral-400"
+                                        iconProps={{ size: 14, strokeWidth: 1 }} aria-label={t('summary.older')} />
                                     <span
                                         className="text-[11px] font-normal text-grey-medium dark:text-neutral-400 tabular-nums">{displayedIndexForUi} / {totalForUi}</span>
                                     <Button variant="ghost" size="icon" icon="chevron-right" onClick={handleNextSummary}
-                                            disabled={currentIndex <= 0 || editMode} // Disable nav in edit mode
-                                            className="w-6 h-6 text-grey-medium dark:text-neutral-400"
-                                            iconProps={{size: 14, strokeWidth: 1}} aria-label={t('summary.newer')}/>
+                                        disabled={currentIndex <= 0 || editMode} // Disable nav in edit mode
+                                        className="w-6 h-6 text-grey-medium dark:text-neutral-400"
+                                        iconProps={{ size: 14, strokeWidth: 1 }} aria-label={t('summary.newer')} />
                                 </>
                             )}
                         </div>
@@ -821,7 +830,7 @@ const SummaryView: React.FC = () => {
                             <div
                                 className="absolute inset-0 bg-white/70 dark:bg-neutral-800/70 backdrop-blur-sm flex items-center justify-center z-10">
                                 <Icon name="loader" size={20} strokeWidth={1.5}
-                                      className="text-primary dark:text-primary-light animate-spin"/>
+                                    className="text-primary dark:text-primary-light animate-spin" />
                             </div>
                         )}
 
@@ -835,9 +844,9 @@ const SummaryView: React.FC = () => {
                                 <div
                                     className="flex flex-col items-center justify-center h-full text-grey-medium dark:text-neutral-400 px-2 text-center">
                                     <Icon name="sparkles" size={32} strokeWidth={1}
-                                          className="mb-3 text-grey-light/70 dark:text-neutral-500/70 opacity-80"/>
-                                    <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">{t('summary.noSummary.title', {defaultValue: 'No summary available'})}</p>
-                                    <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">{t('summary.noSummary.description', {defaultValue: 'Select tasks and generate a new summary.'})}</p>
+                                        className="mb-3 text-grey-light/70 dark:text-neutral-500/70 opacity-80" />
+                                    <p className="text-[13px] font-normal text-grey-dark dark:text-neutral-200">{t('summary.noSummary.title', { defaultValue: 'No summary available' })}</p>
+                                    <p className="text-[11px] mt-1 text-grey-medium dark:text-neutral-400 font-light">{t('summary.noSummary.description', { defaultValue: 'Select tasks and generate a new summary.' })}</p>
                                 </div>
                             )
                         ) : (
@@ -861,7 +870,7 @@ const SummaryView: React.FC = () => {
                 </div>
             </div>
             <SummaryHistoryModal isOpen={isHistoryModalOpen} onClose={closeHistoryModal} summaries={allStoredSummaries}
-                                 allTasks={allTasks}/>
+                allTasks={allTasks} />
         </div>
     );
 };

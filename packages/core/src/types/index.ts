@@ -1,5 +1,5 @@
-import {DarkModeOption, DefaultNewTaskDueDate} from "@/store/jotai.ts";
-import {AIProvider, AIModel} from "@/config/aiProviders.ts";
+import { DarkModeOption, DefaultNewTaskDueDate } from "@/store/jotai.ts";
+import { AIProvider, AIModel } from "@/config/aiProviders.ts";
 
 /**
  * Represents a user-created list for organizing tasks.
@@ -31,7 +31,7 @@ export interface Subtask {
  * Represents a single task item.
  */
 export interface Task {
-    id:string;
+    id: string;
     title: string;
     completed: boolean;
     completedAt: number | null;
@@ -108,6 +108,25 @@ export interface EchoReport {
 }
 
 /**
+ * Defines schedule configuration for automated report generation.
+ */
+export interface ScheduleSettings {
+    enabled: boolean;
+    time: string; // HH:mm format, e.g., "18:00"
+    days: number[]; // 0=Sunday, 1=Monday, ..., 6=Saturday
+}
+
+/**
+ * Represents a scheduled report popup data.
+ */
+export interface ScheduledReportData {
+    type: 'summary' | 'echo';
+    content: string;
+    createdAt: number;
+    reportId: string;
+}
+
+/**
  * Defines the structure for appearance-related settings.
  */
 export interface AppearanceSettings {
@@ -132,6 +151,7 @@ export interface PreferencesSettings {
     echoJobTypes: string[]; // Selected job types for Echo
     echoPastExamples?: string; // User provided past report examples
     alwaysUseAITask: boolean; // Toggle for always using AI task input
+    scheduleSettings: ScheduleSettings; // Scheduled report generation config
 }
 
 /**

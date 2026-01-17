@@ -100,6 +100,8 @@ export const iconMap = {
     'brain-circuit': LucideIcons.BrainCircuit,
     'align-left': LucideIcons.AlignLeft,
     'webhook': LucideIcons.Webhook,
+    'zap': LucideIcons.Zap,
+    'clock-8': LucideIcons.Clock8,
 };
 
 export type IconName = keyof typeof iconMap;

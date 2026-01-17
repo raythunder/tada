@@ -15,7 +15,8 @@ import {
     ExportedData,
     ImportResult,
     EchoReport,
-    ProxySettings
+    ProxySettings,
+    ScheduledReportData
 } from '@/types';
 import {
     endOfDay, isAfter, isBefore, isSameDay, isValid, isWithinNext7Days,
@@ -69,7 +70,8 @@ export const defaultAppearanceSettingsForApi = (): AppearanceSettings => ({
 export const defaultPreferencesSettingsForApi = (): PreferencesSettings => ({
     language: 'zh-CN', defaultNewTaskDueDate: null, defaultNewTaskPriority: null,
     defaultNewTaskList: 'Inbox', confirmDeletions: true, zenModeShyNative: false,
-    enableEcho: true, echoJobTypes: [], echoPastExamples: '', alwaysUseAITask: false
+    enableEcho: true, echoJobTypes: [], echoPastExamples: '', alwaysUseAITask: false,
+    scheduleSettings: { enabled: false, time: '18:00', days: [1, 2, 3, 4, 5] } // default: Mon-Fri at 18:00
 });
 export const defaultAISettingsForApi = (): AISettings => ({
     provider: 'openai',
@@ -160,6 +162,13 @@ export const isZenFullScreenAtom = atom<boolean>(false);
 export const aiConnectionStatusAtom = atom<'idle' | 'success' | 'error'>('idle');
 
 export const aiListAnalyzingTaskIdsAtom = atom<Set<string>>(new Set<string>());
+
+// --- Scheduled Report Modal Atom ---
+export const scheduledReportModalAtom = atom<ScheduledReportData | null>(null);
+
+// --- Selected Report ID Atom ---
+export const selectedEchoReportIdAtom = atom<string | null>(null);
+export const selectedSummaryIdAtom = atom<string | null>(null);
 
 export const addNotificationAtom = atom(
     null,
