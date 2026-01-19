@@ -250,7 +250,7 @@
       },
       "ics": {
         "title": "Calendar Sync",
-        "description": "Sync tasks to your server and subscribe via calendar apps.",
+        "description": "Sync tasks to your server or export as a file.",
         "serverPlaceholder": "http://your-server:3001",
         "syncButton": "Sync",
         "syncSuccess": "Synced {{count}} tasks with due dates.",
@@ -259,7 +259,10 @@
         "subscribeUrl": "Subscription URL",
         "subscribeDescription": "Add this URL to your calendar app (Apple Calendar, Google Calendar, etc.)",
         "copyUrl": "Copy",
-        "urlCopied": "URL copied to clipboard."
+        "urlCopied": "URL copied to clipboard.",
+        "exportIcsButton": "Export .ics",
+        "exportIcsSuccess": "Calendar file exported successfully.",
+        "noTasksForIcs": "No tasks with due dates found to export."
       }
     },
     "about": {

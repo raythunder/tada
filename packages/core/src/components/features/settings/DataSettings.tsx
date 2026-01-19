@@ -19,7 +19,13 @@ import * as RadioGroup from '@radix-ui/react-radio-group';
 import * as RadixSwitch from '@radix-ui/react-switch';
 import { useTranslation } from "react-i18next";
 import storageManager from '@/services/storageManager';
-import { syncTasksToServer, getCalendarUrl, testServerConnection } from '@/services/icsService';
+import {
+    syncTasksToServer,
+    getCalendarUrl,
+    testServerConnection,
+    generateIcsContent,
+    downloadIcsFile
+} from '@/services/icsService';
 
 /**
  * A generic row component for settings pages, providing a consistent layout
@@ -36,7 +42,7 @@ const SettingsRow: React.FC<{
     <div className="flex justify-between items-center py-3 min-h-[48px]">
         <div className="flex-1 mr-4">
             <label htmlFor={htmlFor}
-                className="text-[13px] text-grey-dark dark:text-neutral-200 font-normal block cursor-default">{label}</label>
+                   className="text-[13px] text-grey-dark dark:text-neutral-200 font-normal block cursor-default">{label}</label>
             {description &&
                 <p className="text-[11px] text-grey-medium dark:text-neutral-400 mt-0.5 font-light">{description}</p>}
         </div>
@@ -253,14 +259,28 @@ const DataSettings: React.FC = () => {
         }
     }, [icsServerUrl, tasks, addNotification, t]);
 
+    const handleLocalIcsExport = useCallback(() => {
+        if (!tasks) return;
+        try {
+            const icsContent = generateIcsContent(tasks);
+            if (!icsContent.includes('BEGIN:VEVENT')) {
+                addNotification({ type: 'error', message: t('settings.data.ics.noTasksForIcs') });
+                return;
+            }
+            downloadIcsFile(icsContent, `tada_export_${new Date().toISOString().split('T')[0]}.ics`);
+            addNotification({ type: 'success', message: t('settings.data.ics.exportIcsSuccess') });
+        } catch (e) {
+            console.error(e);
+            addNotification({ type: 'error', message: 'Failed to generate ICS file' });
+        }
+    }, [tasks, t, addNotification]);
+
     const handleCopyIcsUrl = useCallback(async () => {
         const url = getCalendarUrl(icsServerUrl);
         try {
-            // 优先使用 Clipboard API
             if (navigator.clipboard && window.isSecureContext) {
                 await navigator.clipboard.writeText(url);
             } else {
-                // HTTP 环境下的降级方案
                 const textArea = document.createElement('textarea');
                 textArea.value = url;
                 textArea.style.position = 'fixed';
@@ -277,6 +297,7 @@ const DataSettings: React.FC = () => {
         }
     }, [icsServerUrl, addNotification, t]);
 
+    // ... [Keep Existing Export/Import Logic] ...
     const handleExportData = useCallback(async () => {
         try {
             setIsExporting(true);
@@ -473,26 +494,40 @@ const DataSettings: React.FC = () => {
                     label={t('settings.data.ics.title')}
                     description={t('settings.data.ics.description')}
                 >
-                    <input
-                        type="text"
-                        value={icsServerUrl}
-                        onChange={handleIcsServerUrlChange}
-                        placeholder={t('settings.data.ics.serverPlaceholder')}
-                        className="w-[200px] h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 border border-grey-light dark:border-neutral-600 focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <Button
-                        onClick={handleSyncIcs}
-                        disabled={isSyncingIcs || !icsServerUrl}
-                        icon={isSyncingIcs ? 'loader' : 'refresh-cw'}
-                        variant="ghost"
-                        size="sm"
-                        iconProps={{
-                            className: isSyncingIcs ? 'animate-spin' : undefined,
-                            size: 14
-                        }}
-                    >
-                        {t('settings.data.ics.syncButton')}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={icsServerUrl}
+                            onChange={handleIcsServerUrlChange}
+                            placeholder={t('settings.data.ics.serverPlaceholder')}
+                            className="w-[180px] h-8 px-3 text-[13px] font-light rounded-base bg-grey-ultra-light dark:bg-neutral-700 text-grey-dark dark:text-neutral-100 border border-grey-light dark:border-neutral-600 focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <Button
+                            onClick={handleSyncIcs}
+                            disabled={isSyncingIcs || !icsServerUrl}
+                            icon={isSyncingIcs ? 'loader' : 'refresh-cw'}
+                            variant="ghost"
+                            size="sm"
+                            title="Sync to Server"
+                            iconProps={{
+                                className: isSyncingIcs ? 'animate-spin' : undefined,
+                                size: 14
+                            }}
+                        >
+                            {t('settings.data.ics.syncButton')}
+                        </Button>
+                        <div className="w-px h-4 bg-grey-light dark:bg-neutral-700 mx-1"></div>
+                        <Button
+                            onClick={handleLocalIcsExport}
+                            icon="download"
+                            variant="ghost"
+                            size="sm"
+                            title={t('settings.data.ics.exportIcsButton')}
+                            iconProps={{ size: 14 }}
+                        >
+                            {t('settings.data.ics.exportIcsButton')}
+                        </Button>
+                    </div>
                 </SettingsRow>
 
                 {showIcsUrl && icsServerUrl && (
