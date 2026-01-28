@@ -102,19 +102,21 @@ Tada employs a robust Monorepo structure managed by `pnpm workspaces`, ensuring 
 graph TD
     Core["@tada/core (Business Logic & UI)"]
     Web["@tada/web (Browser Entry)"]
+    Server["@tada/server (API + SQLite)"]
     Desktop["@tada/desktop (Tauri Entry)"]
     Storage["IStorageService Interface"]
 
     Web --> Core
     Desktop --> Core
     Core --> Storage
-    Web -- Implements --> LocalStorageService
+    Web -- Implements --> RemoteStorageService
     Desktop -- Implements --> SqliteStorageService
 ```
 
 * **`packages/core`**: The nucleus of the application. Contains reusable UI components (Radix UI + Tailwind), Jotai state atoms, React hooks, i18n locales, and the `Moondown` editor logic.
-* **`packages/web`**: A lightweight wrapper that injects the `LocalStorageService`. Optimized for instant loading in browsers.
+* **`packages/web`**: Web wrapper that connects to the self-hosted API server for auth and database storage.
 * **`packages/desktop`**: A Rust-backed wrapper using Tauri. Injects the `SqliteStorageService` for ACID-compliant database storage and system tray integration.
+* **`packages/server`**: Self-hosted API server (Express + SQLite) for auth and data persistence.
 
 -----
 
@@ -158,6 +160,15 @@ graph TD
 
 ### Development
 
+**API Server:**
+Run the SQLite-backed API server.
+
+```bash
+pnpm dev:server
+```
+
+Copy `packages/server/.env.example` to `packages/server/.env` and set at least `TADA_JWT_SECRET` and `TADA_DB_PATH`.
+
 **Web Environment:**
 Run the standalone web application in your browser.
 
@@ -165,6 +176,8 @@ Run the standalone web application in your browser.
 pnpm dev
 # Application accessible at http://localhost:5173/tada/
 ```
+
+Copy `packages/web/.env.example` to `packages/web/.env` and set `VITE_TADA_API_URL` (for example: `http://localhost:8787`).
 
 **Desktop Environment:**
 Run the application in a native window using Tauri.
@@ -189,6 +202,16 @@ To unlock Tada's full potential, configure an AI provider.
 
 -----
 
+## 🔐 Auth & Registration (Web)
+
+- Email + password login for the web app.
+- Registration can be disabled with `TADA_ALLOW_REGISTRATION=false`.
+- The first registered user is assigned the `admin` role.
+- If registration is disabled and no users exist, set `TADA_DEFAULT_ADMIN_EMAIL` and `TADA_DEFAULT_ADMIN_PASSWORD` to bootstrap an admin account.
+- Web data is stored in SQLite on the server; no automatic migration from localStorage is performed.
+
+-----
+
 ## 📦 Building for Production
 
 **Web Build:**
@@ -196,6 +219,13 @@ Generates a static site in `packages/web/dist` suitable for Netlify, Vercel, or 
 
 ```bash
 pnpm build
+```
+
+**Server Build:**
+Builds the API server into `packages/server/dist`.
+
+```bash
+pnpm build:server
 ```
 
 **Desktop Build:**

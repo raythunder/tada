@@ -1,4 +1,22 @@
 services:
+  # TADA API 后端
+  server:
+    image: node:20-alpine
+    container_name: tada-server
+    restart: always
+    working_dir: /app
+    volumes:
+      - .:/app
+      - tada-server-data:/app/packages/server/data
+    ports:
+      - "8787:8787"
+    environment:
+      - TADA_SERVER_PORT=8787
+      - TADA_DB_PATH=/app/packages/server/data/tada-server.db
+      - TADA_ALLOW_REGISTRATION=true
+      - TADA_JWT_SECRET=change-this-secret
+    command: sh -c "npm install -g pnpm@9 && pnpm install && pnpm --filter @tada/server dev"
+
   # TADA Web 前端
   web:
     image: node:20-alpine
@@ -9,4 +27,9 @@ services:
       - .:/app
     ports:
       - "5173:5173"
+    environment:
+      - VITE_TADA_API_URL=http://server:8787
     command: sh -c "npm install -g pnpm@9 && pnpm install && pnpm dev --host"
+
+volumes:
+  tada-server-data:

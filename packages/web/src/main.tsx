@@ -2,15 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
 import { Provider as JotaiProvider } from 'jotai';
-import { App } from '@tada/core';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import storageManager from '@tada/core/services/storageManager';
-import { LocalStorageService } from './services/localStorageService';
+import AuthGate from './auth/AuthGate';
 
 import '@tada/core/locales';
 import '@tada/core/styles/index.css';
-
-storageManager.register(new LocalStorageService());
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -24,7 +20,7 @@ root.render(
         <JotaiProvider>
             <Tooltip.Provider delayDuration={200}>
                 <HashRouter>
-                    <App />
+                    <AuthGate />
                 </HashRouter>
             </Tooltip.Provider>
         </JotaiProvider>

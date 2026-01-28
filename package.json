@@ -6,8 +6,10 @@
   "description": "Tada Monorepo",
   "scripts": {
     "dev": "pnpm --filter @tada/web dev",
+    "dev:server": "pnpm --filter @tada/server dev",
     "dev:desktop": "pnpm --filter @tada/desktop tauri dev",
     "build": "pnpm --filter @tada/web build",
+    "build:server": "pnpm --filter @tada/server build",
     "build:desktop": "pnpm --filter @tada/desktop build:custom",
     "lint": "pnpm --filter \"./packages/**\" lint",
     "bump": "node scripts/update-version.js"
