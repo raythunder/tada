@@ -2,7 +2,7 @@ import express from 'express';
 import fs from 'node:fs';
 import cors from 'cors';
 import { config } from './config.js';
-import { bootstrapAdmin, loginHandler, meHandler, registerHandler, requireAuth } from './auth.js';
+import { bootstrapAdmin, loginHandler, meHandler, registerHandler, requireAuth, updateAccountHandler } from './auth.js';
 import {
     createEchoReport,
     createList,
@@ -51,6 +51,7 @@ app.use('/uploads', express.static(config.uploadDir));
 app.post('/auth/register', registerHandler);
 app.post('/auth/login', loginHandler);
 app.get('/auth/me', requireAuth, meHandler);
+app.put('/auth/account', requireAuth, updateAccountHandler);
 
 app.get('/settings', requireAuth, getSettings);
 app.put('/settings', requireAuth, updateSettings);

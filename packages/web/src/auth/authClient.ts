@@ -59,3 +59,10 @@ export const me = (token: string) => {
         method: 'GET'
     }, token);
 };
+
+export const updateAccount = (token: string, payload: { email?: string; currentPassword: string; newPassword?: string }) => {
+    return request<{ token: string; user: { id: string; email: string; role: string; createdAt?: number } }>('/auth/account', {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+    }, token);
+};

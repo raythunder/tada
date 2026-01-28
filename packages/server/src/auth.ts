@@ -126,6 +126,56 @@ export const meHandler: RequestHandler = (req, res) => {
     res.json({ user });
 };
 
+export const updateAccountHandler: RequestHandler = (req, res) => {
+    const { email, currentPassword, newPassword } = req.body as {
+        email?: string;
+        currentPassword?: string;
+        newPassword?: string;
+    };
+
+    if (!currentPassword) {
+        res.status(400).json({ error: 'Current password is required' });
+        return;
+    }
+
+    if (!email && !newPassword) {
+        res.status(400).json({ error: 'No changes provided' });
+        return;
+    }
+
+    const { id: userId } = res.locals.user as { id: string; email: string; role: Role };
+    const existingUser = selectUserById(userId);
+    if (!existingUser || !bcrypt.compareSync(currentPassword, existingUser.passwordHash)) {
+        res.status(401).json({ error: 'Invalid credentials' });
+        return;
+    }
+
+    const db = getDb();
+
+    if (email && email !== existingUser.email) {
+        const conflict = selectUserByEmail(email);
+        if (conflict && conflict.id !== userId) {
+            res.status(409).json({ error: 'Email already registered' });
+            return;
+        }
+        db.prepare('UPDATE users SET email = ? WHERE id = ?').run(email, userId);
+    }
+
+    if (newPassword) {
+        const passwordHash = bcrypt.hashSync(newPassword, 12);
+        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
+    }
+
+    const updatedUser = selectUserById(userId);
+    if (!updatedUser) {
+        res.status(500).json({ error: 'User not found after update' });
+        return;
+    }
+
+    const token = signToken(updatedUser);
+    res.json({ token, user: { id: updatedUser.id, email: updatedUser.email, role: updatedUser.role, createdAt: updatedUser.createdAt } });
+};
+
 export const bootstrapAdmin = () => {
     if (!config.defaultAdminEmail || !config.defaultAdminPassword) return;
     if (countUsers() > 0) return;
