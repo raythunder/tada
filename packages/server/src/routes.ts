@@ -1,7 +1,28 @@
 import type { RequestHandler } from 'express';
-import { getDb } from './db';
-import { config } from './config';
-import { nowMs, safeJsonParse, safeJsonStringify, toId } from './utils';
+import { getDb } from './db.js';
+import { config } from './config.js';
+import { nowMs, safeJsonParse, safeJsonStringify, toId } from './utils.js';
+
+type SummaryRow = {
+    id: string;
+    user_id: string;
+    created_at: number;
+    updated_at: number;
+    period_key: string;
+    list_key: string;
+    task_ids_json: string;
+    summary_text: string;
+};
+
+type EchoReportRow = {
+    id: string;
+    user_id: string;
+    created_at: number;
+    content: string;
+    job_types_json: string;
+    style: string;
+    user_input: string | null;
+};
 
 export const getBootstrapInfo: RequestHandler = (req, res) => {
     const db = getDb();
@@ -422,7 +443,7 @@ export const updateSummary: RequestHandler = (req, res) => {
     const summaryId = req.params.summaryId;
     const updates = req.body as any;
 
-    const existing = db.prepare('SELECT * FROM summaries WHERE id = ? AND user_id = ?').get(summaryId, userId);
+    const existing = db.prepare('SELECT * FROM summaries WHERE id = ? AND user_id = ?').get(summaryId, userId) as SummaryRow | undefined;
     if (!existing) {
         res.status(404).json({ error: 'Summary not found' });
         return;
@@ -542,7 +563,7 @@ export const updateEchoReport: RequestHandler = (req, res) => {
     const reportId = req.params.reportId;
     const updates = req.body as any;
 
-    const existing = db.prepare('SELECT * FROM echo_reports WHERE id = ? AND user_id = ?').get(reportId, userId);
+    const existing = db.prepare('SELECT * FROM echo_reports WHERE id = ? AND user_id = ?').get(reportId, userId) as EchoReportRow | undefined;
     if (!existing) {
         res.status(404).json({ error: 'Echo report not found' });
         return;

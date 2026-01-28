@@ -1,9 +1,9 @@
 import type { RequestHandler } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { config } from './config';
-import { getDb, type Role, type UserRecord } from './db';
-import { nowMs, toId } from './utils';
+import { config } from './config.js';
+import { getDb, type Role, type UserRecord } from './db.js';
+import { nowMs, toId } from './utils.js';
 
 const selectUserByEmail = (email: string) => {
     const db = getDb();

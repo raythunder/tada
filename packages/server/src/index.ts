@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { config } from './config';
-import { bootstrapAdmin, loginHandler, meHandler, registerHandler, requireAuth } from './auth';
+import { config } from './config.js';
+import { bootstrapAdmin, loginHandler, meHandler, registerHandler, requireAuth } from './auth.js';
 import {
     createEchoReport,
     createList,
@@ -29,7 +29,7 @@ import {
     updateSubtask,
     updateSummary,
     updateTask
-} from './routes';
+} from './routes.js';
 
 const app = express();
 app.use(cors());
