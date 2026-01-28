@@ -398,20 +398,13 @@ const TaskList: React.FC<{ title: string }> = ({ title: pageTitle }) => {
             }
         }
 
-        const updatedTasks = currentTasks.map((task: Task) => {
-            if (task.id === activeId) {
-                const updates: Partial<Task> = { order: newOrderValue, };
-                if (newDueDateValue !== undefined) {
-                    updates.dueDate = newDueDateValue;
-                }
-                return { ...task, ...updates };
-            }
-            return task;
-        });
+        const updates: Partial<Task> = { order: newOrderValue };
+        if (newDueDateValue !== undefined) {
+            updates.dueDate = newDueDateValue;
+        }
+        updateTask(activeId, updates);
 
-        batchUpdateTasks(updatedTasks);
-
-    }, [allTasks, currentFilterGlobal, sortableItems, batchUpdateTasks]);
+    }, [allTasks, currentFilterGlobal, sortableItems, updateTask]);
 
     const setAiListAnalyzingTaskIds = useSetAtom(aiListAnalyzingTaskIdsAtom);
 
