@@ -14,6 +14,7 @@ dist-ssr
 packages/server/uploads/*
 packages/server/*.db
 *.tsbuildinfo
+docker-compose.yml
 
 # Editor directories and files
 .vscode/*
