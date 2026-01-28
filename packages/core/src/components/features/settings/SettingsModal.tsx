@@ -39,6 +39,7 @@ import { useTranslation } from "react-i18next";
 import { AIProvider, AI_PROVIDERS } from "@/config/aiProviders";
 import { fetchProviderModels, testConnection, isAIConfigValid } from "@/services/aiService";
 import DataSettings from './DataSettings';
+import AccountSettings from './AccountSettings';
 import { Link } from 'react-router-dom';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -53,6 +54,7 @@ interface SettingsItem {
 const settingsSections: SettingsItem[] = [
     { id: 'appearance', labelKey: 'settings.appearance.title', icon: 'settings' },
     { id: 'preferences', labelKey: 'settings.preferences.title', icon: 'sliders' },
+    { id: 'account', labelKey: 'settings.account.title', icon: 'user-cog' },
     { id: 'ai', labelKey: 'settings.ai.title', icon: 'sparkles' },
     { id: 'proxy', labelKey: 'settings.proxy.title', icon: 'network' },
     { id: 'data', labelKey: 'settings.data.title', icon: 'hard-drive' },
@@ -1481,6 +1483,8 @@ const SettingsModal: React.FC = () => {
                 return <AppearanceSettings />;
             case 'preferences':
                 return <PreferencesSettings />;
+            case 'account':
+                return <AccountSettings />;
             case 'ai':
                 return <AISettings />;
             case 'proxy':

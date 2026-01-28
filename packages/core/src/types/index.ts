@@ -67,6 +67,7 @@ export type TaskFilter =
 export type SettingsTab =
     | 'appearance'
     | 'preferences'
+    | 'account'
     | 'ai'
     | 'proxy'
     | 'data'

@@ -160,6 +160,30 @@
         }
       }
     },
+    "account": {
+      "title": "Account",
+      "loading": "Loading account...",
+      "signedInAs": "Signed in as",
+      "role": "Role",
+      "email": "Email",
+      "currentPassword": "Current Password",
+      "currentPasswordRequired": "Current password is required.",
+      "newPassword": "New Password (optional)",
+      "confirmPassword": "Confirm New Password",
+      "passwordMismatch": "New password confirmation does not match.",
+      "noChanges": "No changes to update.",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "signOut": "Sign Out",
+      "updated": "Account updated.",
+      "error": "Failed to update account.",
+      "missingAuth": "No active session. Please log in again.",
+      "missingApi": "Missing API server configuration.",
+      "unavailable": {
+        "title": "Account Settings Unavailable",
+        "description": "Account management is only available in the web app."
+      }
+    },
     "ai": {
       "title": "AI Settings",
       "selectProvider": "Select AI Provider",

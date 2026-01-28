@@ -160,6 +160,30 @@
         }
       }
     },
+    "account": {
+      "title": "账号",
+      "loading": "正在加载账号信息...",
+      "signedInAs": "当前登录",
+      "role": "角色",
+      "email": "邮箱",
+      "currentPassword": "当前密码",
+      "currentPasswordRequired": "必须填写当前密码。",
+      "newPassword": "新密码（可选）",
+      "confirmPassword": "确认新密码",
+      "passwordMismatch": "两次输入的新密码不一致。",
+      "noChanges": "没有可更新的内容。",
+      "save": "保存修改",
+      "saving": "正在保存...",
+      "signOut": "退出登录",
+      "updated": "账号已更新。",
+      "error": "账号更新失败。",
+      "missingAuth": "未检测到登录状态，请重新登录。",
+      "missingApi": "缺少 API 服务器配置。",
+      "unavailable": {
+        "title": "账号设置不可用",
+        "description": "账号管理仅在网页版可用。"
+      }
+    },
     "ai": {
       "title": "AI 设置",
       "selectProvider": "选择 AI 服务商",
