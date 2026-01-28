@@ -1,0 +1,17 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY tsconfig*.json postcss.config.js tailwind.config.ts ./
+COPY packages ./packages
+COPY scripts ./scripts
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @tada/server build
+
+EXPOSE 8787
+
+CMD ["pnpm", "--filter", "@tada/server", "start"]

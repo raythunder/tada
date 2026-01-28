@@ -1,12 +1,14 @@
 services:
   # TADA API 后端（生产）
   server:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    image: tada-server:local
     container_name: tada-server
     restart: always
     working_dir: /app
     volumes:
-      - .:/app
       - tada-server-data:/app/packages/server/data
       - tada-server-uploads:/app/packages/server/uploads
     expose:
@@ -19,21 +21,21 @@ services:
       - TADA_ALLOW_REGISTRATION=true
       - TADA_JWT_SECRET=change-this-secret
       - TADA_PUBLIC_URL=https://tada.raythunder.tech/api
-    command: sh -c "npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @tada/server build && pnpm --filter @tada/server start"
 
   # 构建前端产物（一次性）
   web:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        VITE_TADA_API_URL: https://tada.raythunder.tech/api
+    image: tada-web:local
     container_name: tada-web-build
     restart: "no"
     working_dir: /app
     volumes:
-      - .:/app
       - tada-web-dist:/dist
-    environment:
-      - NODE_ENV=production
-      - VITE_TADA_API_URL=https://tada.raythunder.tech/api
-    command: sh -c "npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @tada/web build && rm -rf /dist/* && cp -r packages/web/dist/* /dist/"
+    command: sh -c "rm -rf /dist/* && cp -r /dist-src/* /dist/"
 
   # Caddy 反向代理 + 静态托管
   caddy:

@@ -1,0 +1,21 @@
+FROM node:20-alpine AS build
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY tsconfig*.json postcss.config.js tailwind.config.ts ./
+COPY packages ./packages
+COPY scripts ./scripts
+
+ARG VITE_TADA_API_URL
+ENV VITE_TADA_API_URL=$VITE_TADA_API_URL
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @tada/web build
+
+FROM alpine:3.20
+
+WORKDIR /dist-src
+COPY --from=build /app/packages/web/dist /dist-src
