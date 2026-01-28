@@ -76,7 +76,8 @@ const MainPage: React.FC<MainPageProps> = ({title, filter}) => {
                             <motion.div
                                 key={selectedTaskId}
                                 className={twMerge(
-                                    "fixed top-0 right-0 h-full w-[90%] max-w-md shadow-2xl z-40 flex flex-col",
+                                    "fixed top-0 right-0 h-full w-full sm:w-[90%] sm:max-w-md shadow-2xl z-40 flex flex-col",
+                                    "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
                                     "bg-white/80 dark:bg-grey-deep/80 backdrop-blur-md"
                                 )}
                                 initial={{x: '100%'}}

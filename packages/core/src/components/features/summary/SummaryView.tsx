@@ -583,7 +583,7 @@ const SummaryView: React.FC = () => {
     return (
         <div className="h-full flex flex-col bg-transparent overflow-hidden">
             <div
-                className="px-6 py-0 h-[56px] border-b border-grey-light/50 dark:border-neutral-700/50 flex justify-between items-center flex-shrink-0 bg-transparent z-10"
+                className="px-6 py-0 h-[56px] mobile-nav-safe border-b border-grey-light/50 dark:border-neutral-700/50 flex justify-between items-center flex-shrink-0 bg-transparent z-10"
                 data-tauri-drag-region="true"
             >
                 <div className="w-1/3 flex items-center space-x-2">

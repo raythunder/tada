@@ -216,6 +216,14 @@
     }
 }
 
+@layer utilities {
+    @media (max-width: 1023px) {
+        .mobile-nav-safe {
+            padding-left: 3rem !important;
+        }
+    }
+}
+
 @layer components {
     .animate-ai-shimmer {
         position: relative;

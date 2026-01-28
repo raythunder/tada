@@ -491,7 +491,7 @@ const EchoView: React.FC = () => {
     return (
         <div className="relative h-full w-full flex flex-col bg-white dark:bg-neutral-900 overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-grey-light/50 dark:border-neutral-800 shrink-0 bg-transparent z-20" data-tauri-drag-region="true">
+            <div className="flex items-center justify-between px-6 py-4 mobile-nav-safe border-b border-grey-light/50 dark:border-neutral-800 shrink-0 bg-transparent z-20" data-tauri-drag-region="true">
                 <div className="flex items-center gap-2">
                     <Icon name="webhook" className="text-primary dark:text-primary-light" size={20} />
                     <h1 className="text-lg font-light text-grey-dark dark:text-neutral-100">{t('echo.title')}</h1>

@@ -107,7 +107,7 @@ const AuthGate: React.FC = () => {
 
     if (isChecking) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-white dark:bg-[#1D2530]">
+            <div className="min-h-screen w-full flex items-center justify-center bg-white dark:bg-[#1D2530] px-4 py-6">
                 <div className="animate-pulse flex flex-col items-center">
                     <div className="h-12 w-12 rounded-full border-4 border-gray-200 border-t-blue-500 animate-spin mb-4"></div>
                     <span className="text-gray-500">Connecting to Tada Server...</span>
@@ -118,8 +118,8 @@ const AuthGate: React.FC = () => {
 
     if (!isReady) {
         return (
-            <div className="h-screen w-screen flex items-center justify-center bg-white dark:bg-[#1D2530]">
-                <div className="w-full max-w-md bg-white/90 dark:bg-[#0f141a] shadow-xl rounded-2xl p-8 border border-gray-100 dark:border-[#1f2a37]">
+            <div className="min-h-screen w-full flex items-center justify-center bg-white dark:bg-[#1D2530] px-4 py-6">
+                <div className="w-full max-w-md bg-white/90 dark:bg-[#0f141a] shadow-xl rounded-2xl p-6 sm:p-8 border border-gray-100 dark:border-[#1f2a37]">
                     <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Tada Server Login</h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Connect to your self-hosted database.</p>
 
@@ -138,7 +138,7 @@ const AuthGate: React.FC = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
-                                className="w-full rounded-lg border border-gray-200 dark:border-[#233040] bg-white dark:bg-[#0b0f14] px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                                className="w-full rounded-lg border border-gray-200 dark:border-[#233040] bg-white dark:bg-[#0b0f14] px-3 py-2 text-base text-gray-900 dark:text-gray-100"
                             />
                         </div>
                         <div>
@@ -149,13 +149,13 @@ const AuthGate: React.FC = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
-                                className="w-full rounded-lg border border-gray-200 dark:border-[#233040] bg-white dark:bg-[#0b0f14] px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                                className="w-full rounded-lg border border-gray-200 dark:border-[#233040] bg-white dark:bg-[#0b0f14] px-3 py-2 text-base text-gray-900 dark:text-gray-100"
                             />
                         </div>
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className="w-full rounded-lg bg-gray-900 text-white py-2 text-sm font-medium hover:bg-gray-800 disabled:opacity-60"
+                            className="w-full rounded-lg bg-gray-900 text-white py-2 text-base font-medium hover:bg-gray-800 disabled:opacity-60"
                         >
                             {isSubmitting ? 'Please wait...' : mode === 'login' ? 'Log In' : 'Create Account'}
                         </button>

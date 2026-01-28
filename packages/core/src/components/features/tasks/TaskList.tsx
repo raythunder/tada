@@ -761,7 +761,13 @@ const TaskList: React.FC<{ title: string }> = ({ title: pageTitle }) => {
         return t('emptyState.title.default', { pageTitle });
     }, [isSearching, searchTerm, currentFilterGlobal, pageTitle, t]);
 
-    const headerClass = useMemo(() => twMerge("px-6 py-0 h-[56px]", "border-b border-grey-light/50 dark:border-neutral-700/50", "flex justify-between items-center flex-shrink-0 z-10", "bg-transparent"), []);
+    const headerClass = useMemo(() => twMerge(
+        "px-6 py-0 h-[56px]",
+        "mobile-nav-safe",
+        "border-b border-grey-light/50 dark:border-neutral-700/50",
+        "flex justify-between items-center flex-shrink-0 z-10",
+        "bg-transparent"
+    ), []);
 
     const shouldShowInputSection = useMemo(() => isRegularNewTaskModeAllowed || isAiTaskInputVisible, [isRegularNewTaskModeAllowed, isAiTaskInputVisible]);
     const isCurrentlyAiMode = isAiTaskInputVisible;

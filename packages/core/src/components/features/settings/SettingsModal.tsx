@@ -1502,23 +1502,26 @@ const SettingsModal: React.FC = () => {
         <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
             <Dialog.Portal>
                 <Dialog.Overlay
-                    className="fixed inset-0 bg-grey-dark/30 dark:bg-black/50 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-40 backdrop-blur-sm" />
+                    className="fixed inset-0 bg-grey-dark/30 dark:bg-black/50 data-[state=open]:animate-fadeIn data-[state=closed]:animate-fadeOut z-[90] backdrop-blur-sm" />
                 <Dialog.Content
                     className={twMerge(
-                        "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50",
-                        "bg-white dark:bg-neutral-800 w-full max-w-5xl h-[85vh] max-h-[750px]",
-                        "rounded-base shadow-modal flex overflow-hidden",
+                        "fixed top-0 left-0 translate-x-0 translate-y-0 z-[100]",
+                        "md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2",
+                        "bg-white dark:bg-neutral-800 w-full max-w-none h-[100dvh] max-h-none",
+                        "md:max-w-5xl md:h-[85vh] md:max-h-[750px]",
+                        "rounded-none md:rounded-base shadow-modal flex flex-col md:flex-row overflow-hidden",
+                        "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
                         "data-[state=open]:animate-modalShow data-[state=closed]:animate-modalHide"
                     )}
                     aria-describedby={undefined}
                     onEscapeKeyDown={() => handleOpenChange(false)}
                 >
                     <div
-                        className="w-52 bg-grey-ultra-light/80 dark:bg-grey-deep/80 backdrop-blur-sm p-3 flex flex-col shrink-0 border-r border-grey-light/50 dark:border-neutral-700/50">
-                        <nav className="space-y-0.5 flex-1 mt-2">
+                        className="w-full md:w-52 bg-grey-ultra-light/80 dark:bg-grey-deep/80 backdrop-blur-sm p-3 flex shrink-0 border-b md:border-b-0 md:border-r border-grey-light/50 dark:border-neutral-700/50">
+                        <nav className="flex flex-row md:flex-col gap-1 md:space-y-0.5 flex-1 mt-1 md:mt-2 overflow-x-auto md:overflow-visible pr-1">
                             {settingsSections.map((item) => (
                                 <button key={item.id} onClick={() => handleTabClick(item.id)}
-                                    className={twMerge('flex items-center w-full px-3 py-2 h-8 text-[13px] rounded-base transition-colors duration-200 ease-in-out',
+                                    className={twMerge('flex items-center w-full md:w-full px-3 py-2 h-8 text-[13px] rounded-base transition-colors duration-200 ease-in-out whitespace-nowrap',
                                         selectedTab === item.id
                                             ? 'bg-grey-light text-primary dark:bg-primary-dark/30 dark:text-primary-light font-normal'
                                             : 'text-grey-dark dark:text-neutral-200 font-light hover:bg-grey-light dark:hover:bg-neutral-700 hover:text-grey-dark dark:hover:text-neutral-100',
