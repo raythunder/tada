@@ -8,13 +8,16 @@ services:
     volumes:
       - .:/app
       - tada-server-data:/app/packages/server/data
+      - tada-server-uploads:/app/packages/server/uploads
     ports:
       - "8787:8787"
     environment:
       - TADA_SERVER_PORT=8787
       - TADA_DB_PATH=/app/packages/server/data/tada-server.db
+      - TADA_UPLOAD_DIR=/app/packages/server/uploads
       - TADA_ALLOW_REGISTRATION=true
       - TADA_JWT_SECRET=change-this-secret
+      - TADA_PUBLIC_URL=http://localhost:8787
     command: sh -c "npm install -g pnpm@9 && pnpm install && pnpm --filter @tada/server dev"
 
   # TADA Web 前端
@@ -33,3 +36,4 @@ services:
 
 volumes:
   tada-server-data:
+  tada-server-uploads:

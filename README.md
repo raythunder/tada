@@ -209,6 +209,7 @@ To unlock Tada's full potential, configure an AI provider.
 - The first registered user is assigned the `admin` role.
 - If registration is disabled and no users exist, set `TADA_DEFAULT_ADMIN_EMAIL` and `TADA_DEFAULT_ADMIN_PASSWORD` to bootstrap an admin account.
 - Web data is stored in SQLite on the server; no automatic migration from localStorage is performed.
+- Pasted images in the web editor are uploaded to the server filesystem and stored under `/uploads` with public URLs.
 
 -----
 

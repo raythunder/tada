@@ -17,7 +17,7 @@ export const clearToken = () => {
     localStorage.removeItem(TOKEN_KEY);
 };
 
-const request = async <T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> => {
+export const request = async <T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> => {
     const baseUrl = getApiBaseUrl();
     const response = await fetch(`${baseUrl}${path}`, {
         ...options,

@@ -190,6 +190,7 @@ Tada 支持多种主流 AI 模型提供商。请在 **设置 > AI 设置** 中�
 - 第一个注册用户会自动成为 `admin`。
 - 若关闭注册且没有用户，请设置 `TADA_DEFAULT_ADMIN_EMAIL` 与 `TADA_DEFAULT_ADMIN_PASSWORD` 以创建管理员账号。
 - Web 数据存储于服务端 SQLite；不自动迁移浏览器 localStorage 数据。
+- Web 编辑器粘贴图片将上传到服务端文件系统，并以 `/uploads` 公网 URL 形式保存。
 
 -----
 

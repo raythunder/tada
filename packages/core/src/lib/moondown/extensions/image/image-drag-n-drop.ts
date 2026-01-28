@@ -4,6 +4,14 @@ import {EditorView, ViewPlugin, type PluginValue, ViewUpdate} from '@codemirror/
  * A ViewPlugin that handles pasting and dragging-and-dropping images into the editor.
  * It reads the image file, converts it to a Base64 data URL, and inserts it as markdown.
  */
+export type ImageUploadHandler = (file: File) => Promise<string>;
+
+let imageUploadHandler: ImageUploadHandler | null = null;
+
+export const setImageUploadHandler = (handler: ImageUploadHandler | null) => {
+    imageUploadHandler = handler;
+};
+
 class ImagePastePlugin implements PluginValue {
     private view: EditorView;
 
@@ -78,17 +86,31 @@ class ImagePastePlugin implements PluginValue {
      * @param pos The position in the document to insert the image markdown.
      */
     private processImage(file: File, pos: number | null) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const base64Data = e.target?.result as string;
-            if (pos !== null) {
-                const markdownImage = `![${this.getFileNameWithoutExtension(file.name)}](${base64Data})`;
+        if (pos === null) return;
+
+        if (imageUploadHandler) {
+            imageUploadHandler(file).then((url) => {
+                const markdownImage = `![${this.getFileNameWithoutExtension(file.name)}](${url})`;
                 const transaction = this.view.state.update({
                     changes: {from: pos, to: pos, insert: markdownImage},
                     selection: {anchor: pos + markdownImage.length},
                 });
                 this.view.dispatch(transaction);
-            }
+            }).catch((error) => {
+                console.error('Image upload failed:', error);
+            });
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const base64Data = e.target?.result as string;
+            const markdownImage = `![${this.getFileNameWithoutExtension(file.name)}](${base64Data})`;
+            const transaction = this.view.state.update({
+                changes: {from: pos, to: pos, insert: markdownImage},
+                selection: {anchor: pos + markdownImage.length},
+            });
+            this.view.dispatch(transaction);
         };
         reader.readAsDataURL(file);
     }

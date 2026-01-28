@@ -1,4 +1,7 @@
 import type { RequestHandler } from 'express';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import multer from 'multer';
 import { getDb } from './db.js';
 import { config } from './config.js';
 import { nowMs, safeJsonParse, safeJsonStringify, toId } from './utils.js';
@@ -672,6 +675,43 @@ export const createSubtask: RequestHandler = (req, res) => {
         createdAt,
         updatedAt
     });
+};
+
+const uploadStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        cb(null, config.uploadDir);
+    },
+    filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname) || '';
+        cb(null, `${crypto.randomUUID()}${ext}`);
+    }
+});
+
+const uploadMiddleware = multer({
+    storage: uploadStorage,
+    fileFilter: (_req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image uploads are allowed'));
+        }
+    }
+});
+
+export const uploadImage = uploadMiddleware.single('file');
+
+export const uploadImageHandler: RequestHandler = (req, res) => {
+    const file = req.file;
+    if (!file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+    }
+
+    const relativeUrl = `/uploads/${file.filename}`;
+    const baseUrl = config.publicBaseUrl || `${req.protocol}://${req.get('host')}`;
+    const url = `${baseUrl}${relativeUrl}`;
+
+    res.json({ url, filename: file.filename });
 };
 
 export const updateSubtask: RequestHandler = (req, res) => {

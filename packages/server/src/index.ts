@@ -1,4 +1,5 @@
 import express from 'express';
+import fs from 'node:fs';
 import cors from 'cors';
 import { config } from './config.js';
 import { bootstrapAdmin, loginHandler, meHandler, registerHandler, requireAuth } from './auth.js';
@@ -28,7 +29,9 @@ import {
     updateSettings,
     updateSubtask,
     updateSummary,
-    updateTask
+    updateTask,
+    uploadImage,
+    uploadImageHandler
 } from './routes.js';
 
 const app = express();
@@ -37,8 +40,13 @@ app.use(express.json({ limit: '2mb' }));
 
 bootstrapAdmin();
 
+if (!fs.existsSync(config.uploadDir)) {
+    fs.mkdirSync(config.uploadDir, { recursive: true });
+}
+
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/bootstrap', getBootstrapInfo);
+app.use('/uploads', express.static(config.uploadDir));
 
 app.post('/auth/register', registerHandler);
 app.post('/auth/login', loginHandler);
@@ -62,6 +70,8 @@ app.delete('/tasks/:taskId', requireAuth, deleteTask);
 app.post('/tasks/:taskId/subtasks', requireAuth, createSubtask);
 app.patch('/subtasks/:subtaskId', requireAuth, updateSubtask);
 app.delete('/subtasks/:subtaskId', requireAuth, deleteSubtask);
+
+app.post('/uploads/image', requireAuth, uploadImage, uploadImageHandler);
 
 app.get('/summaries', requireAuth, getSummaries);
 app.post('/summaries', requireAuth, createSummary);

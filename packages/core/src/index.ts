@@ -4,3 +4,4 @@
  * entry for both the web and desktop applications.
  */
 export { default as App } from './App';
+export { setImageUploadHandler, type ImageUploadHandler } from './lib/moondown/extensions/image/image-drag-n-drop';

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App } from '@tada/core';
+import { App, setImageUploadHandler } from '@tada/core';
 import storageManager from '@tada/core/services/storageManager';
 import { RemoteStorageService } from '../services/remoteStorageService';
 import {
@@ -26,12 +26,32 @@ const AuthGate: React.FC = () => {
     const [password, setPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const uploadImage = useCallback(async (file: File, baseUrl: string, token: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${baseUrl}/uploads/image`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Upload failed with status ${response.status}`);
+        }
+
+        const data = await response.json() as { url: string };
+        return data.url;
+    }, []);
+
     const initializeStorage = useCallback(async (token: string) => {
         const service = new RemoteStorageService(apiBaseUrl, token);
         await service.preloadData();
         storageManager.register(service);
+        setImageUploadHandler((file) => uploadImage(file, apiBaseUrl, token));
         setIsReady(true);
-    }, [apiBaseUrl]);
+    }, [apiBaseUrl, uploadImage]);
 
     useEffect(() => {
         if (!apiBaseUrl) {
