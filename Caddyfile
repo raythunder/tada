@@ -1,0 +1,11 @@
+tada.raythunder.tech {
+    encode zstd gzip
+
+    @api {
+        path /api/*
+    }
+    reverse_proxy @api server:8787
+
+    root * /srv
+    file_server
+}
